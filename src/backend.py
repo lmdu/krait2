@@ -3,13 +3,24 @@ import apsw
 __all__ = ['DB']
 
 CREATE_TABLES_SQL = """
-
 CREATE TABLE IF NOT EXISTS fastas (
 	id INTEGER PRIMARY KEY,
 	name TEXT,
+	size INTEGER,
+	status TEXT,
 	path TEXT
 );
-
+CREATE TABLE IF NOT EXISTS ssr (
+	id INTEGER PRIMARY KEY,
+	chrom TEXT,
+	start INTEGER,
+	end INTEGER,
+	motif TEXT,
+	standard TEXT,
+	type TEXT,
+	repeats INTEGER,
+	length INTEGER
+);
 """
 
 class DataRow(dict):
@@ -79,6 +90,12 @@ class DataBackend:
 
 	def get_column(self, sql, paras=None):
 		return [row[0] for row in self.query(sql, paras)]
+
+	def get_set(self, sql, paras=None):
+		return {row[0] for row in self.query(sql, paras)}
+
+	def get_field(self, table):
+		return [row[1] for row in self.query("PRAGMA table_info({})".format(table))]
 
 	def save_to_file(self, dbfile):
 		target = apsw.Connection(dbfile)

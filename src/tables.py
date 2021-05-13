@@ -10,40 +10,40 @@ class KraitTableModel(QAbstractTableModel):
 	col_count = Signal(int)
 	sel_count = Signal(int)
 
-	def __init__(self, parent=None):
+	def __init__(self, parent=None, table='ssr', reads=100):
 		super(KraitTableModel, self).__init__(parent)
 
+		#store ids of displayed row
 		self.displayed = []
+
+		#store ids of selected row
+		self.selected = set()
+
+		#cache the current row
 		self.cache_row = [-1, None]
+
+		#total row counts
 		self.total_count = 0
+
+		#readed row counts
 		self.read_count = 0
-		self.file_index = 0
-		self.headers = ['id', 'chrom', 'start', 'end', 'motif', 'standard', 'type', 'repeats', 'length']
 
-	def set_file_index(self, file_index):
-		self.file_index = file_index
-		self.sql = "SELECT * FROM ssr{} WHERE id=? LIMIT 1".format(self.file_index)
-		self.total_count = DB.get_one("SELECT COUNT(*) FROM ssr{} LIMIT 1".format(self.file_index))
-		self.cache_row = [-1, None]
-		self.beginResetModel()
-		self.displayed = DB.get_column("SELECT id from ssr{} LIMIT 100".format(self.file_index))
-		self.read_count = len(self.displayed)
-		self.endResetModel()
+		self._table = table
 
-		if self.total_count:
-			self.row_count.emit(self.total_count)
-			self.sel_count.emit(0)
+		#number of readed rows once time
+		self._reads = reads
 
-	def value(self, index):
-		row = index.row()
-		col = index.column() - 1
+		#filters
+		self._filter = ''
 
-		if row != self.cache_row[0]:
-			_id = self.displayed[row]
-			self.cache_row[0] = row
-			self.cache_row[1] = DB.get_row(self.sql, (_id,))
+		#order by
+		self._orderby = ''
 
-		return self.cache_row[1][col]
+		#input file index 
+		self._index = 0
+
+		#get column names
+		self._header = DB.get_field(table)
 
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():
@@ -55,65 +55,184 @@ class KraitTableModel(QAbstractTableModel):
 		if parent.isValid():
 			return 0
 
-		return 10
+		return len(self._header)
+
+	def sort(self, column, order):
+		if order == Qt.SortOrder.DescendingOrder:
+			self._orderby = "ORDER BY {} DESC".format(self._header[column])
+
+		elif order == Qt.AscendingOrder:
+			self._orderby = "ORDER BY {}".format(self._header[column])
+
+		else:
+			self._orderby = ""
+
+		self.reset_table()
 
 	def data(self, index, role=Qt.DisplayRole):
 		if not index.isValid():
 			return None
 
-		if not (0 <= index.row() < self.rowCount()):
-			return None
+		row = index.row()
+		col = index.column()
 
-		elif role == Qt.DisplayRole:
-			if index.column() > 0:
-				return self.value(index)
+		if role == Qt.DisplayRole:
+			return self.get_value(row, col)
 
-			else:
-				return None
+		elif role == Qt.CheckStateRole:
+			if col == 0:
+				if self.displayed[row] in self.selected:
+					return Qt.Checked
+				else:
+					return Qt.Unchecked
 
-		return None
+	def setData(self, index, value, role):
+		if not index.isValid():
+			return False
+
+		row = index.row()
+		col = index.column()
+
+		_id = self.displayed[row]
+
+		if col == 0 and role == Qt.CheckStateRole:
+			if value == Qt.Checked:
+				if _id not in self.selected:
+					self.selected.add(_id)
+			elif value == Qt.Unchecked:
+				if _id in self.selected:
+					self.selected.remove(_id)
+
+			self.dataChanged.emit(index, index)
+
+
+			return True
+		
+		return False
 
 	def headerData(self, section, orientation, role=Qt.DisplayRole):
-		if role != Qt.DisplayRole:
-			return None
+		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+			return self._header[section]
 
-		if orientation == Qt.Horizontal:
-			if section == 0:
-				return None
-			else:
-				return self.headers[section-1]
+	def flags(self, index):
+		if not index.isValid():
+			return Qt.ItemIsSelectable
 		
-		elif orientation == Qt.Vertical:
-			#return self.value(section, 1)
-			if role == Qt.CheckStateRole:
-				if index.column() == 0:
-					if self.displayed[index.row()] in self.selected:
-						return Qt.ItemIsUserCheckable
-					else:
-						return Qt.ItemIsUserCheckable
+		flag = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-		return None
+		if index.column() == 0:
+			flag |= Qt.ItemIsUserCheckable
+
+		return flag
 
 	def canFetchMore(self, parent):
-		return not parent.isValid() and (self.read_count < self.total_count)
+		if parent.isValid():
+			return False
+
+		if self.read_count < self.total_count:
+			return True
+
+		return False
 
 	def fetchMore(self, parent):
 		if parent.isValid():
 			return
-		
-		remainder = self.total_count - self.read_count
-		fetch_count = min(100, remainder)
-		sql = "SELECT id FROM ssr{} LIMIT {},{}".format(self.file_index, self.read_count, fetch_count)
-		ids = self.db.get_column(sql)
+
+		ids = DB.get_column(self.read_sql)
+		fetch_count = len(ids)
 		self.beginInsertRows(QModelIndex(), self.read_count, self.read_count+fetch_count-1)
 		self.displayed.extend(ids)
 		self.read_count += fetch_count
 		self.endInsertRows()
 
-class KraitTableView(QTableView):
-	def __init__(self, parent=None):
-		super(KraitTableView, self).__init__(parent)
+	def set_index(self, file_index):
+		"""set current file index"""
+		self._index = file_index
+		self.reset_table()
 
+	@property
+	def count_sql(self):
+		return "SELECT COUNT(1) FROM {}{} {} LIMIT 1".format(
+			self._table,
+			self._index,
+			self._filter
+		)
+
+	@property
+	def read_sql(self):
+		remainder = self.total_count - self.read_count
+		fetch_count = min(self._reads, remainder)
+
+		return "SELECT id FROM {}{} {} {} LIMIT {},{}".format(
+			self._table,
+			self._index,
+			self._filter,
+			self._orderby,
+			self.read_count,
+			fetch_count
+		)
+
+	@property
+	def all_sql(self):
+		return "SELECT id FROM {}{} {}".format(
+			self._table,
+			self._index,
+			self._filter
+		)
+
+	@property
+	def get_sql(self):
+		return "SELECT * FROM {}{} {} {} {} LIMIT 1".format(
+			self._table,
+			self._index,
+			self._filter,
+			"AND id=?" if self._filter else "WHERE id=?",
+			self._orderby
+		)
+
+	def reset_table(self):
+		self.total_count = DB.get_one(self.count_sql)
+		self.read_count = 0
+		self.cache_row = [-1, None]
+		self.beginResetModel()
+		self.displayed = DB.get_column(self.read_sql)
+		self.read_count = len(self.displayed)
+		self.endResetModel()
+
+	def get_value(self, row, col):
+		if row != self.cache_row[0]:
+			_id = self.displayed[row]
+			self.cache_row[0] = row
+			self.cache_row[1] = DB.get_row(self.get_sql, (_id,))
+
+		return self.cache_row[1][col]
+
+	def set_filter(self, conditions=None):
+		if conditions:
+			self._filter = "WHERE {}".format(conditions)
+		else:
+			self._filter = ""
+
+		self.reset_table()
+
+	def select_all(self):
+		self.beginResetModel()
+
+		if self._filter:
+			self.selected = DB.get_set(self.all_sql)
+		else:
+			self.selected = set(range(1, self.total_count+1))
+
+		self.endResetModel()
+
+	def deselect_all(self):
+		self.beginResetModel()
+		self.selected = set()
+		self.endResetModel()
+
+class KraitTableView(QTableView):
+	def __init__(self, parent=None, table='ssr'):
+		super(KraitTableView, self).__init__(parent)
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
 		self.horizontalHeader().setStretchLastSection(True)
@@ -125,11 +244,19 @@ class KraitTableView(QTableView):
 
 		self.checkbox = QCheckBox(self.horizontalHeader())
 		self.checkbox.setGeometry(QRect(3,5,20,20))
-		#self.checkbox.stateChanged.connect(self.checkboxAction)
+		self.checkbox.stateChanged.connect(self.check_all_action)
 
-		self.model = KraitTableModel(self)
+		self.model = KraitTableModel(self, table)
 		self.setModel(self.model)
 
-	def set_file_index(self, file_index):
-		self.model.set_file_index(file_index)
+	def change_file_index(self, file_index):
+		self.model.set_index(file_index)
 
+	@Slot(int)
+	def check_all_action(self, state):
+		if state == Qt.Checked:
+			self.model.select_all()
+		elif state == Qt.Unchecked:
+			self.model.deselect_all()
+		else:
+			pass

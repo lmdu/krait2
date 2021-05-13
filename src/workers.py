@@ -10,38 +10,52 @@ from PySide6.QtCore import *
 from backend import *
 from motif import *
 
-__all__ = ['SSRWorker']
+__all__ = ['SSRWorkerThread']
 
-class BaseWorker(QObject):
+def iupac_number(n):
+	mapping = ['', 'Mono', 'Di', 'Tri', 'Tetra', 'Penta' 'Hexa', 'Hepta']
+	return mapping[n]
+
+class WorkerSignal(QObject):
 	progress = Signal(int)
 	messages = Signal(str)
 	errors = Signal(str)
 	finished = Signal()
 
+class WorkerThread(QThread):
+	def __init__(self, parent=None):
+		QThread.__init__(self, parent)
+		self.signals = WorkerSignal()
+
+		self.signals.messages.connect(parent.show_status_message)
+		self.signals.errors.connect(parent.show_error_message)
+
 	@property
 	def fastas(self):
+		self.total = DB.get_one("SELECT COUNT(*) FROM fastas LIMIT 1")
 		for fasta in DB.query("SELECT * FROM fastas"):
 			yield fasta
 
 	def process(self):
 		pass
 
-	@Slot()
 	def run(self):
-		self.progress.emit(0)
+		self.signals.progress.emit(0)
 
 		try:
 			self.process()
 		except:
 			self.errors.emit(traceback.format_exc())
 
-		self.progress.emit(100)
-		self.messages.emit('Finished!')
-		self.finished.emit()
+		self.signals.progress.emit(1)
+		self.signals.messages.emit('Finished!')
+		self.signals.finished.emit()
 
-class SSRWorker(BaseWorker):
-	def __init__(self, min_repeats, standard_level):
-		super(SSRWorker, self).__init__()
+class SSRWorkerThread(WorkerThread):
+	def __init__(self, parent, min_repeats, standard_level):
+		super(SSRWorkerThread, self).__init__(parent)
+
+		self.finished.connect(parent.show_ssr_result)
 
 		self.min_repeats = min_repeats
 		self.motifs = StandardMotif(standard_level)
@@ -58,17 +72,23 @@ class SSRWorker(BaseWorker):
 			yield row
 
 	def process(self):
-		with multiprocessing.Pool(1) as pool:
-			for fasta in self.fastas:
-				self.messages.emit('processing file {}'.format(fasta[2]))
+		processed_fasta = 0
+		for fasta in self.fastas:
+			self.signals.messages.emit('processing file {}'.format(fasta[2]))
 
-				#create ssr table for current file
-				DB.create_ssr_table(fasta[0])
+			#create ssr table for current file
+			DB.create_ssr_table(fasta[0])
 
-				seqs = pyfastx.Fastx(fasta[2], uppercase=True)
+			seqs = pyfastx.Fastx(fasta[2], uppercase=True)
+
+			with multiprocessing.Pool(1) as pool:
 				for name, seq, _ in seqs:
 					proc = pool.apply_async(self.search, (name, seq, self.min_repeats))
 					ssrs = proc.get()
-
 					DB.insert_rows(self.sql.format(fasta[0]), self.rows(ssrs))
+			
+			processed_fasta += 1
+
+			p = processed_fasta/self.total
+			self.signals.progress.emit(p)
 
