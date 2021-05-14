@@ -24,7 +24,7 @@ class WorkerSignal(QObject):
 
 class WorkerThread(QThread):
 	def __init__(self, parent=None):
-		QThread.__init__(self, parent)
+		super(WorkerThread, self).__init__(parent)
 		self.signals = WorkerSignal()
 
 		self.signals.messages.connect(parent.show_status_message)
@@ -45,7 +45,7 @@ class WorkerThread(QThread):
 		try:
 			self.process()
 		except:
-			self.errors.emit(traceback.format_exc())
+			self.signals.errors.emit(traceback.format_exc())
 
 		self.signals.progress.emit(1)
 		self.signals.messages.emit('Finished!')
@@ -54,9 +54,6 @@ class WorkerThread(QThread):
 class SSRWorkerThread(WorkerThread):
 	def __init__(self, parent, min_repeats, standard_level):
 		super(SSRWorkerThread, self).__init__(parent)
-
-		self.finished.connect(parent.show_ssr_result)
-
 		self.min_repeats = min_repeats
 		self.motifs = StandardMotif(standard_level)
 		self.sql = "INSERT INTO ssr{} VALUES (?,?,?,?,?,?,?,?,?)"
@@ -73,22 +70,22 @@ class SSRWorkerThread(WorkerThread):
 
 	def process(self):
 		processed_fasta = 0
-		for fasta in self.fastas:
-			self.signals.messages.emit('processing file {}'.format(fasta[2]))
 
-			#create ssr table for current file
-			DB.create_ssr_table(fasta[0])
+		with multiprocessing.Pool(1) as pool:
+			for fasta in self.fastas:
+				self.signals.messages.emit('processing file {}'.format(fasta[1]))
 
-			seqs = pyfastx.Fastx(fasta[2], uppercase=True)
+				#create ssr table for current file
+				DB.create_ssr_table(fasta[0])
 
-			with multiprocessing.Pool(1) as pool:
+				seqs = pyfastx.Fastx(fasta[4], uppercase=True)
+
 				for name, seq, _ in seqs:
 					proc = pool.apply_async(self.search, (name, seq, self.min_repeats))
 					ssrs = proc.get()
 					DB.insert_rows(self.sql.format(fasta[0]), self.rows(ssrs))
-			
-			processed_fasta += 1
+				
+				processed_fasta += 1
 
-			p = processed_fasta/self.total
-			self.signals.progress.emit(p)
-
+				p = processed_fasta/self.total
+				self.signals.progress.emit(p)

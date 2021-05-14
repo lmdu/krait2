@@ -80,6 +80,13 @@ class DataBackend:
 		else:
 			return self.cursor.execute(sql, paras)
 
+	def table_exists(self, table):
+		try:
+			self.query("SELECT 1 FROM {}".format(table))
+			return True
+		except:
+			return False
+
 	def get_one(self, sql, paras=None):
 		for row in self.query(sql, paras):
 			return row[0]

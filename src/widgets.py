@@ -23,16 +23,24 @@ class KraitMainWindow(QMainWindow):
 
 		#self.info_widget = QTextBrowser(self)
 		#self._info_widget.setFrameShape(QFrame.NoFrame)
-		self.info_widget = KraitTableView(self, 'fastas')
-		self.tab_widget.addTab(self.info_widget, "Info")
+		self.file_table = KraitTableView(self, 'fastas')
+		self.file_table.clicked.connect(self.change_current_file)
+		self.tab_widget.addTab(self.file_table, "Input Files")
 
-		self.ssr_table = KraitTableView(self)
-		self.tab_widget.addTab(self.ssr_table, "SSR Results")
+		self.ssr_table = None
+		self.cssr_table = None
+		self.vntr_table = None
+		self.itr_table = None
+		#self.ssr_table = KraitTableView(self)
+		#self.tab_widget.addTab(self.ssr_table, "SSR Results")
 
-		self.file_select = QComboBox(self)
-		self.file_select.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-		self.file_model = FileSelectModel(self)
-		self.file_select.setModel(self.file_model)
+		#self.cssr_table = KraitTableView(self, 'cssr')
+		#self.tab_widget.addTab(self.cssr_table, "cSSR Results")
+
+		#self.file_select = QComboBox(self)
+		#self.file_select.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+		#self.file_model = FileSelectModel(self)
+		#self.file_select.setModel(self.file_model)
 
 		#self._file_select.addItems(["file {}".format(i) for i in range(10)])
 
@@ -139,25 +147,70 @@ class KraitMainWindow(QMainWindow):
 		self.tool_bar.addAction(self.mapping_action)
 		self.tool_bar.addAction(self.primer_action)
 
-		spacer = QWidget(self)
-		spacer.setSizePolicy(
-			QSizePolicy.Expanding,
-			QSizePolicy.Preferred
-		)
-		label = QLabel("Select file: ", self)
+		#spacer = QWidget(self)
+		#spacer.setSizePolicy(
+		#	QSizePolicy.Expanding,
+		#	QSizePolicy.Preferred
+		#)
+		#label = QLabel("Select file: ", self)
 
-		self.tool_bar.addWidget(spacer)
-		self.tool_bar.addWidget(label)
-		self.tool_bar.addWidget(self.file_select)
+		#self.tool_bar.addWidget(spacer)
+		#self.tool_bar.addWidget(label)
+		#self.tool_bar.addWidget(self.file_select)
 
 	def create_statusbar(self):
 		self.status_bar = self.statusBar()
 		self.status_bar.showMessage("Welcome to Krait2")
 
-		#self.progress_bar = QProgressBar(self)
-		#self.progress_bar.setMaximum(1)
-		#self.progress_bar.setMinimum(0)
-		#self.status_bar.addPermanentWidget(self.progress_bar)
+		#row count label
+		rlabel = QLabel("Row:", self)
+		self.status_bar.addPermanentWidget(rlabel)
+		self.row_label = QLabel("0", self)
+		self.status_bar.addPermanentWidget(self.row_label)
+
+		#column count label
+		clabel = QLabel("Column:", self)
+		self.status_bar.addPermanentWidget(clabel)
+		self.col_label = QLabel("0", self)
+		self.status_bar.addPermanentWidget(self.col_label)
+
+		#select count label
+		slabel = QLabel("Select:", self)
+		self.status_bar.addPermanentWidget(slabel)
+		self.sel_label = QLabel("0", self)
+		self.status_bar.addPermanentWidget(self.sel_label)
+
+	@Slot(int)
+	def change_row_count(self, count):
+		self.row_label.setText(str(count))
+
+	@Slot(int)
+	def change_column_count(self, count):
+		self.col_label.setText(str(count))
+
+	@Slot(int)
+	def change_select_count(self, count):
+		self.sel_label.setText(str(count))
+
+	@Slot()
+	def change_current_file(self, index):
+		tables = ['ssr', 'cssr', 'vntr', 'itr', 'primer']
+		rowid = self.file_table.get_clicked_rowid(index)
+
+		if DB.table_exists('ssr{}'.format(rowid)):
+			if self.ssr_table is None:
+				self.ssr_table = KraitTableView(self, 'ssr')
+				self.tab_widget.addTab(self.ssr_table, "SSR Results")
+			else:
+				idx = self.tab_widget.indexOf(self.ssr_table)
+				self.tab_widget.setTabVisible(idx, True)
+
+			self.ssr_table.update_table(rowid)
+
+		else:
+			if self.ssr_table is not None:
+				idx = self.tab_widget.indexOf(self.ssr_table)
+				self.tab_widget.setTabVisible(idx, False)
 
 	@Slot(str)
 	def show_status_message(self, msg):
@@ -200,7 +253,7 @@ class KraitMainWindow(QMainWindow):
 
 		if fas:
 			DB.insert_rows("INSERT INTO fastas VALUES (NULL,?,?,?,?)", fas)
-			self.info_widget.change_file_index('')
+			self.file_table.update_table()
 
 	def import_fasta_folder(self):
 		folder = QFileDialog.getExistingDirectory(self,
@@ -221,39 +274,9 @@ class KraitMainWindow(QMainWindow):
 
 		if fas:
 			DB.insert_rows("INSERT INTO fastas VALUES (NULL,?,?,?,?)", fas)
-			self.info_widget.change_file_index('')
+			self.file_table.update_table()
 
 
 	def perform_ssr_search(self):
 		threader = SSRWorkerThread(self, [12,7,5,4,4,4], 3)
 		threader.start()
-
-	@Slot()
-	def show_ssr_result(self):
-		self.ssr_table.change_file_index(1)
-
-class FileSelectModel(QAbstractListModel):
-	def __init__(self, parent=None):
-		super(FileSelectModel, self).__init__(parent)
-		self.row_count = 0
-
-	def update_select(self):
-		self.beginResetModel()
-		self.row_count = DB.get_one("SELECT COUNT(1) FROM fastas LIMIT 1")
-		self.cache_rows = DB.get_column("SELECT name FROM fastas")
-		self.endResetModel()
-
-	def rowCount(self, parent=QModelIndex()):
-		if parent.isValid():
-			return 0
-
-		return self.row_count
-
-	def data(self, index, role=Qt.DisplayRole):
-		if not index.isValid():
-			return None
-
-		if role == Qt.DisplayRole:
-			return self.cache_rows[index.row()]
-
-		return None
