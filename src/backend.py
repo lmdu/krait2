@@ -2,7 +2,7 @@ import apsw
 
 __all__ = ['DB']
 
-CREATE_TABLES_SQL = """
+FASTA_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS fastas (
 	id INTEGER PRIMARY KEY,
 	name TEXT,
@@ -10,7 +10,10 @@ CREATE TABLE IF NOT EXISTS fastas (
 	status TEXT,
 	path TEXT
 );
-CREATE TABLE IF NOT EXISTS ssr (
+"""
+
+SSR_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS ssr{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
 	start INTEGER,
@@ -22,6 +25,56 @@ CREATE TABLE IF NOT EXISTS ssr (
 	length INTEGER
 );
 """
+
+VNTR_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS vntr{} (
+	id INTEGER PRIMARY KEY,
+	chrom TEXT,
+	start INTEGER,
+	end INTEGER,
+	motif TEXT,
+	type TEXT,
+	repeats INTEGER,
+	length INTEGER
+);
+"""
+
+CSSR_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS cssr{} (
+	id INTEGER PRIMARY KEY,
+	chrom TEXT,
+	start INTEGER,
+	end INTEGER,
+	complexity INTEGER,
+	length INTEGER,
+	structure TEXT
+)
+"""
+
+ITR_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS itr{} (
+	id INTEGER PRIMARY KEY,
+	chrom TEXT,
+	start INTEGER,
+	end INTEGER,
+	motif TEXT,
+	type TEXT,
+	length INTEGER,
+	match INTEGER,
+	subsitution INTEGER,
+	insertion INTEGER,
+	deletion INTEGER,
+	identity REAL
+)
+"""
+
+TABLE_SQL_MAPPING = {
+	'fasta': FASTA_TABLE_SQL,
+	'ssr': SSR_TABLE_SQL,
+	'vntr': VNTR_TABLE_SQL,
+	'cssr': CSSR_TABLE_SQL,
+	'itr': ITR_TABLE_SQL
+}
 
 class DataRow(dict):
 	def __getattr__(self, attr):
@@ -44,35 +97,32 @@ class DataBackend:
 	def _optimize(self):
 		self.cursor.execute("PRAGMA synchronous=OFF")
 
+	def _create_tables(self):
+		for sql in TABLE_SQL_MAPPING.values():
+			self.cursor.execute(sql.format(''))
+
 	def _connect_to_db(self, db_file=':memory:'):
 		if not self.conn:
 			self.conn = apsw.Connection(db_file)
 			#self.conn.setrowtrace(row_factory)
 			self._optimize()
-			self.cursor.execute(CREATE_TABLES_SQL)
+			self._create_tables()
 
 	def change_db(self, db_file):
 		if self.conn:
 			self.conn.close()
 		self._connect_to_db(db_file)
 
-	def create_ssr_table(self, idx):
-		sql = """
-			CREATE TABLE IF NOT EXISTS ssr{} (
-				id INTEGER PRIMARY KEY,
-				chrom TEXT,
-				start INTEGER,
-				end INTEGER,
-				motif TEXT,
-				standard TEXT,
-				type TEXT,
-				repeats INTEGER,
-				length INTEGER
-			);""".format(idx)
+	def create_table(self, table, idx):
+		sql = TABLE_SQL_MAPPING[table].format(idx)
 		self.cursor.execute(sql)
 
 	def insert_rows(self, sql, rows):
 		self.cursor.executemany(sql, rows)
+
+	def update_status(self, rowid, status):
+		sql = "UPDATE fastas SET status=? WHERE id=?"
+		self.query(sql, (status, rowid))
 
 	def query(self, sql, paras=None):
 		if paras is None:

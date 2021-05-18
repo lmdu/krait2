@@ -1,5 +1,4 @@
 import os
-import appdirs
 
 __all__ = ['KRAIT_VERSION']
 

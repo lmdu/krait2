@@ -20,35 +20,25 @@ class KraitMainWindow(QMainWindow):
 
 		self.tab_widget = QTabWidget(self)
 		self.setCentralWidget(self.tab_widget)
-
-		#self.info_widget = QTextBrowser(self)
-		#self._info_widget.setFrameShape(QFrame.NoFrame)
-		self.file_table = KraitTableView(self, 'fastas')
-		self.file_table.clicked.connect(self.change_current_file)
-		self.tab_widget.addTab(self.file_table, "Input Files")
-
-		self.ssr_table = None
-		self.cssr_table = None
-		self.vntr_table = None
-		self.itr_table = None
-		#self.ssr_table = KraitTableView(self)
-		#self.tab_widget.addTab(self.ssr_table, "SSR Results")
-
-		#self.cssr_table = KraitTableView(self, 'cssr')
-		#self.tab_widget.addTab(self.cssr_table, "cSSR Results")
-
-		#self.file_select = QComboBox(self)
-		#self.file_select.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-		#self.file_model = FileSelectModel(self)
-		#self.file_select.setModel(self.file_model)
-
-		#self._file_select.addItems(["file {}".format(i) for i in range(10)])
+		self.tab_widget.currentChanged.connect(self.change_current_table)
 
 		self.create_actions()
 		self.create_menus()
 		self.create_toolbar()
 		self.create_statusbar()
 
+		self.read_settings()
+
+		self.file_table = FastaTableView(self)
+		self.tab_widget.addTab(self.file_table, "Input Files")
+
+		self.ssr_table = None
+		self.cssr_table = None
+		self.vntr_table = None
+		self.itr_table = None
+
+	def closeEvent(self, event):
+		self.write_settings()
 
 	def create_actions(self):
 		#menu actions
@@ -99,12 +89,12 @@ class KraitMainWindow(QMainWindow):
 
 		self.search_vntr_action = QAction(QIcon("icons/vntr.png"), "Search VNTRs", self,
 			statusTip = "Search for VNTRs",
-			triggered = self.close
+			triggered = self.perform_vntr_search
 		)
 
 		self.search_itr_action = QAction(QIcon("icons/issr.png"), "Search ITRs", self,
 			statusTip = "Search for imperfect tandem repeats",
-			triggered = self.close
+			triggered = self.perform_itr_search
 		)
 
 		self.mapping_action = QAction(QIcon("icons/locate.png"), "Mapping", self,
@@ -158,6 +148,10 @@ class KraitMainWindow(QMainWindow):
 		#self.tool_bar.addWidget(label)
 		#self.tool_bar.addWidget(self.file_select)
 
+		progress_circle = ProgressCircle()
+		progress_circle.setFixedSize(30, 30)
+		self.tool_bar.addWidget(progress_circle)
+
 	def create_statusbar(self):
 		self.status_bar = self.statusBar()
 		self.status_bar.showMessage("Welcome to Krait2")
@@ -180,6 +174,29 @@ class KraitMainWindow(QMainWindow):
 		self.sel_label = QLabel("0", self)
 		self.status_bar.addPermanentWidget(self.sel_label)
 
+	def write_settings(self):
+		settings = QSettings()
+
+		settings.beginGroup("SSR")
+		settings.setValue("min_repeats", [12, 7, 5, 4, 4, 4])
+		settings.endGroup()
+
+		if not self.isMaximized():
+			settings.beginGroup("Window")
+			settings.setValue("size", self.size())
+			settings.setValue("pos", self.pos())
+			settings.endGroup()
+
+	def read_settings(self):
+		settings = QSettings()
+		settings.beginGroup("Window")
+		self.resize(settings.value("size", QSize(800, 600)))
+		self.move(settings.value("pos", QPoint(200, 200)))
+
+	@Slot(int)
+	def change_task_status(self, fasta_id):
+		self.file_table.update_status(fasta_id)
+
 	@Slot(int)
 	def change_row_count(self, count):
 		self.row_label.setText(str(count))
@@ -191,6 +208,10 @@ class KraitMainWindow(QMainWindow):
 	@Slot(int)
 	def change_select_count(self, count):
 		self.sel_label.setText(str(count))
+
+	@Slot(int)
+	def change_current_table(self, index):
+		self.tab_widget.widget(index).emit_count()
 
 	@Slot()
 	def change_current_file(self, index):
@@ -210,6 +231,21 @@ class KraitMainWindow(QMainWindow):
 		else:
 			if self.ssr_table is not None:
 				idx = self.tab_widget.indexOf(self.ssr_table)
+				self.tab_widget.setTabVisible(idx, False)
+
+		if DB.table_exists('vntr{}'.format(rowid)):
+			if self.vntr_table is None:
+				self.vntr_table = KraitTableView(self, 'vntr')
+				self.tab_widget.addTab(self.vntr_table, "VNTR Results")
+			else:
+				idx = self.tab_widget.indexOf(self.vntr_table)
+				self.tab_widget.setTabVisible(idx, True)
+
+			self.vntr_table.update_table(rowid)
+
+		else:
+			if self.vntr_table is not None:
+				idx = self.tab_widget.indexOf(self.vntr_table)
 				self.tab_widget.setTabVisible(idx, False)
 
 	@Slot(str)
@@ -276,7 +312,200 @@ class KraitMainWindow(QMainWindow):
 			DB.insert_rows("INSERT INTO fastas VALUES (NULL,?,?,?,?)", fas)
 			self.file_table.update_table()
 
-
 	def perform_ssr_search(self):
-		threader = SSRWorkerThread(self, [12,7,5,4,4,4], 3)
+		threader = SSRWorkerThread(self)
 		threader.start()
+
+	def perform_vntr_search(self):
+		threader = VNTRWorkerThread(self)
+		threader.start()
+
+	def perform_itr_search(self):
+		threader = ITRWorkerThread(self)
+		threader.start()
+
+class ProgressCircle(QWidget):
+	valueChanged = Signal(int)
+	maximumChanged = Signal(int)
+
+	def __init__(self, parent=None):
+		super(ProgressCircle, self).__init__(parent)
+
+		self.mValue = 0
+		self.mMaximum = 0
+		self.mInnerRadius = 0.6
+		self.mOuterRadius = 1.0
+		self.mColor = QColor(110, 190, 235)
+		self.mVisibleValue = 0
+		self.mValueAnimation = QPropertyAnimation(self, b"visibleValue"),
+		self.mInfiniteAnimation =QPropertyAnimation(self, b"infiniteAnimationValue"),
+		self.mInfiniteAnimationValue = 0
+
+		self.mInfiniteAnimation.setLoopCount(-1)
+		self.mInfiniteAnimation.setDuration(1000)
+		self.mInfiniteAnimation.setStartValue(0.0)
+		self.mInfiniteAnimation.setEndValue(1.0)
+		self.mInfiniteAnimation.start()
+
+	def value(self):
+		return self.mValue
+
+	def maximum(self):
+		return self.mMaximum
+
+	def innerRadius(self):
+		return self.mInnerRadius
+
+	def outerRadius(self):
+		return self.mOuterRadius
+
+	def color(self):
+		return self.mColor
+
+	@Slot(int)
+	def setValue(self, value):
+		if value < 0:
+			value = 0
+
+		if self.mValue != value:
+			self.mValueAnimation.stop()
+			self.mValueAnimation.setEndValue(value)
+			self.mValueAnimation.setDuration(250)
+			self.mValueAnimation.start()
+
+			self.mValue = value
+			self.valueChanged.emit(value)
+
+	@Slot(int)
+	def setMaximum(self, maximum):
+		if maximum < 0:
+			maximum = 0
+
+		if self.mMaximum != maximum:
+			self.mMaximum = maximum
+			self.update()
+			self.maximumChanged.emit(maximum)
+
+			if self.mMaximum == 0:
+				self.mInfiniteAnimation.start()
+
+			else:
+				self.mInfiniteAnimation.stop()
+
+	@Slot(float)
+	def setInnerRadius(self, innerRadius):
+		if innerRadius > 1:
+			innerRadius = 1
+
+		if innerRadius < 0:
+			innerRadius = 0
+
+		if self.mInnerRadius != innerRadius:
+			self.mInnerRadius = innerRadius
+			self.update()
+
+	@Slot(float)
+	def setOuterRadius(self, outerRadius):
+		if outerRadius > 1:
+			outerRadius = 1
+
+		if outerRadius < 0:
+			outerRadius = 0
+
+		if self.mOuterRadius != outerRadius:
+			self.mOuterRadius = outerRadius
+			self.update()
+
+	def setColor(self, color):
+		if self.mColor != color:
+			self.mColor = color
+			self.update()
+
+	@staticmethod
+	def squared(rect):
+		if rect.width() > rect.height():
+			diff = rect.width() - rect.height()
+			return rect.adjusted(diff/2, 0, -diff/2, 0)
+		else:
+			diff = rect.height() - rect.width()
+			return rect.adjusted(0, diff/2, 0, -diff/2)
+
+	def paintEvent(self, event):
+		pixmap = QPixmap()
+
+		if not QPixmapCache.find(self.key(), pixmap):
+			pixmap = self.generatePixmap()
+			QPixmapCache.insert(self.key(), pixmap)
+
+		painter = QPainter(self)
+		painter.drawPixmap(0.5*(self.width() - pixmap.width()), 0.5*(self.height() - pixmap.height()), pixmap)
+
+	@Slot(float)
+	def setInfiniteAnimationValue(self, value):
+		self.mInfiniteAnimationValue = value
+		self.update()
+
+	@Slot(int)
+	def setVisibleValue(self, value):
+		if self.mVisibleValue != value:
+			self.mVisibleValue = value
+			self.update()
+
+	def key(self):
+		return "{},{},{},{},{},{},{},{}".format(
+			self.mInfiniteAnimationValue,
+			self.mVisibleValue,
+			self.mMaximum,
+			self.mInnerRadius,
+			self.mOuterRadius,
+			self.width(),
+			self.height(),
+			self.mColor.rgb()
+		)
+
+	def generatePixmap(self):
+		pixmap = QPixmap(self.squared(self.rect()).size())
+		pixmap.fill(QColor(0,0,0,0))
+		painter = QPainter(pixmap)
+		painter.setRenderHint(QPainter.Antialiasing, True)
+
+		rect = pixmap.rect().adjusted(1,1,-1,-1)
+		margin = rect.width() * (1.0 - self.mOuterRadius)/2
+		rect.adjust(margin, margin, -margin, -margin)
+		innerRadius = self.mInnerRadius * rect.width()/2
+
+		painter.setBrush(QColor(225,225,225))
+		painter.setPen(QColor(225,225,225))
+		painter.drawPie(rect, 0, 360*16)
+
+		painter.setBrush(self.mColor)
+		painter.setPen(self.mColor)
+
+		if mMaximum == 0:
+			#draw as infinite process
+			startAngle = -self.mInfiniteAnimationValue * 360 * 16
+			spanAngle = 0.15 * 360 * 16;
+			painter.drawPie(rect, startAngle, spanAngle)
+
+		else:
+			value = min(self.mVisibleValue, self.mMaximum)
+			startAngle = 90 * 16
+			spanAngle = -value * 360 * 16 / self.mMaximum
+
+			painter.drawPie(rect, startAngle, spanAngle)
+
+			#inner circle and frame
+			painter.setBrush(QColor(255,255,255))
+			painter.setPen(QColor(0,0,0, 60))
+			painter.drawEllipse(rect.center(), innerRadius, innerRadius)
+
+		#outer frame
+		painter.drawArc(rect, 0, 360*16);
+
+		return pixmap;
+
+	def infiniteAnimationValue(self):
+		return self.mInfiniteAnimationValue
+
+	def visibleValue(self):
+		return self.mVisibleValue

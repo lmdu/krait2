@@ -1,9 +1,10 @@
+from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from backend import *
 
-__all__ = ['KraitTableView']
+__all__ = ['KraitTableView', 'FastaTableView']
 
 class KraitTableSignal(QObject):
 	row_count = Signal(int)
@@ -12,7 +13,7 @@ class KraitTableSignal(QObject):
 	sel_autom = Signal()
 
 class KraitTableModel(QAbstractTableModel):
-	def __init__(self, parent=None, table='ssr', reads=100):
+	def __init__(self, parent=None, table='ssr'):
 		super(KraitTableModel, self).__init__(parent)
 
 		#signals
@@ -36,7 +37,7 @@ class KraitTableModel(QAbstractTableModel):
 		self._table = table
 
 		#number of readed rows once time
-		self._reads = reads
+		self._reads = 100
 
 		#filters
 		self._filter = ''
@@ -108,7 +109,7 @@ class KraitTableModel(QAbstractTableModel):
 				if _id in self.selected:
 					self.selected.remove(_id)
 
-			self.dataChanged.emit(index, index)
+			#self.dataChanged.emit(index, index)
 			self.signals.sel_count.emit(len(self.selected))
 			self.signals.sel_autom.emit()
 
@@ -213,11 +214,14 @@ class KraitTableModel(QAbstractTableModel):
 
 	def get_value(self, row, col):
 		if row != self.cache_row[0]:
-			_id = self.displayed[row]
-			self.cache_row[0] = row
-			self.cache_row[1] = DB.get_row(self.get_sql, (_id,))
+			self.update_cache(row)
 
 		return self.cache_row[1][col]
+
+	def update_cache(self, row):
+		_id = self.displayed[row]
+		self.cache_row[0] = row
+		self.cache_row[1] = DB.get_row(self.get_sql, (_id,))
 
 	def set_filter(self, conditions=None):
 		if conditions:
@@ -249,24 +253,29 @@ class KraitTableModel(QAbstractTableModel):
 class KraitTableView(QTableView):
 	def __init__(self, parent=None, table='ssr'):
 		super(KraitTableView, self).__init__(parent)
+		self.table = table
+
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
 		self.horizontalHeader().setStretchLastSection(True)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
-		#self.setSelectionMode(QAbstractItemView.MultiSelection)
 		self.setSortingEnabled(True)
 
 		self.checkbox = QCheckBox(self.horizontalHeader())
 		self.checkbox.setGeometry(QRect(3,5,20,20))
 		self.checkbox.clicked.connect(self.check_all_action)
 
-		self.model = KraitTableModel(self, table)
+		self.create_model()
+
 		self.model.signals.sel_autom.connect(self.change_checkbox_state)
 		self.model.signals.col_count.connect(parent.change_column_count)
 		self.model.signals.row_count.connect(parent.change_row_count)
 		self.model.signals.sel_count.connect(parent.change_select_count)
+
+	def create_model(self):
+		self.model = KraitTableModel(self, self.table)
 		self.setModel(self.model)
 
 	def update_table(self, file_index=''):
@@ -274,6 +283,11 @@ class KraitTableView(QTableView):
 
 	def get_clicked_rowid(self, index):
 		return self.model.displayed[index.row()]
+
+	def emit_count(self):
+		self.model.signals.row_count.emit(self.model.total_count)
+		self.model.signals.col_count.emit(len(self.model._header))
+		self.model.signals.sel_count.emit(len(self.model.selected))
 
 	@Slot()
 	def change_checkbox_state(self):
@@ -301,3 +315,49 @@ class KraitTableView(QTableView):
 		elif state == Qt.PartiallyChecked:
 			self.model.select_all()
 			self.checkbox.setCheckState(Qt.Checked)
+
+class FastaTableModel(KraitTableModel):
+	def __init__(self, parent=None, table="fastas"):
+		super(FastaTableModel, self).__init__(parent, table)
+		self.color_mapping = {
+			'pending': QColor(221, 221, 221),
+			'running': QColor(100, 181, 246),
+			'success': QColor(129, 199, 132),
+			'failure': QColor(229, 115, 115)
+		}
+
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
+
+		row = index.row()
+		col = index.column()
+
+		if role == Qt.DisplayRole:
+			return self.get_value(row, col)
+
+		elif col == 0 and role == Qt.CheckStateRole:
+			if self.displayed[row] in self.selected:
+				return Qt.Checked
+			else:
+				return Qt.Unchecked
+
+		elif col == 3 and role == Qt.BackgroundRole:
+			val = self.get_value(row, col)
+			return self.color_mapping.get(val, Qt.white)
+
+
+class FastaTableView(KraitTableView):
+	def __init__(self, parent=None):
+		super(FastaTableView, self).__init__(parent, "fastas")
+		self.clicked.connect(parent.change_current_file)
+
+	def create_model(self):
+		self.model = FastaTableModel(self)
+		self.setModel(self.model)
+
+	def update_status(self, fasta_id):
+		row = self.model.displayed.index(fasta_id)
+		index = self.model.createIndex(row, 3)
+		self.model.update_cache(row)
+		self.model.dataChanged.emit(index, index)
