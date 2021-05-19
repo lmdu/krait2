@@ -39,16 +39,18 @@ class WorkerThread(QThread):
 	def __init__(self, parent=None):
 		super(WorkerThread, self).__init__(parent)
 		self.signals = WorkerSignal()
+		self.signals.progress.connect(parent.change_progress)
 		self.signals.messages.connect(parent.show_status_message)
 		self.signals.errors.connect(parent.show_error_message)
 		self.signals.status.connect(parent.change_task_status)
+		self.signals.finished.connect(self.deleteLater)
 		self.columns = len(DB.get_field(self.table)) - 1
 		self.settings = QSettings()
 		self.findex = 0
 
 	@property
 	def fastas(self):
-		self.total = DB.get_one("SELECT COUNT(*) FROM fastas LIMIT 1")
+		self.total = DB.get_one("SELECT SUM(size) FROM fastas LIMIT 1")
 		for fasta in DB.query("SELECT * FROM fastas"):
 			yield fasta
 
@@ -70,7 +72,8 @@ class WorkerThread(QThread):
 		pass
 
 	def process(self):
-		processed_fasta = 0
+		progress = 0
+		processed = 0
 
 		with multiprocessing.Pool(1) as pool:
 			for fasta in self.fastas:
@@ -87,11 +90,13 @@ class WorkerThread(QThread):
 					proc = pool.apply_async(self.search, self.args(name, seq))
 					trs = proc.get()
 					DB.insert_rows(sql, self.rows(trs))
-				
-				processed_fasta += 1
 
-				p = processed_fasta/self.total
-				self.signals.progress.emit(p)
+					processed += len(seq)
+					p = int(processed/self.total*100)
+
+					if p > progress:
+						self.signals.progress.emit(p)
+						progress = p
 
 				self.change_status('success')
 
@@ -104,7 +109,7 @@ class WorkerThread(QThread):
 			self.signals.errors.emit(traceback.format_exc())
 			self.change_status('failure')
 
-		self.signals.progress.emit(1)
+		self.signals.progress.emit(100)
 		self.signals.messages.emit('Finished!')
 		self.signals.finished.emit()
 

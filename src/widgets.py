@@ -36,6 +36,7 @@ class KraitMainWindow(QMainWindow):
 		self.cssr_table = None
 		self.vntr_table = None
 		self.itr_table = None
+		self.threader = None
 
 	def closeEvent(self, event):
 		self.write_settings()
@@ -148,9 +149,10 @@ class KraitMainWindow(QMainWindow):
 		#self.tool_bar.addWidget(label)
 		#self.tool_bar.addWidget(self.file_select)
 
-		progress_circle = ProgressCircle()
-		progress_circle.setFixedSize(30, 30)
-		self.tool_bar.addWidget(progress_circle)
+		#progress_circle = ProgressCircle()
+		#progress_circle.setFixedSize(30, 30)
+		#self.tool_bar.addWidget(progress_circle)
+
 
 	def create_statusbar(self):
 		self.status_bar = self.statusBar()
@@ -174,6 +176,13 @@ class KraitMainWindow(QMainWindow):
 		self.sel_label = QLabel("0", self)
 		self.status_bar.addPermanentWidget(self.sel_label)
 
+		#progress bar
+		self.progress_bar = QProgressBar(self)
+		self.progress_bar.setMaximumWidth(100)
+		self.progress_bar.setMaximumHeight(15)
+		self.progress_bar.setAlignment(Qt.AlignCenter)
+		self.status_bar.addPermanentWidget(self.progress_bar)
+
 	def write_settings(self):
 		settings = QSettings()
 
@@ -192,6 +201,10 @@ class KraitMainWindow(QMainWindow):
 		settings.beginGroup("Window")
 		self.resize(settings.value("size", QSize(800, 600)))
 		self.move(settings.value("pos", QPoint(200, 200)))
+
+	@Slot(int)
+	def change_progress(self, p):
+		self.progress_bar.setValue(p)
 
 	@Slot(int)
 	def change_task_status(self, fasta_id):
@@ -313,199 +326,13 @@ class KraitMainWindow(QMainWindow):
 			self.file_table.update_table()
 
 	def perform_ssr_search(self):
-		threader = SSRWorkerThread(self)
-		threader.start()
+		self.threader = SSRWorkerThread(self)
+		self.threader.start()
 
 	def perform_vntr_search(self):
-		threader = VNTRWorkerThread(self)
-		threader.start()
+		self.threader = VNTRWorkerThread(self)
+		self.threader.start()
 
 	def perform_itr_search(self):
-		threader = ITRWorkerThread(self)
-		threader.start()
-
-class ProgressCircle(QWidget):
-	valueChanged = Signal(int)
-	maximumChanged = Signal(int)
-
-	def __init__(self, parent=None):
-		super(ProgressCircle, self).__init__(parent)
-
-		self.mValue = 0
-		self.mMaximum = 0
-		self.mInnerRadius = 0.6
-		self.mOuterRadius = 1.0
-		self.mColor = QColor(110, 190, 235)
-		self.mVisibleValue = 0
-		self.mValueAnimation = QPropertyAnimation(self, b"visibleValue"),
-		self.mInfiniteAnimation =QPropertyAnimation(self, b"infiniteAnimationValue"),
-		self.mInfiniteAnimationValue = 0
-
-		self.mInfiniteAnimation.setLoopCount(-1)
-		self.mInfiniteAnimation.setDuration(1000)
-		self.mInfiniteAnimation.setStartValue(0.0)
-		self.mInfiniteAnimation.setEndValue(1.0)
-		self.mInfiniteAnimation.start()
-
-	def value(self):
-		return self.mValue
-
-	def maximum(self):
-		return self.mMaximum
-
-	def innerRadius(self):
-		return self.mInnerRadius
-
-	def outerRadius(self):
-		return self.mOuterRadius
-
-	def color(self):
-		return self.mColor
-
-	@Slot(int)
-	def setValue(self, value):
-		if value < 0:
-			value = 0
-
-		if self.mValue != value:
-			self.mValueAnimation.stop()
-			self.mValueAnimation.setEndValue(value)
-			self.mValueAnimation.setDuration(250)
-			self.mValueAnimation.start()
-
-			self.mValue = value
-			self.valueChanged.emit(value)
-
-	@Slot(int)
-	def setMaximum(self, maximum):
-		if maximum < 0:
-			maximum = 0
-
-		if self.mMaximum != maximum:
-			self.mMaximum = maximum
-			self.update()
-			self.maximumChanged.emit(maximum)
-
-			if self.mMaximum == 0:
-				self.mInfiniteAnimation.start()
-
-			else:
-				self.mInfiniteAnimation.stop()
-
-	@Slot(float)
-	def setInnerRadius(self, innerRadius):
-		if innerRadius > 1:
-			innerRadius = 1
-
-		if innerRadius < 0:
-			innerRadius = 0
-
-		if self.mInnerRadius != innerRadius:
-			self.mInnerRadius = innerRadius
-			self.update()
-
-	@Slot(float)
-	def setOuterRadius(self, outerRadius):
-		if outerRadius > 1:
-			outerRadius = 1
-
-		if outerRadius < 0:
-			outerRadius = 0
-
-		if self.mOuterRadius != outerRadius:
-			self.mOuterRadius = outerRadius
-			self.update()
-
-	def setColor(self, color):
-		if self.mColor != color:
-			self.mColor = color
-			self.update()
-
-	@staticmethod
-	def squared(rect):
-		if rect.width() > rect.height():
-			diff = rect.width() - rect.height()
-			return rect.adjusted(diff/2, 0, -diff/2, 0)
-		else:
-			diff = rect.height() - rect.width()
-			return rect.adjusted(0, diff/2, 0, -diff/2)
-
-	def paintEvent(self, event):
-		pixmap = QPixmap()
-
-		if not QPixmapCache.find(self.key(), pixmap):
-			pixmap = self.generatePixmap()
-			QPixmapCache.insert(self.key(), pixmap)
-
-		painter = QPainter(self)
-		painter.drawPixmap(0.5*(self.width() - pixmap.width()), 0.5*(self.height() - pixmap.height()), pixmap)
-
-	@Slot(float)
-	def setInfiniteAnimationValue(self, value):
-		self.mInfiniteAnimationValue = value
-		self.update()
-
-	@Slot(int)
-	def setVisibleValue(self, value):
-		if self.mVisibleValue != value:
-			self.mVisibleValue = value
-			self.update()
-
-	def key(self):
-		return "{},{},{},{},{},{},{},{}".format(
-			self.mInfiniteAnimationValue,
-			self.mVisibleValue,
-			self.mMaximum,
-			self.mInnerRadius,
-			self.mOuterRadius,
-			self.width(),
-			self.height(),
-			self.mColor.rgb()
-		)
-
-	def generatePixmap(self):
-		pixmap = QPixmap(self.squared(self.rect()).size())
-		pixmap.fill(QColor(0,0,0,0))
-		painter = QPainter(pixmap)
-		painter.setRenderHint(QPainter.Antialiasing, True)
-
-		rect = pixmap.rect().adjusted(1,1,-1,-1)
-		margin = rect.width() * (1.0 - self.mOuterRadius)/2
-		rect.adjust(margin, margin, -margin, -margin)
-		innerRadius = self.mInnerRadius * rect.width()/2
-
-		painter.setBrush(QColor(225,225,225))
-		painter.setPen(QColor(225,225,225))
-		painter.drawPie(rect, 0, 360*16)
-
-		painter.setBrush(self.mColor)
-		painter.setPen(self.mColor)
-
-		if mMaximum == 0:
-			#draw as infinite process
-			startAngle = -self.mInfiniteAnimationValue * 360 * 16
-			spanAngle = 0.15 * 360 * 16;
-			painter.drawPie(rect, startAngle, spanAngle)
-
-		else:
-			value = min(self.mVisibleValue, self.mMaximum)
-			startAngle = 90 * 16
-			spanAngle = -value * 360 * 16 / self.mMaximum
-
-			painter.drawPie(rect, startAngle, spanAngle)
-
-			#inner circle and frame
-			painter.setBrush(QColor(255,255,255))
-			painter.setPen(QColor(0,0,0, 60))
-			painter.drawEllipse(rect.center(), innerRadius, innerRadius)
-
-		#outer frame
-		painter.drawArc(rect, 0, 360*16);
-
-		return pixmap;
-
-	def infiniteAnimationValue(self):
-		return self.mInfiniteAnimationValue
-
-	def visibleValue(self):
-		return self.mVisibleValue
+		self.threader = ITRWorkerThread(self)
+		self.threader.start()
