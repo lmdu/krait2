@@ -263,6 +263,8 @@ class KraitTableView(QTableView):
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
 		self.setSortingEnabled(True)
 
+		#self.setFrameStyle(QFrame.NoFrame)
+
 		self.checkbox = QCheckBox(self.horizontalHeader())
 		self.checkbox.setGeometry(QRect(3,5,20,20))
 		self.checkbox.clicked.connect(self.check_all_action)

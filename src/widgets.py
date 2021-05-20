@@ -8,6 +8,7 @@ from config import *
 from tables import *
 from backend import *
 from workers import *
+from utils import *
 
 __all__ = ['KraitMainWindow']
 
@@ -298,7 +299,16 @@ class KraitMainWindow(QMainWindow):
 		fas = []
 		for fa in files[0]:
 			qf = QFileInfo(fa)
-			fas.append((qf.baseName(), qf.size(), 'pending', fa))
+			name = qf.baseName()
+			size = qf.size()
+
+			if is_gzip_compressed(fa):
+				isize = get_uncompressed_size(fa)
+
+				if isize > size:
+					size = isize
+
+			fas.append((name, size, 'pending', fa))
 
 		if fas:
 			DB.insert_rows("INSERT INTO fastas VALUES (NULL,?,?,?,?)", fas)
@@ -319,7 +329,16 @@ class KraitMainWindow(QMainWindow):
 		while it.hasNext():
 			fa = it.next()
 			qf = QFileInfo(fa)
-			fas.append((qf.baseName(), qf.size(), 'pending', fa))
+			name = qf.baseName()
+			size = qf.size()
+
+			if is_gzip_compressed(fa):
+				isize = get_uncompressed_size(fa)
+
+				if isize > size:
+					size = isize
+
+			fas.append((name, size, 'pending', fa))
 
 		if fas:
 			DB.insert_rows("INSERT INTO fastas VALUES (NULL,?,?,?,?)", fas)

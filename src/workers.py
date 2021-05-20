@@ -9,22 +9,10 @@ from PySide6.QtCore import *
 
 from backend import *
 from motif import *
+from utils import *
 
 __all__ = ['SSRWorkerThread', 'VNTRWorkerThread',
 			'ITRWorkerThread']
-
-def iupac_number(n):
-	mapping = {
-		0: 'mono',
-		1: 'hen',
-		2: 'di',
-		3: 'tri',
-		4: 'tetra',
-		5: 'penta',
-		6: 'hexa'
-	}
-
-	return mapping.get(n, str(n))
 
 class WorkerSignal(QObject):
 	progress = Signal(int)
@@ -43,14 +31,14 @@ class WorkerThread(QThread):
 		self.signals.messages.connect(parent.show_status_message)
 		self.signals.errors.connect(parent.show_error_message)
 		self.signals.status.connect(parent.change_task_status)
-		self.signals.finished.connect(self.deleteLater)
+		#self.signals.finished.connect(self.deleteLater)
 		self.columns = len(DB.get_field(self.table)) - 1
 		self.settings = QSettings()
 		self.findex = 0
 
 	@property
 	def fastas(self):
-		self.total = DB.get_one("SELECT SUM(size) FROM fastas LIMIT 1")
+		self.total_file = DB.get_one("SELECT COUNT(1) FROM fastas LIMIT 1")
 		for fasta in DB.query("SELECT * FROM fastas"):
 			yield fasta
 
@@ -73,12 +61,13 @@ class WorkerThread(QThread):
 
 	def process(self):
 		progress = 0
-		processed = 0
+		processed_size = 0
+		processed_file = 0
 
 		with multiprocessing.Pool(1) as pool:
 			for fasta in self.fastas:
-				self.signals.messages.emit('processing file {}'.format(fasta[1]))
 				self.findex = fasta[0]
+				total_size = fasta[2]
 				#create ssr table for current file
 				DB.create_table(self.table, self.findex)
 				self.change_status('running')
@@ -87,17 +76,25 @@ class WorkerThread(QThread):
 				sql = self.sql.format(self.findex)
 
 				for name, seq, _ in seqs:
+					self.signals.messages.emit('processing sequence {} in {}'.format(name, fasta[1]))
 					proc = pool.apply_async(self.search, self.args(name, seq))
 					trs = proc.get()
 					DB.insert_rows(sql, self.rows(trs))
 
-					processed += len(seq)
-					p = int(processed/self.total*100)
+					processed_size += len(seq)
+
+					if processed_size > total_size:
+						r = 0
+					else:
+						r = processed_size/total_size
+
+					p = int((processed_file + r)/self.total_file*100)
 
 					if p > progress:
 						self.signals.progress.emit(p)
 						progress = p
 
+				processed_file += 1
 				self.change_status('success')
 
 	def run(self):
@@ -142,7 +139,7 @@ class SSRWorkerThread(WorkerThread):
 	def rows(self, ssrs):
 		for ssr in ssrs:
 			row = [ssr[0], ssr[1], ssr[2], ssr[3], self.motifs.standard(ssr[3]),
-					iupac_number(ssr[4]), ssr[5], ssr[6]]
+					iupac_numerical_multiplier(ssr[4]), ssr[5], ssr[6]]
 			yield row
 
 class CSSRWorkerThread(WorkerThread):
@@ -211,7 +208,7 @@ class VNTRWorkerThread(WorkerThread):
 	def rows(self, vntrs):
 		for vntr in vntrs:
 			row = list(vntr)
-			row[4] = iupac_number(row[4])
+			row[4] = iupac_numerical_multiplier(row[4])
 			yield row
 
 class ITRWorkerThread(WorkerThread):
