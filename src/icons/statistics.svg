@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="图层_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 256 256" style="enable-background:new 0 0 256 256;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-miterlimit:10;}
+	
+		.st1{fill-rule:evenodd;clip-rule:evenodd;fill:#3FA9F5;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+	
+		.st2{fill-rule:evenodd;clip-rule:evenodd;fill:#7AC943;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+	
+		.st3{fill-rule:evenodd;clip-rule:evenodd;fill:#FF931E;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+</style>
+<line class="st0" x1="11.4" y1="239.85" x2="244.6" y2="239.85"/>
+<g>
+	<rect x="15.4" y="177.05" class="st1" width="50" height="40"/>
+	<rect x="15.4" y="137.05" class="st1" width="50" height="40"/>
+	<rect x="15.4" y="97.05" class="st1" width="50" height="40"/>
+	<rect x="15.4" y="57.05" class="st1" width="50" height="40"/>
+	<rect x="15.4" y="17.05" class="st1" width="50" height="40"/>
+</g>
+<g>
+	
+		<rect x="107.74" y="172.05" transform="matrix(2.010025e-03 -1 1 2.010025e-03 -69.5675 324.3923)" class="st2" width="40" height="50"/>
+	
+		<rect x="107.82" y="132.05" transform="matrix(2.010025e-03 -1 1 2.010025e-03 -29.4874 284.5532)" class="st2" width="40" height="50"/>
+	
+		<rect x="107.9" y="92.05" transform="matrix(2.010025e-03 -1 1 2.010025e-03 10.5926 244.714)" class="st2" width="40" height="50"/>
+</g>
+<g>
+	
+		<rect x="195.24" y="172" transform="matrix(2.010025e-03 -1 1 2.010025e-03 17.8062 411.8417)" class="st3" width="40" height="50"/>
+	
+		<rect x="195.32" y="132" transform="matrix(2.010025e-03 -1 1 2.010025e-03 57.8862 372.0026)" class="st3" width="40" height="50"/>
+</g>
+</svg>

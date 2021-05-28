@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="图层_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 256 256" style="enable-background:new 0 0 256 256;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-miterlimit:10;}
+	
+		.st1{fill-rule:evenodd;clip-rule:evenodd;fill:#3FA9F5;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+	
+		.st2{fill-rule:evenodd;clip-rule:evenodd;fill:#7AC943;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+	
+		.st3{fill-rule:evenodd;clip-rule:evenodd;fill:#ED1E79;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+</style>
+<line class="st0" x1="9.8" y1="167" x2="243" y2="167"/>
+<g>
+	<rect x="48.05" y="18.25" class="st1" width="40" height="50"/>
+	<rect x="88.05" y="18.25" class="st1" width="40" height="50"/>
+	<g>
+		<rect x="127.95" y="18.25" class="st1" width="40" height="50"/>
+		<rect x="167.95" y="18.25" class="st1" width="40" height="50"/>
+	</g>
+</g>
+<g>
+	
+		<rect x="21.4" y="95.92" transform="matrix(2.010021e-03 -1 1 2.010021e-03 -69.6124 162.0871)" class="st2" width="50" height="40"/>
+	<rect x="61.4" y="96" transform="matrix(2.010021e-03 -1 1 2.010021e-03 -29.7735 202.1667)" class="st2" width="50" height="40"/>
+</g>
+<g>
+	
+		<rect x="141.35" y="96" transform="matrix(2.010021e-03 -1 1 2.010021e-03 50.0156 282.1163)" class="st3" width="50" height="40"/>
+	
+		<rect x="181.35" y="96.08" transform="matrix(2.010021e-03 -1 1 2.010021e-03 89.8545 322.1957)" class="st3" width="50" height="40"/>
+</g>
+<g>
+	
+		<rect x="81.4" y="195.92" transform="matrix(2.010021e-03 -1 1 2.010021e-03 -109.733 321.8858)" class="st3" width="50" height="40"/>
+	
+		<rect x="121.4" y="196" transform="matrix(2.010021e-03 -1 1 2.010021e-03 -69.894 361.9652)" class="st3" width="50" height="40"/>
+</g>
+</svg>

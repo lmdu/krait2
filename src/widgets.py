@@ -9,6 +9,7 @@ from tables import *
 from backend import *
 from workers import *
 from utils import *
+from filter import *
 
 __all__ = ['KraitMainWindow']
 
@@ -17,21 +18,25 @@ class KraitMainWindow(QMainWindow):
 		super(KraitMainWindow, self).__init__()
 
 		self.setWindowTitle("Krait2 v{}".format(KRAIT_VERSION))
-		self.setWindowIcon(QIcon('icons/logo.ico'))
+		self.setWindowIcon(QIcon('icons/logo.svg'))
 
 		self.tab_widget = QTabWidget(self)
 		self.setCentralWidget(self.tab_widget)
 		self.tab_widget.currentChanged.connect(self.change_current_table)
+
+		#self.filter_box = QLineEdit(self)
+		#self.filter_box.setPlaceholderText("e.g. motif=AT and repeat>10")
+		#self.filter_box.returnPressed.connect(self.set_table_filters)
 
 		self.create_actions()
 		self.create_menus()
 		self.create_toolbar()
 		self.create_statusbar()
 
-		self.read_settings()
-
 		self.file_table = FastaTableView(self)
 		self.tab_widget.addTab(self.file_table, "Input Files")
+
+		self.read_settings()
 
 		self.ssr_table = None
 		self.cssr_table = None
@@ -44,31 +49,41 @@ class KraitMainWindow(QMainWindow):
 
 	def create_actions(self):
 		#menu actions
-		self.open_action = QAction("&Open project", self,
+		self.open_action = QAction("&Open Project...", self,
 			shortcut = QKeySequence.Open,
 			statusTip = "Open a project file",
 			triggered = self.open_project
 		)
 
-		self.save_action = QAction("&Save project", self,
+		self.save_action = QAction("&Save Project", self,
 			shortcut = QKeySequence.Save,
 			statusTip = "Save project",
 			triggered = self.save_project
 		)
 
-		self.save_as_action = QAction("&Save project as", self,
+		self.save_as_action = QAction("&Save Project As...", self,
 			shortcut = QKeySequence.SaveAs,
 			statusTip = "Save project as",
 			triggered = self.save_project_as
 		)
 
-		self.import_action = QAction("&Import fasta files", self,
+		self.import_action = QAction("&Import Fasta Files...", self,
 			statusTip = "Import fasta files",
 			triggered = self.import_fasta_files
 		)
 
-		self.folder_action = QAction("&Import fastas from folder", self,
-			statusTip = "Import all fasta files from a folder",
+		self.folder_action = QAction("&Import Fasta Files in Folder...", self,
+			statusTip = "Import all fasta files in a folder",
+			triggered = self.import_fasta_folder
+		)
+
+		self.annotin_action = QAction("&Import Annotation Files...", self,
+			statusTip = "Import GFF or GTF formatted annotation files",
+			triggered = self.import_fasta_files
+		)
+
+		self.annotfolder_action = QAction("&Import Annotation Files in Folder...", self,
+			statusTip = "Import all GFF or GTF formatted annotation files in a folder",
 			triggered = self.import_fasta_folder
 		)
 
@@ -78,35 +93,67 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.close
 		)
 
+		#help actions
+		self.about_action = QAction("&About Krait2", self,
+			statusTip = "About",
+			triggered = self.open_about
+		)
+
+		self.doc_action = QAction("&Documentation", self,
+			shortcut = QKeySequence.HelpContents,
+			statusTip = "Documentation",
+			triggered = self.open_documentation
+		)
+
+		self.issue_action = QAction("&Report Issue", self,
+			statusTip = "Report issues",
+			triggered = self.report_issue
+		)
+
+		self.update_action = QAction("&Check for Updates", self,
+			statusTip = "Check for any updates",
+			triggered = self.check_update
+		)
+
 		#toolbar actions
-		self.search_ssr_action = QAction(QIcon("icons/ssr.png"), "Search SSRs", self,
+		self.search_ssr_action = QAction(QIcon("icons/ssr.svg"), "Search SSRs", self,
 			statusTip = "Search for perfect microsatellites",
 			triggered = self.perform_ssr_search
 		)
 
-		self.search_cssr_action = QAction(QIcon("icons/cssr.png"), "Search cSSRs", self,
+		self.search_cssr_action = QAction(QIcon("icons/cssr.svg"), "Search cSSRs", self,
 			statusTip = "Search for compound microsatellites",
 			triggered = self.close
 		)
 
-		self.search_vntr_action = QAction(QIcon("icons/vntr.png"), "Search VNTRs", self,
+		self.search_vntr_action = QAction(QIcon("icons/vntr.svg"), "Search VNTRs", self,
 			statusTip = "Search for VNTRs",
 			triggered = self.perform_vntr_search
 		)
 
-		self.search_itr_action = QAction(QIcon("icons/issr.png"), "Search ITRs", self,
+		self.search_itr_action = QAction(QIcon("icons/itr.svg"), "Search ITRs", self,
 			statusTip = "Search for imperfect tandem repeats",
 			triggered = self.perform_itr_search
 		)
 
-		self.mapping_action = QAction(QIcon("icons/locate.png"), "Mapping", self,
+		self.mapping_action = QAction(QIcon("icons/mapping.svg"), "Mapping", self,
 			statusTip = "Mapping tandem repeats to gene",
 			triggered = self.close
 		)
 
-		self.primer_action = QAction(QIcon("icons/primer.png"), "Design primer", self,
+		self.primer_action = QAction(QIcon("icons/primer.svg"), "Design primer", self,
 			statusTip = "Design primers for selected repeats",
 			triggered = self.close
+		)
+
+		self.stat_action = QAction(QIcon("icons/statistics.svg"), "Statistics", self,
+			statusTip = "Perform statistics and generate statistics report",
+			triggered = self.close
+		)
+
+		self.filter_action = QAction(QIcon("icons/filter.svg"), "Filter", self,
+			statusTip = "Filter rows from the current table",
+			triggered = self.open_filter
 		)
 
 	def create_menus(self):
@@ -118,6 +165,9 @@ class KraitMainWindow(QMainWindow):
 		self.file_menu.addAction(self.import_action)
 		self.file_menu.addAction(self.folder_action)
 		self.file_menu.addSeparator()
+		self.file_menu.addAction(self.annotin_action)
+		self.file_menu.addAction(self.annotfolder_action)
+		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.close_action)
 
 		self.edit_menu = self.menuBar().addMenu("&Edit")
@@ -125,6 +175,13 @@ class KraitMainWindow(QMainWindow):
 		self.menuBar().addSeparator()
 
 		self.help_menu = self.menuBar().addMenu("&Help")
+		self.help_menu.addAction(self.doc_action)
+		self.help_menu.addAction(self.issue_action)
+		self.help_menu.addSeparator()
+		self.help_menu.addAction(self.update_action)
+		self.help_menu.addSeparator()
+		self.help_menu.addAction(self.about_action)
+		
 
 	def create_toolbar(self):
 		self.tool_bar = self.addToolBar('')
@@ -138,6 +195,8 @@ class KraitMainWindow(QMainWindow):
 		self.tool_bar.addAction(self.search_itr_action)
 		self.tool_bar.addAction(self.mapping_action)
 		self.tool_bar.addAction(self.primer_action)
+		self.tool_bar.addAction(self.stat_action)
+		self.tool_bar.addAction(self.filter_action)
 
 		#spacer = QWidget(self)
 		#spacer.setSizePolicy(
@@ -153,6 +212,7 @@ class KraitMainWindow(QMainWindow):
 		#progress_circle = ProgressCircle()
 		#progress_circle.setFixedSize(30, 30)
 		#self.tool_bar.addWidget(progress_circle)
+		#self.tool_bar.addWidget(self.filter_box)
 
 
 	def create_statusbar(self):
@@ -355,3 +415,26 @@ class KraitMainWindow(QMainWindow):
 	def perform_itr_search(self):
 		self.threader = ITRWorkerThread(self)
 		self.threader.start()
+
+	def open_filter(self):
+		dialog = FilterDialog(self)
+		state = dialog.exec_()
+		print(state)
+
+	def open_about(self):
+		QMessageBox.about(self, "About", KRAIT_ABOUT)
+
+	def open_documentation(self):
+		QDesktopServices.openUrl(QUrl("https://krait2.readthedocs.io"))
+
+	def report_issue(self):
+		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait2/issues"))
+
+	def check_update(self):
+		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait2/releases"))
+
+	#def set_table_filters(self):
+	#	text = self.filter_box.text()
+
+	#	print(text)
+
