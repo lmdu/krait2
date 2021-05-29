@@ -254,6 +254,7 @@ class KraitTableView(QTableView):
 	def __init__(self, parent=None, table='ssr'):
 		super(KraitTableView, self).__init__(parent)
 		self.table = table
+		self.real_table = None
 
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
@@ -282,6 +283,10 @@ class KraitTableView(QTableView):
 
 	def update_table(self, file_index=''):
 		self.model.set_index(file_index)
+		self.real_table = "{}{}".format(self.table, file_index)
+
+	def set_filter(self, filters):
+		self.model.set_filter(filters)
 
 	def get_clicked_rowid(self, index):
 		return self.model.displayed[index.row()]

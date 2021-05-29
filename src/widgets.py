@@ -10,6 +10,7 @@ from backend import *
 from workers import *
 from utils import *
 from filter import *
+from preference import *
 
 __all__ = ['KraitMainWindow']
 
@@ -43,6 +44,12 @@ class KraitMainWindow(QMainWindow):
 		self.vntr_table = None
 		self.itr_table = None
 		self.threader = None
+
+		#current table in backend displayed
+		self.current_table = "fastas"
+
+		#filters
+		self.current_filter = []
 
 	def closeEvent(self, event):
 		self.write_settings()
@@ -91,6 +98,18 @@ class KraitMainWindow(QMainWindow):
 			shortcut = "Alt+Q",
 			statusTip = "Exit",
 			triggered = self.close
+		)
+
+		#edit actions
+		self.search_param_action = QAction("&Set Search Parameters", self,
+			shortcut = QKeySequence.Preferences,
+			statusTip = "Set search parameters",
+			triggered = self.open_search_param_dialog
+		)
+
+		self.primer_param_action = QAction("&Set Primer Parameters", self,
+			statusTip = "Set primer parameters",
+			triggered = self.open_primer_param_dialog
 		)
 
 		#help actions
@@ -171,8 +190,10 @@ class KraitMainWindow(QMainWindow):
 		self.file_menu.addAction(self.close_action)
 
 		self.edit_menu = self.menuBar().addMenu("&Edit")
+		self.edit_menu.addAction(self.search_param_action)
+		self.edit_menu.addAction(self.primer_param_action)
 
-		self.menuBar().addSeparator()
+		#self.menuBar().addSeparator()
 
 		self.help_menu = self.menuBar().addMenu("&Help")
 		self.help_menu.addAction(self.doc_action)
@@ -285,7 +306,10 @@ class KraitMainWindow(QMainWindow):
 
 	@Slot(int)
 	def change_current_table(self, index):
-		self.tab_widget.widget(index).emit_count()
+		widget = self.tab_widget.widget(index)
+		widget.emit_count()
+		self.current_table = widget.real_table
+		self.current_filter = []
 
 	@Slot()
 	def change_current_file(self, index):
@@ -418,8 +442,20 @@ class KraitMainWindow(QMainWindow):
 
 	def open_filter(self):
 		dialog = FilterDialog(self)
-		state = dialog.exec_()
-		print(state)
+		dialog.show()
+
+	def set_filter(self, filters):
+		table_widget = self.tab_widget.currentWidget()
+		table_widget.set_filter(filters)
+
+	def open_search_param_dialog(self):
+		dialog = PreferenceDialog(self)
+		dialog.show()
+
+	def open_primer_param_dialog(self):
+		dialog = PreferenceDialog(self)
+		dialog.goto_primer_panel()
+		dialog.show()
 
 	def open_about(self):
 		QMessageBox.about(self, "About", KRAIT_ABOUT)
@@ -432,9 +468,4 @@ class KraitMainWindow(QMainWindow):
 
 	def check_update(self):
 		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait2/releases"))
-
-	#def set_table_filters(self):
-	#	text = self.filter_box.text()
-
-	#	print(text)
 

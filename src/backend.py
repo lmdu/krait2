@@ -154,6 +154,9 @@ class DataBackend:
 	def get_field(self, table):
 		return [row[1] for row in self.query("PRAGMA table_info({})".format(table))]
 
+	def get_field_type(self, table):
+		return [row[2] for row in self.query("PRAGMA table_info({})".format(table))]
+
 	def save_to_file(self, dbfile):
 		target = apsw.Connection(dbfile)
 		return target.backup("main", self.conn, "main")
