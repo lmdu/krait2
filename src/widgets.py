@@ -135,43 +135,44 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		#toolbar actions
-		self.search_ssr_action = QAction(QIcon("icons/ssr.svg"), "Search SSRs", self,
-			statusTip = "Search for perfect microsatellites",
+		self.search_ssr_action = QAction(QIcon("icons/ssr.svg"), "SSRs", self,
+			#statusTip = "Search for perfect microsatellites",
+			toolTip = "Search for perferct microsatellites",
 			triggered = self.perform_ssr_search
 		)
 
-		self.search_cssr_action = QAction(QIcon("icons/cssr.svg"), "Search cSSRs", self,
-			statusTip = "Search for compound microsatellites",
+		self.search_cssr_action = QAction(QIcon("icons/cssr.svg"), "cSSRs", self,
+			toolTip = "Search for compound microsatellites",
 			triggered = self.close
 		)
 
-		self.search_vntr_action = QAction(QIcon("icons/vntr.svg"), "Search VNTRs", self,
-			statusTip = "Search for VNTRs",
+		self.search_vntr_action = QAction(QIcon("icons/vntr.svg"), "VNTRs", self,
+			toolTip = "Search for VNTRs",
 			triggered = self.perform_vntr_search
 		)
 
-		self.search_itr_action = QAction(QIcon("icons/itr.svg"), "Search ITRs", self,
-			statusTip = "Search for imperfect tandem repeats",
+		self.search_itr_action = QAction(QIcon("icons/itr.svg"), "ITRs", self,
+			toolTip = "Search for imperfect tandem repeats",
 			triggered = self.perform_itr_search
 		)
 
 		self.mapping_action = QAction(QIcon("icons/mapping.svg"), "Mapping", self,
-			statusTip = "Mapping tandem repeats to gene",
+			toolTip = "Mapping tandem repeats to gene",
 			triggered = self.close
 		)
 
-		self.primer_action = QAction(QIcon("icons/primer.svg"), "Design primer", self,
-			statusTip = "Design primers for selected repeats",
+		self.primer_action = QAction(QIcon("icons/primer.svg"), "Primer", self,
+			toolTip = "Design primers for selected repeats",
 			triggered = self.close
 		)
 
 		self.stat_action = QAction(QIcon("icons/statistics.svg"), "Statistics", self,
-			statusTip = "Perform statistics and generate statistics report",
+			toolTip = "Perform statistics and generate statistics report",
 			triggered = self.close
 		)
 
 		self.filter_action = QAction(QIcon("icons/filter.svg"), "Filter", self,
-			statusTip = "Filter rows from the current table",
+			toolTip = "Filter rows from the current table",
 			triggered = self.open_filter
 		)
 
@@ -208,7 +209,8 @@ class KraitMainWindow(QMainWindow):
 		self.tool_bar = self.addToolBar('')
 		self.tool_bar.setMovable(False)
 		#self.tool_bar.setIconSize(QtCore.QSize(36, 36))
-		self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		#self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
 		self.tool_bar.addAction(self.search_ssr_action)
 		self.tool_bar.addAction(self.search_cssr_action)

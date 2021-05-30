@@ -150,11 +150,17 @@ class FilterDialog(QDialog):
 		self.tree.setItemDelegate(self.delegate)
 
 		filter_box = QDialogButtonBox()
-		add_btn = QPushButton("Add filter", self)
+		add_btn = QPushButton(self)
+		add_btn.setIcon(QIcon("icons/plus.svg"))
+		add_btn.setToolTip("Add filter")
 		add_btn.clicked.connect(self.add_filter)
-		del_btn = QPushButton("Delete filter", self)
+		del_btn = QPushButton(self)
+		del_btn.setIcon(QIcon("icons/minus.svg"))
+		del_btn.setToolTip("Delete the selected filter")
 		del_btn.clicked.connect(self.delete_filter)
-		clr_btn = QPushButton("Clear filter", self)
+		clr_btn = QPushButton(self)
+		clr_btn.setIcon(QIcon("icons/clear.svg"))
+		clr_btn.setToolTip("Delete all the filters")
 		clr_btn.clicked.connect(self.clear_filter)
 		filter_box.addButton(add_btn, QDialogButtonBox.ActionRole)
 		filter_box.addButton(del_btn, QDialogButtonBox.ActionRole)
@@ -162,6 +168,7 @@ class FilterDialog(QDialog):
 
 		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
 		btn_box.button(QDialogButtonBox.Ok).setText("Update table")
+		btn_box.button(QDialogButtonBox.Ok).setIcon(QIcon("icons/update.svg"))
 		btn_box.accepted.connect(self.update_filter)
 
 		layout = QVBoxLayout()

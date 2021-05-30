@@ -12,14 +12,14 @@ from config import *
 if __name__ == '__main__':
 	multiprocessing.freeze_support()
 
-	QCoreApplication.setOrganizationName("Krait")
+	QCoreApplication.setOrganizationName("BIG")
 	QCoreApplication.setOrganizationDomain("krait2.readthedocs.io")
 	QCoreApplication.setApplicationName("Kriat2")
 
 	QSettings.setDefaultFormat(QSettings.IniFormat)
 
 	if os.name == 'nt':
-		myappid = "BIG.Tandem.Krait2.{}".format(KRAIT_VERSION)
+		myappid = "BIG.Krait.Krait2.{}".format(KRAIT_VERSION)
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 	app = QApplication(sys.argv)
