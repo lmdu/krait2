@@ -112,7 +112,8 @@ class PrimerParameterPanel(QWidget):
 		self.clr_btn.setToolTip("Delete all the primer3 tags")
 
 		btn_layout = QHBoxLayout()
-		btn_layout.addWidget(QLabel("Add other primer3 tag settings"), 1)
+		btn_layout.addWidget(QLabel("Add other primer3 tag settings"))
+		btn_layout.addWidget(PrimerTagLabel("learn more", ''), 1)
 		btn_layout.addWidget(self.add_btn)
 		btn_layout.addWidget(self.del_btn)
 		btn_layout.addWidget(self.clr_btn)
