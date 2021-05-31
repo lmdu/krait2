@@ -3,7 +3,7 @@ import apsw
 __all__ = ['DB']
 
 FASTA_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS fastas (
+CREATE TABLE IF NOT EXISTS fasta (
 	id INTEGER PRIMARY KEY,
 	name TEXT,
 	size INTEGER,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS fastas (
 """
 
 SSR_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS ssr{} (
+CREATE TABLE IF NOT EXISTS ssr_{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
 	start INTEGER,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS ssr{} (
 """
 
 VNTR_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS vntr{} (
+CREATE TABLE IF NOT EXISTS vntr_{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
 	start INTEGER,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS vntr{} (
 """
 
 CSSR_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS cssr{} (
+CREATE TABLE IF NOT EXISTS cssr_{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
 	start INTEGER,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS cssr{} (
 """
 
 ITR_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS itr{} (
+CREATE TABLE IF NOT EXISTS itr_{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
 	start INTEGER,
@@ -68,12 +68,34 @@ CREATE TABLE IF NOT EXISTS itr{} (
 )
 """
 
+PRIMER_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS primer_{} (
+	id INTEGER PRIMARY KEY,
+	locus TEXT,
+	entry INTEGER,
+	product_size INTEGER,
+	forward_seq TEXT,
+	forward_tm REAL,
+	forward_gc REAL,
+	forward_stability REAL,
+	reverse_seq TEXT,
+	reverse_tm REAL,
+	reverse_gc REAL,
+	reverse_stability REAL,
+	forward_start INTEGER,
+	forward_length INTEGER,
+	reverse_start INTEGER,
+	reverse_length INTEGER
+)
+"""
+
 TABLE_SQL_MAPPING = {
 	'fasta': FASTA_TABLE_SQL,
 	'ssr': SSR_TABLE_SQL,
 	'vntr': VNTR_TABLE_SQL,
 	'cssr': CSSR_TABLE_SQL,
-	'itr': ITR_TABLE_SQL
+	'itr': ITR_TABLE_SQL,
+	'primer': PRIMER_TABLE_SQL,
 }
 
 class DataRow(dict):
@@ -160,5 +182,8 @@ class DataBackend:
 	def save_to_file(self, dbfile):
 		target = apsw.Connection(dbfile)
 		return target.backup("main", self.conn, "main")
+
+	def clear_table(self, table, idx):
+		self.query("DELETE FROM {}".format(table))
 
 DB = DataBackend()

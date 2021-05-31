@@ -1,6 +1,7 @@
 import os
 import time
 import stria
+import primer3
 import pyfastx
 import traceback
 import multiprocessing
@@ -22,29 +23,50 @@ class WorkerSignal(QObject):
 	status = Signal(int)
 
 class WorkerThread(QThread):
-	table = ''
-
 	def __init__(self, parent=None):
-		super(WorkerThread, self).__init__(parent)
+		super().__init__(parent)
 		self.signals = WorkerSignal()
 		self.signals.progress.connect(parent.change_progress)
 		self.signals.messages.connect(parent.show_status_message)
 		self.signals.errors.connect(parent.show_error_message)
 		self.signals.status.connect(parent.change_task_status)
-		#self.signals.finished.connect(self.deleteLater)
-		self.columns = len(DB.get_field(self.table)) - 1
 		self.settings = QSettings()
+
+	def process(self):
+		pass
+
+	def error(self):
+		self.signals.errors.emit(traceback.format_exc())
+
+	def run(self):
+		self.signals.progress.emit(0)
+
+		try:
+			self.process()
+		except:
+			self.error()
+
+		self.signals.progress.emit(100)
+		self.signals.messages.emit('Finished!')
+		self.signals.finished.emit()
+
+class SearchThread(WorkerThread):
+	table = ''
+
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.columns = len(DB.get_field(self.table)) - 1
 		self.findex = 0
 
 	@property
 	def fastas(self):
-		self.total_file = DB.get_one("SELECT COUNT(1) FROM fastas LIMIT 1")
-		for fasta in DB.query("SELECT * FROM fastas"):
+		self.total_file = DB.get_one("SELECT COUNT(1) FROM fasta LIMIT 1")
+		for fasta in DB.query("SELECT * FROM fasta"):
 			yield fasta
 
 	@property
 	def sql(self):
-		return "INSERT INTO {}{{}} VALUES (NULL{})".format(
+		return "INSERT INTO {}_{{}} VALUES (NULL{})".format(
 			self.table,
 			",?" * self.columns
 		)
@@ -97,28 +119,19 @@ class WorkerThread(QThread):
 				processed_file += 1
 				self.change_status('success')
 
-	def run(self):
-		self.signals.progress.emit(0)
-
-		try:
-			self.process()
-		except:
-			self.signals.errors.emit(traceback.format_exc())
-			self.change_status('failure')
-
-		self.signals.progress.emit(100)
-		self.signals.messages.emit('Finished!')
-		self.signals.finished.emit()
+	def error(self):
+		self.signals.errors.emit(traceback.format_exc())
+		self.change_status('failure')
 
 	def change_status(self, status):
 		DB.update_status(self.findex, status)
 		self.signals.status.emit(self.findex)
 
-class SSRWorkerThread(WorkerThread):
+class SSRSearchThread(SearchThread):
 	table = 'ssr'
 
 	def __init__(self, parent):
-		super(SSRWorkerThread, self).__init__(parent)
+		super().__init__(parent)
 		self.settings.beginGroup("SSR")
 		self.min_repeats = self.settings.value('min_repeats', [12, 7, 5, 4, 4, 4])
 		self.settings.endGroup()
@@ -142,10 +155,12 @@ class SSRWorkerThread(WorkerThread):
 					iupac_numerical_multiplier(ssr[4]), ssr[5], ssr[6]]
 			yield row
 
-class CSSRWorkerThread(WorkerThread):
+class CSSRSearchThread(SearchThread):
 	table = 'cssr'
 
 	def __init__(self, parent):
+		super().__init__(parent)
+
 		self.settings.beginGroup("SSR")
 		self.min_repeats = self.settings.value('min_repeats', [12, 7, 5, 4, 4, 4])
 		self.settings.endGroup()
@@ -187,11 +202,11 @@ class CSSRWorkerThread(WorkerThread):
 		)
 	'''
 
-class VNTRWorkerThread(WorkerThread):
+class VNTRSearchThread(SearchThread):
 	table = 'vntr'
 
 	def __init__(self, parent):
-		super(VNTRWorkerThread, self).__init__(parent)
+		super().__init__(parent)
 		self.settings.beginGroup("VNTR")
 		self.min_motif = self.settings.value('min_motif', 7)
 		self.max_motif = self.settings.value('max_motif', 30)
@@ -211,7 +226,7 @@ class VNTRWorkerThread(WorkerThread):
 			row[4] = iupac_numerical_multiplier(row[4])
 			yield row
 
-class ITRWorkerThread(WorkerThread):
+class ITRSearchThread(SearchThread):
 	table = 'itr'
 
 	def __init__(self, parent):
@@ -240,3 +255,104 @@ class ITRWorkerThread(WorkerThread):
 
 	def rows(self, itrs):
 		return itrs
+
+class PrimerDesignThread(WorkerThread):
+	def __init__(self, parent=None, table=None):
+		super().__init__(parent)
+		self.table, self.findex = table.split('_')
+		self.parent = parent
+		self.batch = 100
+		self.flank_len = int(self.settings.getValue("STR/flank"))
+		self._sql = "SELECT * FROM {}_{} WHERE id IN ({})".format(table, ','.join(['?']*self.batch))
+		self._isql = "INSERT INTO primer_{} VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)".format(self.findex)
+
+		DB.create_table(self.table, self.findex)
+		DB.clear_table(table)
+
+		self.read_primer_settings()
+
+	def read_primer_settings(self):
+		self.settings.beginGroup("PRIMER")
+		self.primer_tags = {k: self.settings.getValue(k) for k in self.settings.allKeys()}
+		self.settings.endGroup()
+		size_ranges = []
+		for r in self.primer_tags['PRIMER_PRODUCT_SIZE_RANGE'].split():
+			size_ranges.append(r.split('-'))
+		self.primer_tags['PRIMER_PRODUCT_SIZE_RANGE'] = size_ranges
+
+	def sql(self, num):
+		if num == self.batch:
+			return self._sql
+		else:
+			return "SELECT * FROM {}_{} WHERE id IN ({})".format(self.table, self.findex, ','.join(['?']*num))
+
+	def process(self):
+		#get fasta file path
+		fasta_file = DB.get_one("SELECT path FROM fasta WHERE id=?", self.findex)
+		fasta = pyfastx.Fasta(fasta_file, uppercase=True)
+
+		selected = sorted(self.parent.get_selected_rows())
+		total = len(selected)
+		processed = 0
+		progress = 0
+		tr_type = self.table.split('_')[0]
+
+		primer3.bindings.setP3Globals(self.primer_tags)
+
+		while start < total:
+			end = start + self.batch
+			ids = selected[start:end]
+			primer_list = []
+
+			for tr in DB.query(self.sql(len(ids)), ids):
+				start = tr[2] - self.flank_len
+				if start < 1:
+					start = 1
+
+				end = tr[3] + self.flank_len
+
+				if end > len(fasta[tr[0]]):
+					end = len(fasta[tr[0]])
+
+				seq = fasta.fetch(tr[1], (start, end))
+				slen = tr[3] - tr[1] + 1
+
+				locus = "{}.{}.{}".format(tr_type, self.findex, tr[0])
+
+				primer3.bindings.setP3SeqArgs({
+					'SEQUENCE_ID': locus,
+					'SEQUENCE_TEMPLATE': seq,
+					'SEQUENCE_TARGET': [tr[2]-start, slen],
+					'SEQUENCE_INTERNAL_EXCLUDED_REGION': [tr[2]-start, slen]
+				})
+
+				res = primer3.bindings.runP3Design()
+
+				if res:
+					primer_count = res['PRIMER_PAIR_NUM_RETURNED']
+					
+					for i in range(primer_count):
+						primer_info = [locus, i+1,
+							res['PRIMER_PAIR_%s_PRODUCT_SIZE' % i],
+							res['PRIMER_LEFT_%s_SEQUENCE' % i],
+							round(res['PRIMER_LEFT_%s_TM' % i], 2),
+							round(res['PRIMER_LEFT_%s_GC_PERCENT' % i], 2),
+							round(res['PRIMER_LEFT_%s_END_STABILITY' % i], 2),
+							res['PRIMER_RIGHT_%s_SEQUENCE' % i],
+							round(res['PRIMER_RIGHT_%s_TM' % i], 2),
+							round(res['PRIMER_RIGHT_%s_GC_PERCENT' % i], 2),
+							round(res['PRIMER_RIGHT_%s_END_STABILITY' % i], 2),
+						]
+						primer_info.extend(res['PRIMER_LEFT_%s' % i])
+						primer_info.extend(res['PRIMER_RIGHT_%s' % i])
+						primer_list.append(primer_info)
+
+			if primer_list:
+				DB.insert_rows(self._isql, primer_list)
+
+			processed += len(ids)
+			p = int(processed/total*100)
+			if p > progress:
+				self.signals.progress.emit(p)
+				progress = p
+

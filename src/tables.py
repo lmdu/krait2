@@ -159,7 +159,7 @@ class KraitTableModel(QAbstractTableModel):
 
 	@property
 	def count_sql(self):
-		return "SELECT COUNT(1) FROM {}{} {} LIMIT 1".format(
+		return "SELECT COUNT(1) FROM {}_{} {} LIMIT 1".format(
 			self._table,
 			self._index,
 			self._filter
@@ -170,7 +170,7 @@ class KraitTableModel(QAbstractTableModel):
 		remainder = self.total_count - self.read_count
 		fetch_count = min(self._reads, remainder)
 
-		return "SELECT id FROM {}{} {} {} LIMIT {},{}".format(
+		return "SELECT id FROM {}_{} {} {} LIMIT {},{}".format(
 			self._table,
 			self._index,
 			self._filter,
@@ -181,7 +181,7 @@ class KraitTableModel(QAbstractTableModel):
 
 	@property
 	def all_sql(self):
-		return "SELECT id FROM {}{} {}".format(
+		return "SELECT id FROM {}_{} {}".format(
 			self._table,
 			self._index,
 			self._filter
@@ -189,7 +189,7 @@ class KraitTableModel(QAbstractTableModel):
 
 	@property
 	def get_sql(self):
-		return "SELECT * FROM {}{} {} {} {} LIMIT 1".format(
+		return "SELECT * FROM {}_{} {} {} {} LIMIT 1".format(
 			self._table,
 			self._index,
 			self._filter,
@@ -283,13 +283,16 @@ class KraitTableView(QTableView):
 
 	def update_table(self, file_index=''):
 		self.model.set_index(file_index)
-		self.real_table = "{}{}".format(self.table, file_index)
+		self.real_table = "{}_{}".format(self.table, file_index)
 
 	def set_filter(self, filters):
 		self.model.set_filter(filters)
 
 	def get_clicked_rowid(self, index):
 		return self.model.displayed[index.row()]
+
+	def get_selected_rows(self):
+		return self.model.selected
 
 	def emit_count(self):
 		self.model.signals.row_count.emit(self.model.total_count)
@@ -324,7 +327,7 @@ class KraitTableView(QTableView):
 			self.checkbox.setCheckState(Qt.Checked)
 
 class FastaTableModel(KraitTableModel):
-	def __init__(self, parent=None, table="fastas"):
+	def __init__(self, parent=None, table="fasta"):
 		super(FastaTableModel, self).__init__(parent, table)
 		self.color_mapping = {
 			'pending': QColor(221, 221, 221),
@@ -356,7 +359,7 @@ class FastaTableModel(KraitTableModel):
 
 class FastaTableView(KraitTableView):
 	def __init__(self, parent=None):
-		super(FastaTableView, self).__init__(parent, "fastas")
+		super(FastaTableView, self).__init__(parent, "fasta")
 		self.clicked.connect(parent.change_current_file)
 
 	def create_model(self):

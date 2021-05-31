@@ -46,7 +46,7 @@ class KraitMainWindow(QMainWindow):
 		self.threader = None
 
 		#current table in backend displayed
-		self.current_table = "fastas"
+		self.current_table = "fasta"
 
 		#filters
 		self.current_filter = []
@@ -442,6 +442,10 @@ class KraitMainWindow(QMainWindow):
 		self.threader = ITRWorkerThread(self)
 		self.threader.start()
 
+	def perform_primer_design(self):
+		self.threader = PrimerDesignThread(self, self.current_table)
+		self.threader.start()
+
 	def open_filter(self):
 		dialog = FilterDialog(self)
 		dialog.show()
@@ -471,3 +475,6 @@ class KraitMainWindow(QMainWindow):
 	def check_update(self):
 		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/krait2/releases"))
 
+	def get_selected_rows(self):
+		table_widget = self.tab_widget.currentWidget()
+		return table_widget.get_selected_rows()
