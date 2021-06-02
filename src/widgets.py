@@ -397,7 +397,7 @@ class KraitMainWindow(QMainWindow):
 			fas.append((name, size, 'pending', fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fastas VALUES (NULL,?,?,?,?)", fas)
+			DB.insert_rows("INSERT INTO fasta VALUES (NULL,?,?,?,?)", fas)
 			self.file_table.update_table()
 
 	def import_fasta_folder(self):
@@ -427,19 +427,24 @@ class KraitMainWindow(QMainWindow):
 			fas.append((name, size, 'pending', fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fastas VALUES (NULL,?,?,?,?)", fas)
+			DB.insert_rows("INSERT INTO fasta VALUES (NULL,?,?,?,?)", fas)
 			self.file_table.update_table()
 
 	def perform_ssr_search(self):
-		self.threader = SSRWorkerThread(self)
+		self.threader = SSRSearchThread(self)
 		self.threader.start()
 
 	def perform_vntr_search(self):
-		self.threader = VNTRWorkerThread(self)
-		self.threader.start()
+		#self.threader = VNTRSearchThread(self)
+		#self.threader.start()
+
+		if self.threader:
+			print('yes')
+		else:
+			print('no')
 
 	def perform_itr_search(self):
-		self.threader = ITRWorkerThread(self)
+		self.threader = ITRSearchThread(self)
 		self.threader.start()
 
 	def perform_primer_design(self):

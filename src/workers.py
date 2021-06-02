@@ -12,8 +12,8 @@ from backend import *
 from motif import *
 from utils import *
 
-__all__ = ['SSRWorkerThread', 'VNTRWorkerThread',
-			'ITRWorkerThread']
+__all__ = ['SSRSearchThread', 'VNTRSearchThread',
+			'ITRSearchThread', 'PrimerDesignThread']
 
 class WorkerSignal(QObject):
 	progress = Signal(int)
