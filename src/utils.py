@@ -1,8 +1,11 @@
 import sys
 import struct
 
+from config import PRIMER_PARAMETERS
+
 __all__ = ["get_uncompressed_size", "is_gzip_compressed",
-			"iupac_numerical_multiplier"]
+			"iupac_numerical_multiplier", "primer_tag_format",
+			"product_size_format"]
 
 def is_gzip_compressed(fpath):
 	with open(fpath, 'rb') as f:
@@ -84,6 +87,18 @@ def iupac_numerical_multiplier(num):
 			affixs.append(mapping[n])
 
 	return ''.join(affixs)
+
+def product_size_format(ranges):
+	size_ranges = []
+	for r in ranges.split():
+		size_ranges.append([int(n) for n in r.split('-')])
+	return size_ranges
+
+def primer_tag_format(tag):
+	try:
+		return PRIMER_PARAMETERS[tag]
+	except:
+		raise Exception("The {} tag is not a primer3 tag".format(tag))
 
 if __name__ == '__main__':
 	affix = iupac_numerical_multiplier(int(sys.argv[1]))

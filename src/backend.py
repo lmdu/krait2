@@ -3,7 +3,7 @@ import apsw
 __all__ = ['DB']
 
 FASTA_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS fasta (
+CREATE TABLE IF NOT EXISTS fasta_0 (
 	id INTEGER PRIMARY KEY,
 	name TEXT,
 	size INTEGER,
@@ -139,11 +139,14 @@ class DataBackend:
 		sql = TABLE_SQL_MAPPING[table].format(idx)
 		self.cursor.execute(sql)
 
+	def clear_table(self, table, idx):
+		self.query("DELETE FROM {}_{}".format(table, idx))
+
 	def insert_rows(self, sql, rows):
 		self.cursor.executemany(sql, rows)
 
 	def update_status(self, rowid, status):
-		sql = "UPDATE fastas SET status=? WHERE id=?"
+		sql = "UPDATE fasta_0 SET status=? WHERE id=?"
 		self.query(sql, (status, rowid))
 
 	def query(self, sql, paras=None):
@@ -182,8 +185,5 @@ class DataBackend:
 	def save_to_file(self, dbfile):
 		target = apsw.Connection(dbfile)
 		return target.backup("main", self.conn, "main")
-
-	def clear_table(self, table, idx):
-		self.query("DELETE FROM {}".format(table))
 
 DB = DataBackend()

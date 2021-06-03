@@ -4,7 +4,8 @@ from PySide6.QtWidgets import *
 
 from backend import *
 
-__all__ = ['KraitTableView', 'FastaTableView']
+__all__ = ['KraitTableView', 'FastaTableView',
+			'PrimerTableView']
 
 class KraitTableSignal(QObject):
 	row_count = Signal(int)
@@ -46,10 +47,9 @@ class KraitTableModel(QAbstractTableModel):
 		self._orderby = ''
 
 		#input file index 
-		self._index = ''
+		self._index = 0
 
-		#get column names
-		self._header = DB.get_field(table)
+		self._header = []
 
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():
@@ -155,6 +155,8 @@ class KraitTableModel(QAbstractTableModel):
 	def set_index(self, file_index):
 		"""set current file index"""
 		self._index = file_index
+		#get column names
+		self._header = DB.get_field("{}_{}".format(self._table, self._index))
 		self.reset_table()
 
 	@property
@@ -281,7 +283,7 @@ class KraitTableView(QTableView):
 		self.model = KraitTableModel(self, self.table)
 		self.setModel(self.model)
 
-	def update_table(self, file_index=''):
+	def update_table(self, file_index=0):
 		self.model.set_index(file_index)
 		self.real_table = "{}_{}".format(self.table, file_index)
 
@@ -359,7 +361,7 @@ class FastaTableModel(KraitTableModel):
 
 class FastaTableView(KraitTableView):
 	def __init__(self, parent=None):
-		super(FastaTableView, self).__init__(parent, "fasta")
+		super().__init__(parent, "fasta")
 		self.clicked.connect(parent.change_current_file)
 
 	def create_model(self):
@@ -371,3 +373,15 @@ class FastaTableView(KraitTableView):
 		index = self.model.createIndex(row, 3)
 		self.model.update_cache(row)
 		self.model.dataChanged.emit(index, index)
+
+class PrimerTableModel(KraitTableModel):
+	def __init__(self, parent=None, table="primer"):
+		super().__init__(parent, table)
+
+class PrimerTableView(KraitTableView):
+	def __init__(self, parent=None):
+		super().__init__(parent, "primer")
+
+	def create_model(self):
+		self.model = PrimerTableModel(self)
+		self.setModel(self.model)

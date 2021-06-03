@@ -39,14 +39,21 @@ class KraitMainWindow(QMainWindow):
 
 		self.read_settings()
 
-		self.ssr_table = None
-		self.cssr_table = None
-		self.vntr_table = None
-		self.itr_table = None
+		self.table_widgets = {
+			'ssr': None,
+			'cssr': None,
+			'vntr': None,
+			'itr': None,
+			'primer': None
+		}
+
 		self.threader = None
 
 		#current table in backend displayed
 		self.current_table = "fasta"
+
+		#current fasta file id
+		self.current_file = 0
 
 		#filters
 		self.current_filter = []
@@ -163,7 +170,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.primer_action = QAction(QIcon("icons/primer.svg"), "Primer", self,
 			toolTip = "Design primers for selected repeats",
-			triggered = self.close
+			triggered = self.perform_primer_design
 		)
 
 		self.stat_action = QAction(QIcon("icons/statistics.svg"), "Statistics", self,
@@ -286,6 +293,31 @@ class KraitMainWindow(QMainWindow):
 		self.resize(settings.value("size", QSize(800, 600)))
 		self.move(settings.value("pos", QPoint(200, 200)))
 
+	def show_table(self, table):
+		if DB.table_exists("{}_{}".format(table, self.current_file)):
+			if self.table_widgets[table] is None:
+				if table == 'primer':
+					self.table_widgets[table] = PrimerTableView(self)
+					title = "Primer Results"
+				else:
+					self.table_widgets[table] = KraitTableView(self, table)
+					title = "{} Results".format(table.upper())
+
+				self.tab_widget.addTab(self.table_widgets[table], title)
+			else:
+				idx = self.tab_widget.indexOf(self.table_widgets[table])
+				self.tab_widget.setTabVisible(idx, True)
+
+			self.table_widgets[table].update_table(self.current_file)
+		else:
+			if self.table_widgets[table] is not None:
+				idx = self.tab_widget.indexOf(self.table_widgets[table])
+				self.tab_widget.setTabVisible(idx, False)
+
+	@Slot()
+	def show_primer_table(self):
+		self.show_table('primer')
+
 	@Slot(int)
 	def change_progress(self, p):
 		self.progress_bar.setValue(p)
@@ -315,38 +347,12 @@ class KraitMainWindow(QMainWindow):
 
 	@Slot()
 	def change_current_file(self, index):
+		#get current fasta id in backend
+		self.current_file = self.file_table.get_clicked_rowid(index)
 		tables = ['ssr', 'cssr', 'vntr', 'itr', 'primer']
-		rowid = self.file_table.get_clicked_rowid(index)
 
-		if DB.table_exists('ssr{}'.format(rowid)):
-			if self.ssr_table is None:
-				self.ssr_table = KraitTableView(self, 'ssr')
-				self.tab_widget.addTab(self.ssr_table, "SSR Results")
-			else:
-				idx = self.tab_widget.indexOf(self.ssr_table)
-				self.tab_widget.setTabVisible(idx, True)
-
-			self.ssr_table.update_table(rowid)
-
-		else:
-			if self.ssr_table is not None:
-				idx = self.tab_widget.indexOf(self.ssr_table)
-				self.tab_widget.setTabVisible(idx, False)
-
-		if DB.table_exists('vntr{}'.format(rowid)):
-			if self.vntr_table is None:
-				self.vntr_table = KraitTableView(self, 'vntr')
-				self.tab_widget.addTab(self.vntr_table, "VNTR Results")
-			else:
-				idx = self.tab_widget.indexOf(self.vntr_table)
-				self.tab_widget.setTabVisible(idx, True)
-
-			self.vntr_table.update_table(rowid)
-
-		else:
-			if self.vntr_table is not None:
-				idx = self.tab_widget.indexOf(self.vntr_table)
-				self.tab_widget.setTabVisible(idx, False)
+		for table in tables:
+			self.show_table(table)
 
 	@Slot(str)
 	def show_status_message(self, msg):
@@ -397,7 +403,7 @@ class KraitMainWindow(QMainWindow):
 			fas.append((name, size, 'pending', fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fasta VALUES (NULL,?,?,?,?)", fas)
+			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?)", fas)
 			self.file_table.update_table()
 
 	def import_fasta_folder(self):
@@ -427,7 +433,7 @@ class KraitMainWindow(QMainWindow):
 			fas.append((name, size, 'pending', fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fasta VALUES (NULL,?,?,?,?)", fas)
+			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?)", fas)
 			self.file_table.update_table()
 
 	def perform_ssr_search(self):
@@ -449,6 +455,7 @@ class KraitMainWindow(QMainWindow):
 
 	def perform_primer_design(self):
 		self.threader = PrimerDesignThread(self, self.current_table)
+		self.threader.finished.connect(self.show_primer_table)
 		self.threader.start()
 
 	def open_filter(self):

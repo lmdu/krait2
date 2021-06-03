@@ -11,6 +11,7 @@ from PySide6.QtCore import *
 from backend import *
 from motif import *
 from utils import *
+from config import *
 
 __all__ = ['SSRSearchThread', 'VNTRSearchThread',
 			'ITRSearchThread', 'PrimerDesignThread']
@@ -36,7 +37,9 @@ class WorkerThread(QThread):
 		pass
 
 	def error(self):
-		self.signals.errors.emit(traceback.format_exc())
+		errmsg = traceback.format_exc()
+		self.signals.errors.emit(errmsg)
+		print(errmsg)
 
 	def run(self):
 		self.signals.progress.emit(0)
@@ -51,22 +54,25 @@ class WorkerThread(QThread):
 		self.signals.finished.emit()
 
 class SearchThread(WorkerThread):
-	table = ''
+	_table = ''
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
-		self.columns = len(DB.get_field(self.table)) - 1
 		self.findex = 0
 
 	@property
-	def fastas(self):
-		self.total_file = DB.get_one("SELECT COUNT(1) FROM fasta LIMIT 1")
-		for fasta in DB.query("SELECT * FROM fasta"):
-			yield fasta
+	def table(self):
+		return "{}_{}".format(self._table, self.findex)
 
 	@property
+	def fastas(self):
+		self.total_file = DB.get_one("SELECT COUNT(1) FROM fasta_0 LIMIT 1")
+		for fasta in DB.query("SELECT * FROM fasta_0"):
+			yield fasta
+
 	def sql(self):
-		return "INSERT INTO {}_{{}} VALUES (NULL{})".format(
+		self.columns = len(DB.get_field(self.table)) - 1
+		return "INSERT INTO {} VALUES (NULL{})".format(
 			self.table,
 			",?" * self.columns
 		)
@@ -90,28 +96,27 @@ class SearchThread(WorkerThread):
 			for fasta in self.fastas:
 				self.findex = fasta[0]
 				total_size = fasta[2]
+
 				#create ssr table for current file
-				DB.create_table(self.table, self.findex)
+				DB.create_table(self._table, self.findex)
 				self.change_status('running')
 
 				seqs = pyfastx.Fastx(fasta[4], uppercase=True)
-				sql = self.sql.format(self.findex)
+				sql = self.sql()
 
 				for name, seq, _ in seqs:
-					self.signals.messages.emit('processing sequence {} in {}'.format(name, fasta[1]))
+					self.signals.messages.emit('processing sequence {} in file {}'.format(name, fasta[1]))
+
 					proc = pool.apply_async(self.search, self.args(name, seq))
 					trs = proc.get()
 					DB.insert_rows(sql, self.rows(trs))
 
 					processed_size += len(seq)
-
 					if processed_size > total_size:
 						r = 0
 					else:
 						r = processed_size/total_size
-
 					p = int((processed_file + r)/self.total_file*100)
-
 					if p > progress:
 						self.signals.progress.emit(p)
 						progress = p
@@ -128,18 +133,22 @@ class SearchThread(WorkerThread):
 		self.signals.status.emit(self.findex)
 
 class SSRSearchThread(SearchThread):
-	table = 'ssr'
+	_table = 'ssr'
 
 	def __init__(self, parent):
 		super().__init__(parent)
 		self.settings.beginGroup("SSR")
-		self.min_repeats = self.settings.value('min_repeats', [12, 7, 5, 4, 4, 4])
+		self.min_repeats = [
+			self.settings.value('mono', 12, int),
+			self.settings.value('di', 7, int),
+			self.settings.value('tri', 5, int),
+			self.settings.value('tetra', 4, int),
+			self.settings.value('penta', 4, int),
+			self.settings.value('hexa', 4, int)
+		]
 		self.settings.endGroup()
-		self.min_repeats = [int(mr) for mr in self.min_repeats]
 
-		self.settings.beginGroup("Stat")
-		standard_level = self.settings.value('standard_level', 0, int)
-		self.settings.endGroup()
+		standard_level = self.settings.value('STR/level', 3, type=int)
 		self.motifs = StandardMotif(standard_level)
 
 	def args(self, name, seq):
@@ -156,19 +165,18 @@ class SSRSearchThread(SearchThread):
 			yield row
 
 class CSSRSearchThread(SearchThread):
-	table = 'cssr'
+	_table = 'cssr'
 
 	def __init__(self, parent):
 		super().__init__(parent)
+		params = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
+		self.min_repeats = []
+		for param in params:
+			default, func = KRAIT_PARAMETERS[param]
+			self.min_repeats.append(self.settings.value(param, default, func))
 
-		self.settings.beginGroup("SSR")
-		self.min_repeats = self.settings.value('min_repeats', [12, 7, 5, 4, 4, 4])
-		self.settings.endGroup()
-		self.min_repeats = [int(mr) for mr in self.min_repeats]
-
-		self.settings.beginGroup("CSSR")
-		self.dmax = self.settings.value('dmax', 10)
-		self.settings.endGroup()
+		default, func = KRAIT_PARAMETERS['CSSR/dmax']
+		self.dmax = self.settings.value('CSSR/dmax', default, func)
 
 	def args(self, name, seq):
 		return (name, seq, self.min_repeats)
@@ -203,18 +211,19 @@ class CSSRSearchThread(SearchThread):
 	'''
 
 class VNTRSearchThread(SearchThread):
-	table = 'vntr'
+	_table = 'vntr'
 
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.settings.beginGroup("VNTR")
-		self.min_motif = self.settings.value('min_motif', 7)
-		self.max_motif = self.settings.value('max_motif', 30)
-		self.min_repeat = self.settings.value('min_repeat', 3)
-		self.settings.endGroup()
+		self.params = []
+
+		params = ['VNTR/minmotif', 'VNTR/maxmotif', 'VNTR/minrepeat']
+		for param in params:
+			default, func = KRAIT_PARAMETERS[param]
+			self.params.append(self.settings.value(param, default, func))
 
 	def args(self, name, seq):
-		return (name, seq, self.min_motif, self.max_motif, self.min_repeat)
+		return (name, seq, *self.params)
 
 	@staticmethod
 	def search(*args):
@@ -227,27 +236,20 @@ class VNTRSearchThread(SearchThread):
 			yield row
 
 class ITRSearchThread(SearchThread):
-	table = 'itr'
+	_table = 'itr'
 
 	def __init__(self, parent):
 		super(ITRWorkerThread, self).__init__(parent)
-		self.settings.beginGroup("ITR")
-		self.min_motif = self.settings.value('min_motif', 1)
-		self.max_motif = self.settings.value('max_motif', 6)
-		self.min_srep = self.settings.value('min_srep', 3)
-		self.min_slen = self.settings.value('min_slen', 10)
-		self.max_errors = self.settings.value('max_errors', 2)
-		self.sub_penalty = self.settings.value('sub_penalty', 0.5)
-		self.ins_penalty = self.settings.value('ins_penalty', 1.0)
-		self.del_penalty = self.settings.value('del_penalty', 1.0)
-		self.min_ratio = self.settings.value('min_ratio', 0.7)
-		self.max_extend = self.settings.value('max_extend', 2000)
-		self.settings.endGroup()
+		self.params = []
+		params = ['ITR/minmsize', 'ITR/maxmsize', 'ITR/minsrep', 'ITR/minslen',
+					'ITR/maxerr', 'ITR/subpena', 'ITR/inspena', 'ITR/delpena',
+					'ITR/matratio', 'ITR/maxextend']
+		for param in params:
+			default, func = KRAIT_PARAMETERS[param]
+			self.params.append(self.settings.value(param, default, func))
 
 	def args(self, name, seq):
-		return (name, seq, self.min_motif, self.max_motif, self.min_srep, self.min_slen,
-				self.max_errors, self.sub_penalty, self.ins_penalty, self.del_penalty,
-				self.min_ratio, self.max_extend)
+		return (name, seq, *self.params)
 
 	@staticmethod
 	def search(*args):
@@ -259,26 +261,44 @@ class ITRSearchThread(SearchThread):
 class PrimerDesignThread(WorkerThread):
 	def __init__(self, parent=None, table=None):
 		super().__init__(parent)
-		self.table, self.findex = table.split('_')
 		self.parent = parent
 		self.batch = 100
-		self.flank_len = int(self.settings.getValue("STR/flank"))
-		self._sql = "SELECT * FROM {}_{} WHERE id IN ({})".format(table, ','.join(['?']*self.batch))
-		self._isql = "INSERT INTO primer_{} VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)".format(self.findex)
 
-		DB.create_table(self.table, self.findex)
-		DB.clear_table(table)
+		#current table is tandem repeat table, not primer table
+		self.table, self.findex = table.split('_')		
+
+		param = "STR/flank"
+		default, func = KRAIT_PARAMETERS[param]
+		self.flank_len = self.settings.value(param, default, func)
+		
+		self._sql = "SELECT * FROM {} WHERE id IN ({})".format(table, ','.join(['?']*self.batch))
+		self._isql = "INSERT INTO primer_{} VALUES (NULL{})".format(self.findex, ',?'*15)
+
+		DB.create_table('primer', self.findex)
+		DB.clear_table('primer', self.findex)
 
 		self.read_primer_settings()
 
 	def read_primer_settings(self):
+		self.primer_tags = {}
+
 		self.settings.beginGroup("PRIMER")
-		self.primer_tags = {k: self.settings.getValue(k) for k in self.settings.allKeys()}
+		for k in self.settings.allKeys():
+			default, func = primer_tag_format(k)
+			self.primer_tags[k] = self.settings.value(k, default, func)
 		self.settings.endGroup()
-		size_ranges = []
-		for r in self.primer_tags['PRIMER_PRODUCT_SIZE_RANGE'].split():
-			size_ranges.append(r.split('-'))
-		self.primer_tags['PRIMER_PRODUCT_SIZE_RANGE'] = size_ranges
+
+		if not self.primer_tags:
+			for param in PRIMER_COMMONS:
+				default, _ = PRIMER_PARAMETERS[param]
+				self.primer_tags = default
+
+		size_ranges = self.primer_tags['PRIMER_PRODUCT_SIZE_RANGE']
+		self.primer_tags['PRIMER_PRODUCT_SIZE_RANGE'] =	product_size_format(size_ranges)
+		self.primer_tags['PRIMER_TASK'] = 'generic'
+		self.primer_tags['PRIMER_PICK_LEFT_PRIMER'] = 1
+		self.primer_tags['PRIMER_PICK_INTERNAL_OLIGO'] = 0
+		self.primer_tags['PRIMER_PICK_RIGHT_PRIMER'] = 1
 
 	def sql(self, num):
 		if num == self.batch:
@@ -288,45 +308,51 @@ class PrimerDesignThread(WorkerThread):
 
 	def process(self):
 		#get fasta file path
-		fasta_file = DB.get_one("SELECT path FROM fasta WHERE id=?", self.findex)
+		fasta_file = DB.get_one("SELECT path FROM fasta_0 WHERE id=?", self.findex)
 		fasta = pyfastx.Fasta(fasta_file, uppercase=True)
 
+		print(self.primer_tags)
+
+		primer3.bindings.setP3Globals(self.primer_tags)
+		
 		selected = sorted(self.parent.get_selected_rows())
 		total = len(selected)
 		processed = 0
 		progress = 0
-		tr_type = self.table.split('_')[0]
+		slice_start = 0
+		slice_end = 0
 
-		primer3.bindings.setP3Globals(self.primer_tags)
+		while slice_start < total:
+			slice_end = slice_start + self.batch
+			ids = selected[slice_start:slice_end]
+			slice_start = slice_end
 
-		while start < total:
-			end = start + self.batch
-			ids = selected[start:end]
 			primer_list = []
-
 			for tr in DB.query(self.sql(len(ids)), ids):
-				start = tr[2] - self.flank_len
-				if start < 1:
-					start = 1
+				tr_start = tr[2] - self.flank_len
+				if tr_start < 1:
+					tr_start = 1
 
-				end = tr[3] + self.flank_len
+				tr_end = tr[3] + self.flank_len
 
-				if end > len(fasta[tr[0]]):
-					end = len(fasta[tr[0]])
+				if tr_end > len(fasta[tr[1]]):
+					tr_end = len(fasta[tr[1]])
 
-				seq = fasta.fetch(tr[1], (start, end))
-				slen = tr[3] - tr[1] + 1
+				tr_seq = fasta.fetch(tr[1], (tr_start, tr_end))
+				tr_len = tr[3] - tr[2] + 1
 
-				locus = "{}.{}.{}".format(tr_type, self.findex, tr[0])
+				locus = "{}.{}.{}".format(self.table, self.findex, tr[0])
 
 				primer3.bindings.setP3SeqArgs({
 					'SEQUENCE_ID': locus,
-					'SEQUENCE_TEMPLATE': seq,
-					'SEQUENCE_TARGET': [tr[2]-start, slen],
-					'SEQUENCE_INTERNAL_EXCLUDED_REGION': [tr[2]-start, slen]
+					'SEQUENCE_TEMPLATE': tr_seq,
+					'SEQUENCE_TARGET': [tr[2]-tr_start, tr_len],
+					#'SEQUENCE_INTERNAL_EXCLUDED_REGION': [tr[2]-tr_start, tr_len]
 				})
 
 				res = primer3.bindings.runP3Design()
+
+				print(res)
 
 				if res:
 					primer_count = res['PRIMER_PAIR_NUM_RETURNED']

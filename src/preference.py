@@ -2,6 +2,8 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
+from config import *
+
 __all__ = ['PreferenceDialog']
 
 class PrimerTagLabel(QLabel):
@@ -134,21 +136,21 @@ class PrimerParameterPanel(QWidget):
 		self.setLayout(mainLayout)
 
 		self._mappings = {
-			'PRIMER/PRIMER_PRODUCT_SIZE_RANGE': (self.product_size, '100-300', str),
-			'PRIMER/PRIMER_NUM_RETURN': (self.primer_num, 1, int),
-			'PRIMER/PRIMER_MIN_SIZE': (self.size_min, 18, int),
-			'PRIMER/PRIMER_OPT_SIZE': (self.size_opt, 20, int),
-			'PRIMER/PRIMER_MAX_SIZE': (self.size_max, 27, int),
-			'PRIMER/PRIMER_MIN_GC': (self.gc_min, 20, float),
-			'PRIMER/PRIMER_OPT_GC_PERCENT': (self.gc_opt, 50, float),
-			'PRIMER/PRIMER_MAX_GC': (self.gc_max, 80, float),
-			'PRIMER/PRIMER_MIN_TM': (self.tm_min, 57, float),
-			'PRIMER/PRIMER_OPT_TM': (self.tm_opt, 60, float),
-			'PRIMER/PRIMER_MAX_TM': (self.tm_max, 63, float),
-			'PRIMER/PRIMER_MAX_NS_ACCEPTED': (self.max_ns, 0, int),
-			'PRIMER/PRIMER_GC_CLAMP': (self.gc_clamp, 0, int),
-			'PRIMER/PRIMER_PAIR_MAX_DIFF_TM': (self.max_diff_tm, 100, float),
-			'PRIMER/PRIMER_MAX_END_STABILITY': (self.max_end_stability, 100, float)
+			'PRIMER_PRODUCT_SIZE_RANGE': self.product_size,
+			'PRIMER_NUM_RETURN': self.primer_num,
+			'PRIMER_MIN_SIZE': self.size_min,
+			'PRIMER_OPT_SIZE': self.size_opt,
+			'PRIMER_MAX_SIZE': self.size_max,
+			'PRIMER_MIN_GC': self.gc_min,
+			'PRIMER_OPT_GC_PERCENT': self.gc_opt,
+			'PRIMER_MAX_GC': self.gc_max,
+			'PRIMER_MIN_TM': self.tm_min,
+			'PRIMER_OPT_TM': self.tm_opt,
+			'PRIMER_MAX_TM': self.tm_max,
+			'PRIMER_MAX_NS_ACCEPTED': self.max_ns,
+			'PRIMER_GC_CLAMP': self.gc_clamp,
+			'PRIMER_PAIR_MAX_DIFF_TM': self.max_diff_tm,
+			'PRIMER_MAX_END_STABILITY': self.max_end_stability,
 		}
 
 		self.read_settings()
@@ -170,17 +172,18 @@ class PrimerParameterPanel(QWidget):
 
 	def read_settings(self):
 		for param in self._mappings:
-			box, default, func = self._mappings[param]
+			box = self._mappings[param]
+			default, func = PRIMER_PARAMETERS[param]
 
 			if box == self.product_size:
 				box.setText(self.settings.value(param, default))
 			else:
-				box.setValue(func(self.settings.value(param, default)))
+				box.setValue(self.settings.value(param, default, func))
 
 		self.settings.beginGroup("PRIMER")
 
 		for k in self.settings.allKeys():
-			if "PRIMER/{}".format(k) not in self._mappings:
+			if k not in self._mappings:
 				item = QTreeWidgetItem(self.tree, [k, self.settings.value(k)])
 				item.setFlags(item.flags() | Qt.ItemIsEditable)
 				self.tree.addTopLevelItem(item)
@@ -188,8 +191,9 @@ class PrimerParameterPanel(QWidget):
 		self.settings.endGroup()
 
 	def write_settings(self):
+		self.settings.beginGroup("PRIMER")
 		for param in self._mappings:
-			box, _, _ = self._mappings[param]
+			box = self._mappings[param]
 
 			if box == self.product_size:
 				self.settings.setValue(param, box.text())
@@ -206,10 +210,9 @@ class PrimerParameterPanel(QWidget):
 			if tag and val:
 				params[tag] = val
 
-		self.settings.beginGroup("PRIMER")
 		#delete other params
 		for k in self.settings.allKeys():
-			if "PRIMER/{}".format(k) not in self._mappings:
+			if k not in self._mappings:
 				if k not in params:
 					self.settings.remove(k)
 
@@ -249,7 +252,8 @@ class SearchParameterPanel(QWidget):
 		ssr_layout.setColumnStretch(1, 1)
 		ssr_layout.setColumnStretch(3, 1)
 		ssr_layout.setColumnStretch(5, 1)
-		ssr_layout.addWidget(QLabel("Minimum repeats required for each type to form an SSR"), 0, 0, 1, 6)
+		ssr_layout.addWidget(QLabel("Minimum repeats required for each type to form an SSR"),
+							 0, 0, 1, 6)
 		ssr_layout.addWidget(QLabel("Mono"), 1, 0)
 		ssr_layout.addWidget(self.mono_box, 1, 1)
 		ssr_layout.addWidget(QLabel("Di"), 1, 2)
@@ -375,44 +379,45 @@ class SearchParameterPanel(QWidget):
 		self.setLayout(main_layout)
 
 		self._mappings = {
-			'SSR/mono': (self.mono_box, 12, int),
-			'SSR/di': (self.di_box, 7, int),
-			'SSR/tri': (self.tri_box, 5, int),
-			'SSR/tetra': (self.tetra_box, 4, int),
-			'SSR/penta': (self.penta_box, 4, int),
-			'SSR/hexa': (self.hexa_box, 4, int),
-			'CSSR/dmax': (self.dmax_box, 10, int),
-			'VNTR/minmotif': (self.minmotif_box, 7, int),
-			'VNTR/maxmotif': (self.maxmotif_box, 30, int),
-			'VNTR/minrep': (self.minrep_box, 3, int),
-			'ITR/minmsize': (self.minmsize_box, 1, int),
-			'ITR/maxmsize': (self.maxmsize_box, 6,int),
-			'ITR/minsrep': (self.minsrep_box, 3, int),
-			'ITR/mixslen': (self.minslen_box, 10, int),
-			'ITR/maxerr': (self.maxerr_box, 2, int),
-			'ITR/subpena': (self.subpena_box, 0.5, float),
-			'ITR/inspena': (self.inspena_box, 1.0, float),
-			'ITR/delpena': (self.delpena_box, 1.0, float),
-			'ITR/matratio': (self.matratio_box, 0.7, float),
-			'ITR/maxextend': (self.maxextend_box, 2000, int),
-			'STR/level': (self.level_box, 3, int),
-			'STR/flank': (self.flank_box, 100, int)
+			'SSR/mono': self.mono_box,
+			'SSR/di': self.di_box,
+			'SSR/tri': self.tri_box,
+			'SSR/tetra': self.tetra_box,
+			'SSR/penta': self.penta_box,
+			'SSR/hexa': self.hexa_box,
+			'CSSR/dmax': self.dmax_box,
+			'VNTR/minmotif': self.minmotif_box,
+			'VNTR/maxmotif': self.maxmotif_box,
+			'VNTR/minrep': self.minrep_box,
+			'ITR/minmsize': self.minmsize_box,
+			'ITR/maxmsize': self.maxmsize_box,
+			'ITR/minsrep': self.minsrep_box,
+			'ITR/minslen': self.minslen_box,
+			'ITR/maxerr': self.maxerr_box,
+			'ITR/subpena': self.subpena_box,
+			'ITR/inspena': self.inspena_box,
+			'ITR/delpena': self.delpena_box,
+			'ITR/matratio': self.matratio_box,
+			'ITR/maxextend': self.maxextend_box,
+			'STR/level': self.level_box,
+			'STR/flank': self.flank_box,
 		}
 
 		self.read_settings()
 
 	def read_settings(self):
 		for param in self._mappings:
-			box, default, func = self._mappings[param]
+			box = self._mappings[param]
+			default, func = KRAIT_PARAMETERS[param]
 
 			if box == self.level_box:
-				box.setCurrentIndex(func(self.settings.value(param, default)))
+				box.setCurrentIndex(self.settings.value(param, default, func))
 			else:
-				box.setValue(func(self.settings.value(param, default)))
+				box.setValue(self.settings.value(param, default, func))
 
 	def write_settings(self):
 		for param in self._mappings:
-			box, _, _ = self._mappings[param]
+			box = self._mappings[param]
 
 			if box == self.level_box:
 				self.settings.setValue(param, box.currentIndex())
