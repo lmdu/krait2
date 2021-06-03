@@ -1,12 +1,12 @@
 import os
 import time
 import stria
-import primer3
 import pyfastx
 import traceback
 import multiprocessing
 
 from PySide6.QtCore import *
+from primer3 import primerdesign
 
 from backend import *
 from motif import *
@@ -311,9 +311,7 @@ class PrimerDesignThread(WorkerThread):
 		fasta_file = DB.get_one("SELECT path FROM fasta_0 WHERE id=?", self.findex)
 		fasta = pyfastx.Fasta(fasta_file, uppercase=True)
 
-		print(self.primer_tags)
-
-		primer3.bindings.setP3Globals(self.primer_tags)
+		primerdesign.setGlobals(self.primer_tags, None, None)
 		
 		selected = sorted(self.parent.get_selected_rows())
 		total = len(selected)
@@ -343,16 +341,13 @@ class PrimerDesignThread(WorkerThread):
 
 				locus = "{}.{}.{}".format(self.table, self.findex, tr[0])
 
-				primer3.bindings.setP3SeqArgs({
+				primerdesign.setSeqArgs({
 					'SEQUENCE_ID': locus,
 					'SEQUENCE_TEMPLATE': tr_seq,
-					'SEQUENCE_TARGET': [tr[2]-tr_start, tr_len],
-					#'SEQUENCE_INTERNAL_EXCLUDED_REGION': [tr[2]-tr_start, tr_len]
+					'SEQUENCE_TARGET': [tr[2]-tr_start, tr_len]
 				})
 
-				res = primer3.bindings.runP3Design()
-
-				print(res)
+				res = primerdesign.runDesign(False)
 
 				if res:
 					primer_count = res['PRIMER_PAIR_NUM_RETURNED']

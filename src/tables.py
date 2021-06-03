@@ -156,7 +156,8 @@ class KraitTableModel(QAbstractTableModel):
 		"""set current file index"""
 		self._index = file_index
 		#get column names
-		self._header = DB.get_field("{}_{}".format(self._table, self._index))
+		if not self._header:
+			self._header = DB.get_field("{}_{}".format(self._table, self._index))
 		self.reset_table()
 
 	@property
@@ -261,7 +262,7 @@ class KraitTableView(QTableView):
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
 		self.horizontalHeader().setStretchLastSection(True)
-		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.setEditTriggers(QAbstractItemView.DoubleClicked)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
 		self.setSortingEnabled(True)
@@ -374,14 +375,59 @@ class FastaTableView(KraitTableView):
 		self.model.update_cache(row)
 		self.model.dataChanged.emit(index, index)
 
+class PrimerTableDelegate(QStyledItemDelegate):
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.parent = parent
+
+	def setEditorData(self, editor, index):
+		val = self.parent.model.get_value(index.row(), index.column())
+		editor.setText(val)
+
 class PrimerTableModel(KraitTableModel):
 	def __init__(self, parent=None, table="primer"):
 		super().__init__(parent, table)
+		self._header = ['id', 'locus', 'entry', 'product size',
+						'F/R', 'primer', 'Tm', 'GC', 'stability']
+
+	def get_value(self, row, col):
+		if row != self.cache_row[0]:
+			self.update_cache(row)
+
+		if col == 4:
+			return 'F\nR'
+
+		elif col > 4:
+			return "{}\n{}".format(
+				self.cache_row[1][col-1],
+				self.cache_row[1][col+3]
+			)
+		else:
+			return self.cache_row[1][col]
+
+	def flags(self, index):
+		if not index.isValid():
+			return Qt.ItemIsSelectable
+
+		flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+		if index.column() == 0:
+			flags |= Qt.ItemIsUserCheckable
+
+		elif index.column() == 5:
+			flags |= Qt.ItemIsEditable
+
+		return flags
 
 class PrimerTableView(KraitTableView):
 	def __init__(self, parent=None):
 		super().__init__(parent, "primer")
+		width = self.verticalHeader().defaultSectionSize()
+		self.verticalHeader().setDefaultSectionSize(int(width*1.25))
 
 	def create_model(self):
 		self.model = PrimerTableModel(self)
 		self.setModel(self.model)
+
+		self.delegate = PrimerTableDelegate(self)
+		self.setItemDelegate(self.delegate)
