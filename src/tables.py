@@ -14,6 +14,8 @@ class KraitTableSignal(QObject):
 	sel_autom = Signal()
 
 class KraitTableModel(QAbstractTableModel):
+	_custom_headers = []
+
 	def __init__(self, parent=None, table='ssr'):
 		super(KraitTableModel, self).__init__(parent)
 
@@ -61,7 +63,10 @@ class KraitTableModel(QAbstractTableModel):
 		if parent.isValid():
 			return 0
 
-		return len(self._header)
+		if self._custom_headers:
+			return len(self._custom_headers)
+		else:
+			return len(self._header)
 
 	def sort(self, column, order):
 		if order == Qt.SortOrder.DescendingOrder:
@@ -119,7 +124,10 @@ class KraitTableModel(QAbstractTableModel):
 
 	def headerData(self, section, orientation, role=Qt.DisplayRole):
 		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-			return self._header[section]
+			if self._custom_headers:
+				return self._custom_headers[section]
+			else:
+				return self._header[section]
 
 	def flags(self, index):
 		if not index.isValid():
@@ -385,17 +393,18 @@ class PrimerTableDelegate(QStyledItemDelegate):
 		editor.setText(val)
 
 class PrimerTableModel(KraitTableModel):
+	_custom_headers = ['#', 'Locus', 'Entry', 'Product size',
+						'Primer', 'Sequence', 'Tm (°C)', 'GC (%)', 'End stability']
+
 	def __init__(self, parent=None, table="primer"):
 		super().__init__(parent, table)
-		self._header = ['id', 'locus', 'entry', 'product size',
-						'F/R', 'primer', 'Tm', 'GC', 'stability']
 
 	def get_value(self, row, col):
 		if row != self.cache_row[0]:
 			self.update_cache(row)
 
 		if col == 4:
-			return 'F\nR'
+			return 'Forward\nReverse'
 
 		elif col > 4:
 			return "{}\n{}".format(
@@ -418,6 +427,12 @@ class PrimerTableModel(KraitTableModel):
 			flags |= Qt.ItemIsEditable
 
 		return flags
+
+	def sort(self, column, order):
+		if column > 3:
+			return
+
+		super().sort(column, order)
 
 class PrimerTableView(KraitTableView):
 	def __init__(self, parent=None):

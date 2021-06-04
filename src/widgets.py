@@ -58,6 +58,9 @@ class KraitMainWindow(QMainWindow):
 		#filters
 		self.current_filter = []
 
+		#search for all or selected
+		self.search_all = True
+
 	def closeEvent(self, event):
 		self.write_settings()
 
@@ -118,6 +121,15 @@ class KraitMainWindow(QMainWindow):
 			statusTip = "Set primer parameters",
 			triggered = self.open_primer_param_dialog
 		)
+
+		#run actions
+		self.search_group_action = QActionGroup(self)
+		self.search_group_action.triggered.connect(self.search_switch)
+		self.search_all_action = QAction("Search for All Fastas", self, checkable=True, checked=True)
+		self.search_sel_action = QAction("Search for Selected Fastas", self, checkable=True)
+		self.search_group_action.addAction(self.search_all_action)
+		self.search_group_action.addAction(self.search_sel_action)
+
 
 		#help actions
 		self.about_action = QAction("&About Krait2", self,
@@ -200,6 +212,12 @@ class KraitMainWindow(QMainWindow):
 		self.edit_menu = self.menuBar().addMenu("&Edit")
 		self.edit_menu.addAction(self.search_param_action)
 		self.edit_menu.addAction(self.primer_param_action)
+		self.edit_menu.addSeparator()
+		self.edit_menu.addAction("Filter Rows in Current Table")
+
+		self.run_menu = self.menuBar().addMenu("&Run")
+		self.run_menu.addAction(self.search_all_action)
+		self.run_menu.addAction(self.search_sel_action)
 
 		#self.menuBar().addSeparator()
 
@@ -313,6 +331,13 @@ class KraitMainWindow(QMainWindow):
 			if self.table_widgets[table] is not None:
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, False)
+
+	@Slot()
+	def search_switch(self, action):
+		if action == self.search_all_action:
+			self.search_all = 1
+		else:
+			self.search_all = 0
 
 	@Slot()
 	def show_primer_table(self):

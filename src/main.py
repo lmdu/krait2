@@ -16,6 +16,8 @@ if __name__ == '__main__':
 	QCoreApplication.setOrganizationDomain("krait2.readthedocs.io")
 	QCoreApplication.setApplicationName("Kriat2")
 
+	QFontDatabase.addApplicationFont("fonts/RobotoMono.ttf")
+
 	QSettings.setDefaultFormat(QSettings.IniFormat)
 
 	if os.name == 'nt':
