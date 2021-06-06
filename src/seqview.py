@@ -4,36 +4,6 @@ from PySide6.QtWidgets import *
 
 __all__ = ['SeqViewer']
 
-class SequenceScaler(QWidget):
-	def __init__(self, parent=None):
-		super().__init__(parent)
-		self.editor_width = 0
-		self.line_number = 0
-
-	def paintEvent(self, event):
-		painter = QPainter(self)
-		width = painter.device().width()
-		height = painter.device().height()
-
-		x = self.line_number
-
-		painter.drawLine(QPoint(x, 0), QPoint(x, 10))
-		painter.drawLine(QPoint(x, 5), QPoint(self.editor_width+self.line_number-1, 5))
-		painter.drawLine(QPoint(self.editor_width+self.line_number-1, 0), QPoint(self.editor_width+self.line_number-1, 10))
-		
-		#painter.drawLine(QPoint(1, 0), QPoint(1, 10))
-		
-		#painter.drawLine(QPoint(width-1, 0), QPoint(width-1, 10))
-
-	def minimumSizeHint(self):
-		return QSize(0, 10)
-
-	@Slot(int, int)
-	def update_scale(self, width, line):
-		self.editor_width = width
-		self.line_number = line
-		self.update()
-
 class SequenceHighlighter(QSyntaxHighlighter):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -77,91 +47,133 @@ class LineNumberArea(QWidget):
 	def paintEvent(self, event):
 		self._editor.lineNumberAreaPaintEvent(event)
 
-class SequenceViewer(QPlainTextEdit):
-	resized = Signal(int, int)
+class SequenceScaler(QWidget):
+	def __init__(self, editor):
+		super().__init__(editor)
+		self._editor = editor
 
-	def __init__(self, parent):
+	def sizeHint(self):
+		return QSize(self._editor.scale_bar_area_width(), 20)
+
+	def paintEvent(self, event):
+		self._editor.scaleBarAreaPaintEvent(event)
+
+class SequenceViewer(QPlainTextEdit):
+	def __init__(self, parent=None, start=206578, length=70):
 		super().__init__(parent)
-		#self.setReadOnly(True)
+		self.start = start
+		self.length = length
+
+		self.setReadOnly(True)
 		self.setFrameStyle(QFrame.NoFrame)
 		#self.viewport().setAutoFillBackground(False)
+		font = QFont("Roboto Mono")
+		font.setPointSize(12)
+		self.setFont(font)
+
+		fmt = QTextCharFormat()
+		fmt.setFontLetterSpacing(200)
+		self.setCurrentCharFormat(fmt)
 
 		self.line_number_area = LineNumberArea(self)
+		self.scale_bar_area = SequenceScaler(self)
 
 		self.blockCountChanged.connect(self.update_line_number_area_width)
 		self.updateRequest.connect(self.update_line_number_area)
 
 		self.update_line_number_area_width(0)
 
-		#fmt = QTextCharFormat()
-		#fmt.setFontLetterSpacingType(QFont.AbsoluteSpacing)
-		#fmt.setFontLetterSpacing(10)
-		#self.setCurrentCharFormat(fmt)
-
-		font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-		font.setPointSize(13)
-		self.setFont(font)
-
 
 	def line_number_area_width(self):
 		digits = 1
-		max_num = max(1, self.blockCount())
+		#max_num = max(1, self.blockCount())
+		#max_num = max(1, self.document().lineCount())
+		max_num = self.start + self.length - 1
 		while max_num >= 10:
 			max_num *= 0.1
 			digits += 1
 
-		space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
+		space = 25 + self.fontMetrics().horizontalAdvance('9') * digits
 		return space
 
-	def resizeEvent(self, e):
-		super().resizeEvent(e)
+	def scale_bar_area_width(self):
+		return self.width()
+
+	def resizeEvent(self, event):
+		super().resizeEvent(event)
 		cr = self.contentsRect()
 		width = self.line_number_area_width()
-		rect = QRect(cr.left(), cr.top(), width, cr.height())
+		rect = QRect(cr.left(), cr.top()+20, width, cr.height())
 		self.line_number_area.setGeometry(rect)
-		self.resized.emit(self.viewport().width(), width)
+
+		rect = QRect(cr.left(), cr.top(), self.scale_bar_area_width(), 20)
+		self.scale_bar_area.setGeometry(rect)
+
+	def scaleBarAreaPaintEvent(self, event):
+		painter = QPainter(self.scale_bar_area)
+		painter.fillRect(event.rect(), Qt.white)
+
+		start = self.line_number_area_width()
+		block = self.firstVisibleBlock()
+		line = block.layout().lineAt(0)
+		columns = line.textLength()
+		column_width = line.naturalTextWidth()/columns
+
+		start = start + line.x() + self.fontMetrics().averageCharWidth()/2
+
+		painter.drawLine(QPoint(start, 20), QPoint(start+column_width*(columns-1), 20))
+		painter.drawLine(QPoint(start, 12), QPoint(start, 20))
+		painter.drawText(start, 10, str(1))
+
+		for i in range(1, columns+1):
+			x = start + (i-1)*column_width
+
+			if i % 10 == 0:
+				painter.drawLine(QPoint(x, 12), QPoint(x, 20))
+				painter.drawText(x, 10, str(i))
+			elif i % 5 == 0:
+				painter.drawLine(QPoint(x, 15), QPoint(x, 20))
+				painter.drawText(x, 10, str(i))
+			else:
+				painter.drawLine(QPoint(x, 17), QPoint(x, 20))
+
 
 	def lineNumberAreaPaintEvent(self, event):
 		painter = QPainter(self.line_number_area)
-		painter.fillRect(event.rect(), Qt.transparent)
+		painter.fillRect(event.rect(), Qt.white)
+
 		block = self.firstVisibleBlock()
-		block_number = block.blockNumber()
 		offset = self.contentOffset()
 		top = self.blockBoundingGeometry(block).translated(offset).top()
 		bottom = top + self.blockBoundingRect(block).height()
 
-		width = self.line_number_area.width()
+		width = self.line_number_area_width()
 		height = self.fontMetrics().height()
 
-		
+		line_char = block.layout().lineAt(0).textLength()
 
-		for i in range(self.document().lineCount()):
-			lh = int(self.fontMetrics().lineSpacing())
+		line_number = 0
 
-			print(height, lh)
-			painter.drawText(0, top, width, height, Qt.AlignRight, str(i+1))
-			top += lh
+		while block.isValid():
+			for i in range(block.lineCount()):
+				line_number += 1
+				
+				line_start = self.start + (line_number - 1) * line_char
 
-		'''
-		while block.isValid() and top <= event.rect().bottom():
-			if block.isVisible() and bottom >= event.rect().top():
-				number = str(block_number + 1)
-				painter.setPen(Qt.black)
-				width = self.line_number_area.width()
-				height = self.fontMetrics().height()
-				painter.drawText(0, top, width, height, Qt.AlignRight, number)
+				dx = self.blockBoundingGeometry(block).x()
+				dy = self.blockBoundingGeometry(block).y()
+				line = block.layout().lineAt(i)
+				top = line.rect().translated(offset).translated(dx, dy).y()
+				painter.setPen(Qt.gray)
+				painter.drawText(0, top, width-20, height, Qt.AlignRight, str(line_start))
 
 			block = block.next()
-			top = bottom
-			bottom = top + self.blockBoundingRect(block).height()
-			block_number += 1
-		'''
 
-	@Slot()
+	@Slot(int)
 	def update_line_number_area_width(self, newBlockCount):
-		self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+		self.setViewportMargins(self.line_number_area_width(), 20, 0, 0)
 
-	@Slot()
+	@Slot(QRect, int)
 	def update_line_number_area(self, rect, dy):
 		if dy:
 			self.line_number_area.scroll(0, dy)
@@ -172,27 +184,33 @@ class SequenceViewer(QPlainTextEdit):
 		if rect.contains(self.viewport().rect()):
 			self.update_line_number_area_width(0)
 
-class SequenceDialog(QDialog):
+
+class SequenceDialog(QMainWindow):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.setWindowTitle("Sequence viewer")
+		#self.setWindowFlags(Qt.Dialog)
+		self.setWindowModality(Qt.ApplicationModal)
 		self.highlighter = SequenceHighlighter()
 		self.editor = SequenceViewer(self)
-		self.scaler = SequenceScaler(self)
-		self.editor.resized.connect(self.scaler.update_scale)
-		layout = QVBoxLayout(self)
-		layout.addWidget(self.scaler)
-		layout.addWidget(self.editor)
-		self.setLayout(layout)
+		#self.scaler = SequenceScaler(self)
+		#self.editor.resized.connect(self.scaler.update_scale)
+		#layout = QVBoxLayout(self)
+		#layout.addWidget(self.scaler)
+		#layout.addWidget(self.editor)
+		#layout.setSpacing(0)
+		#self.setLayout(layout)
 		self.highlighter.setDocument(self.editor.document())
+		self.setCentralWidget(self.editor)
 
 	def set_sequence(self, seq="ATGCAAAGCCTTTG"):
-		self.editor.setPlainText(seq)
+		self.editor.setPlainText("ATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTG")
 
 
 if __name__ == '__main__':
 	import sys
 	app = QApplication(sys.argv)
+	QFontDatabase.addApplicationFont("fonts/robotomono.ttf")
 	win = SequenceDialog()
 	win.set_sequence()
 	win.show()

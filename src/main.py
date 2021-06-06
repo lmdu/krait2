@@ -3,6 +3,7 @@ import sys
 import ctypes
 import multiprocessing
 
+from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
@@ -16,7 +17,7 @@ if __name__ == '__main__':
 	QCoreApplication.setOrganizationDomain("krait2.readthedocs.io")
 	QCoreApplication.setApplicationName("Kriat2")
 
-	QFontDatabase.addApplicationFont("fonts/RobotoMono.ttf")
+	#QFontDatabase.addApplicationFont("fonts/Cousine.ttf")
 
 	QSettings.setDefaultFormat(QSettings.IniFormat)
 
