@@ -98,8 +98,6 @@ class SequenceViewer(QPlainTextEdit):
 		self.blockCountChanged.connect(self.update_line_number_area_width)
 		self.updateRequest.connect(self.update_line_number_area)
 
-		self.update_line_number_area_width(0)
-
 		#set dna sequence highlighter
 		self.highlighter = SequenceHighlighter()
 		self.highlighter.setDocument(self.document())
@@ -155,13 +153,13 @@ class SequenceViewer(QPlainTextEdit):
 		column_width = line.naturalTextWidth()/column_count
 		char_width = self.fontMetrics().averageCharWidth()
 		char_height = self.fontMetrics().height()
-		scale_height = self.scale_bar_area_height()
+		scale_height = self.scale_bar_area_height() - 1
 
 		#correct the start position
 		start = start + line.x() + char_width/2
 
 		#draw cross mark line
-		painter.drawLine(QPoint(start, scale_height-1), QPoint(start+column_width*(column_count-1), scale_height-1))
+		painter.drawLine(QPoint(start, scale_height), QPoint(start+column_width*(column_count-1), scale_height))
 
 		#draw first mark
 		mark_y = self.scale_top_space + char_height + self.scale_mark_space
@@ -218,6 +216,7 @@ class SequenceViewer(QPlainTextEdit):
 	@Slot(int)
 	def update_line_number_area_width(self, newBlockCount):
 		self.setViewportMargins(self.line_number_area_width(), self.scale_bar_area_height(), 0, 0)
+		self.change_line_number()
 
 	@Slot(QRect, int)
 	def update_line_number_area(self, rect, dy):
@@ -262,11 +261,22 @@ class SequenceViewer(QPlainTextEdit):
 
 		extra_selections = []
 		selection = QTextEdit.ExtraSelection()
-		selection.format.setBackground(Qt.yellow)
+		#selection.format.setBackground(Qt.yellow)
+		selection.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.darkGray))
 		selection.cursor = self.textCursor()
 		selection.cursor.setPosition(20)
 		selection.cursor.setPosition(25, QTextCursor.KeepAnchor)
 		extra_selections.append(selection)
+
+
+		selection = QTextEdit.ExtraSelection()
+		#selection.format.setBackground(Qt.yellow)
+		selection.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.darkGray))
+		selection.cursor = self.textCursor()
+		selection.cursor.setPosition(25)
+		selection.cursor.setPosition(30, QTextCursor.KeepAnchor)
+		extra_selections.append(selection)
+
 		self.setExtraSelections(extra_selections)
 
 class SequenceDialog(QMainWindow):
@@ -280,10 +290,24 @@ class SequenceDialog(QMainWindow):
 
 		self.editor = SequenceViewer(self)
 		self.setCentralWidget(self.editor)
-		self.resize(QSize(700, 500))
+		self.resize(QSize(600, 400))
 
 	def create_statusbar(self):
 		self.status_bar = self.statusBar()
+
+		#flank length slider
+		self.flank_slider = QSlider(Qt.Horizontal, self)
+		self.flank_slider.setMinimum(1)
+		self.flank_slider.setMaximum(1000)
+		self.flank_slider.setPageStep(1)
+		self.flank_slider.valueChanged.connect(self.on_flank_moved)
+		self.flank_slider.sliderReleased.connect(self.on_flank_changed)
+
+		#flank value
+		self.status_bar.addPermanentWidget(QLabel("Flank length:", self))
+		self.flank_len = QLabel("100", self)
+		self.status_bar.addPermanentWidget(self.flank_len)
+		self.status_bar.addPermanentWidget(self.flank_slider, 1)
 
 		#line number
 		self.status_bar.addPermanentWidget(QLabel("Line:", self))
@@ -295,11 +319,23 @@ class SequenceDialog(QMainWindow):
 		self.select_count = QLabel("0", self)
 		self.status_bar.addPermanentWidget(self.select_count)
 
-	def set_sequence(self, seq="ATGCAAAGCCTTTG", start=1):
+	def set_sequence(self, seq="ATGCAAAGCCTTTG", start=1456789):
 		seq = "ATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTG"
 		self.editor.setPlainText(seq)
 		self.editor.set_locus_position(start, len(seq))
 		self.editor.add_format()
+		self.editor.update_line_number_area_width(0)
+
+	@Slot(int)
+	def on_flank_moved(self, pos):
+		self.flank_len.setText(str(pos))
+
+	@Slot()
+	def on_flank_changed(self):
+		print(self.flank_slider.value())
+
+
+
 
 
 if __name__ == '__main__':
