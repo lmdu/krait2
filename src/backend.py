@@ -117,23 +117,27 @@ class DataBackend:
 		return self.conn.cursor()
 
 	def _optimize(self):
-		self.cursor.execute("PRAGMA synchronous=OFF")
+		self.query("PRAGMA synchronous=OFF")
+		self.query(TABLE_SQL_MAPPING['fasta'])
+		self.begin()
 
-	def _create_tables(self):
-		for sql in TABLE_SQL_MAPPING.values():
-			self.cursor.execute(sql.format(''))
+	#def _create_tables(self):
+	#	for sql in TABLE_SQL_MAPPING.values():
+	#		self.cursor.execute(sql.format(''))
 
 	def _connect_to_db(self, db_file=':memory:'):
 		if not self.conn:
 			self.conn = apsw.Connection(db_file)
 			#self.conn.setrowtrace(row_factory)
 			self._optimize()
-			self._create_tables()
+			#self._create_tables()
 
 	def change_db(self, db_file):
 		if self.conn:
 			self.conn.close()
-		self._connect_to_db(db_file)
+		
+		self.conn = apsw.Connection(db_file)
+		self._optimize()
 
 	def create_table(self, table, idx):
 		sql = TABLE_SQL_MAPPING[table].format(idx)
@@ -148,6 +152,11 @@ class DataBackend:
 	def update_status(self, rowid, status):
 		sql = "UPDATE fasta_0 SET status=? WHERE id=?"
 		self.query(sql, (status, rowid))
+
+	def has_fasta(self):
+		sql = "SELECT 1 FROM fasta_0 LIMIT 1"
+		res = self.get_one(sql)
+		return True if res else False
 
 	def query(self, sql, paras=None):
 		if paras is None:
@@ -185,5 +194,20 @@ class DataBackend:
 	def save_to_file(self, dbfile):
 		target = apsw.Connection(dbfile)
 		return target.backup("main", self.conn, "main")
+
+	def begin(self):
+		self.query("BEGIN")
+
+	def commit(self):
+		if not self.autocommit:
+			self.query("COMMIT")
+
+	@property
+	def autocommit(self):
+		return self.conn.getautocommit()
+
+	@property
+	def changed(self):
+		return self.conn.changes() > 0
 
 DB = DataBackend()

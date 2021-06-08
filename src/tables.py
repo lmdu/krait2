@@ -305,6 +305,12 @@ class KraitTableView(QTableView):
 	def get_selected_rows(self):
 		return self.model.selected
 
+	def has_selection(self):
+		if self.model.selected:
+			return True
+		else:
+			return False
+
 	def emit_count(self):
 		self.model.signals.row_count.emit(self.model.total_count)
 		self.model.signals.col_count.emit(len(self.model._header))
@@ -338,6 +344,8 @@ class KraitTableView(QTableView):
 			self.checkbox.setCheckState(Qt.Checked)
 
 class FastaTableModel(KraitTableModel):
+	_custom_headers = ['id', 'name', 'size', 'status', 'path']
+
 	def __init__(self, parent=None, table="fasta"):
 		super(FastaTableModel, self).__init__(parent, table)
 		self.color_mapping = {
@@ -393,7 +401,7 @@ class PrimerTableDelegate(QStyledItemDelegate):
 		editor.setText(val)
 
 class PrimerTableModel(KraitTableModel):
-	_custom_headers = ['#', 'Locus', 'Entry', 'Product size',
+	_custom_headers = ['id', 'Locus', 'Entry', 'Product size',
 						'Primer', 'Sequence', 'Tm (°C)', 'GC (%)', 'End stability']
 
 	def __init__(self, parent=None, table="primer"):

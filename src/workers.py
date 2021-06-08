@@ -13,8 +13,11 @@ from motif import *
 from utils import *
 from config import *
 
-__all__ = ['SSRSearchThread', 'VNTRSearchThread',
-			'ITRSearchThread', 'PrimerDesignThread']
+__all__ = [
+	'SSRSearchThread', 'VNTRSearchThread',
+	'ITRSearchThread', 'PrimerDesignThread',
+	'SaveProjectThread'
+]
 
 class WorkerSignal(QObject):
 	progress = Signal(int)
@@ -31,15 +34,16 @@ class WorkerThread(QThread):
 		self.signals.messages.connect(parent.show_status_message)
 		self.signals.errors.connect(parent.show_error_message)
 		self.signals.status.connect(parent.change_task_status)
+		#self.signals.finished.connect(self.deleteLater)
 		self.settings = QSettings()
-
-	def process(self):
-		pass
 
 	def error(self):
 		errmsg = traceback.format_exc()
 		self.signals.errors.emit(errmsg)
 		print(errmsg)
+
+	def process(self):
+		pass
 
 	def run(self):
 		self.signals.progress.emit(0)
@@ -50,7 +54,7 @@ class WorkerThread(QThread):
 			self.error()
 
 		self.signals.progress.emit(100)
-		self.signals.messages.emit('Finished!')
+		#self.signals.messages.emit('Finished!')
 		self.signals.finished.emit()
 
 class SearchThread(WorkerThread):
@@ -217,7 +221,7 @@ class VNTRSearchThread(SearchThread):
 		super().__init__(parent)
 		self.params = []
 
-		params = ['VNTR/minmotif', 'VNTR/maxmotif', 'VNTR/minrepeat']
+		params = ['VNTR/minmotif', 'VNTR/maxmotif', 'VNTR/minrep']
 		for param in params:
 			default, func = KRAIT_PARAMETERS[param]
 			self.params.append(self.settings.value(param, default, func))
@@ -239,7 +243,7 @@ class ITRSearchThread(SearchThread):
 	_table = 'itr'
 
 	def __init__(self, parent):
-		super(ITRWorkerThread, self).__init__(parent)
+		super().__init__(parent)
 		self.params = []
 		params = ['ITR/minmsize', 'ITR/maxmsize', 'ITR/minsrep', 'ITR/minslen',
 					'ITR/maxerr', 'ITR/subpena', 'ITR/inspena', 'ITR/delpena',
@@ -377,3 +381,24 @@ class PrimerDesignThread(WorkerThread):
 				self.signals.progress.emit(p)
 				progress = p
 
+class SaveProjectThread(WorkerThread):
+	def __init__(self, parent=None, save_file=None):
+		super().__init__(parent)
+		self.save_file = save_file
+
+	def process(self):
+		self.signals.messages.emit("Saving to {}".format(self.save_file))
+		progress = 0
+
+		#close transaction
+		DB.commit()
+
+		with DB.save_to_file(self.save_file) as backup:
+			while not backup.done:
+				backup.step(10)
+				p = int((backup.pagecount - backup.remaining)/backup.pagecount*100)
+				if p > progress:
+					self.signals.progress.emit(p)
+					progress = p
+
+		self.signals.messages.emit("Successfully saved to {}".format(self.save_file))

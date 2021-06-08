@@ -22,8 +22,12 @@ class KraitMainWindow(QMainWindow):
 		self.setWindowIcon(QIcon('icons/logo.svg'))
 
 		self.tab_widget = QTabWidget(self)
-		self.setCentralWidget(self.tab_widget)
+		self.tab_widget.setStyleSheet("QTabWidget::pane { border: 0; }")
+		#self.tab_widget.setTabBarAutoHide(True)
+		#self.tab_widget.setTabShape(QTabWidget.Triangular)
+		#self.tab_widget.setFrameStyle(QFrame.NoFrame)
 		self.tab_widget.currentChanged.connect(self.change_current_table)
+		self.setCentralWidget(self.tab_widget)
 
 		#self.filter_box = QLineEdit(self)
 		#self.filter_box.setPlaceholderText("e.g. motif=AT and repeat>10")
@@ -61,6 +65,9 @@ class KraitMainWindow(QMainWindow):
 		#search for all or selected
 		self.search_all = True
 
+		#opened project file
+		self.project_file = None
+
 	def closeEvent(self, event):
 		self.write_settings()
 
@@ -68,8 +75,15 @@ class KraitMainWindow(QMainWindow):
 		#menu actions
 		self.open_action = QAction("&Open Project...", self,
 			shortcut = QKeySequence.Open,
-			statusTip = "Open a project file",
+			#statusTip = "Open a project file",
+			toolTip = "Open a project file",
 			triggered = self.open_project
+		)
+
+		self.close_action = QAction("&Close Project", self,
+			shortcut = QKeySequence.Close,
+			toolTip = "Close the opened project file",
+			triggered = self.close_project
 		)
 
 		self.save_action = QAction("&Save Project", self,
@@ -104,7 +118,7 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.import_fasta_folder
 		)
 
-		self.close_action = QAction("&Exit", self,
+		self.exit_action = QAction("&Exit", self,
 			shortcut = "Alt+Q",
 			statusTip = "Exit",
 			triggered = self.close
@@ -198,6 +212,7 @@ class KraitMainWindow(QMainWindow):
 	def create_menus(self):
 		self.file_menu = self.menuBar().addMenu("&File")
 		self.file_menu.addAction(self.open_action)
+		self.file_menu.addAction(self.close_action)
 		self.file_menu.addAction(self.save_action)
 		self.file_menu.addAction(self.save_as_action)
 		self.file_menu.addSeparator()
@@ -207,7 +222,7 @@ class KraitMainWindow(QMainWindow):
 		self.file_menu.addAction(self.annotin_action)
 		self.file_menu.addAction(self.annotfolder_action)
 		self.file_menu.addSeparator()
-		self.file_menu.addAction(self.close_action)
+		self.file_menu.addAction(self.exit_action)
 
 		self.edit_menu = self.menuBar().addMenu("&Edit")
 		self.edit_menu.addAction(self.search_param_action)
@@ -228,7 +243,6 @@ class KraitMainWindow(QMainWindow):
 		self.help_menu.addAction(self.update_action)
 		self.help_menu.addSeparator()
 		self.help_menu.addAction(self.about_action)
-		
 
 	def create_toolbar(self):
 		self.tool_bar = self.addToolBar('')
@@ -335,9 +349,9 @@ class KraitMainWindow(QMainWindow):
 	@Slot()
 	def search_switch(self, action):
 		if action == self.search_all_action:
-			self.search_all = 1
+			self.search_all = True
 		else:
-			self.search_all = 0
+			self.search_all = False
 
 	@Slot()
 	def show_primer_table(self):
@@ -388,10 +402,55 @@ class KraitMainWindow(QMainWindow):
 		QMessageBox.critical(self, 'Error', err)
 
 	def open_project(self):
-		pass
+		if self.project_file:
+			ret = QMessageBox.question(self, "Confirmation",
+				"A project file is already opened. Would you like to open a new project file?"
+			)
+
+			if ret == QMessageBox.No:
+				return
+
+		if DB.has_fasta():
+			ret = QMessageBox.question(self, "Confirmation",
+				"Would you like to save previous results before opening new project file?"
+			)
+
+			if ret == QMessageBox.Yes:
+				self.save_project()
+
+				#wait for save task finish
+				self.wait_task_finish()
+
+		open_file, _ = QFileDialog.getOpenFileName(self, filter="Krait Database (*.kdb)")
+
+		if not open_file:
+			return
+
+		self.project_file = open_file
+		DB.change_db(self.project_file)
+		self.file_table.update_table()
+
+		self.show_status_message("Open new project file {}".format(self.project_file))
 
 	def save_project(self):
-		pass
+		if self.project_file is None:
+			save_file, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
+
+			if not save_file:
+				return
+
+			self.project_file = save_file
+
+			worker = SaveProjectThread(self, self.project_file)
+			worker.finished.connect(lambda : DB.change_db(self.project_file))
+			self.perform_new_task(worker)
+		else:
+			if DB.changed:
+				DB.commit()
+				DB.begin()
+
+			self.show_status_message("Successfully saved to {}".format(self.project_file))
+			self.progress_bar.setValue(100)			
 
 	def save_project_as(self):
 		save_file, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
@@ -399,9 +458,31 @@ class KraitMainWindow(QMainWindow):
 		if not save_file:
 			return
 
-		with DB.save_to_file(save_file) as backup:
-			while not backup.done:
-				backup.step(100)
+		worker = SaveProjectThread(self, save_file)
+		self.perform_new_task(worker)
+
+		self.show_status_message("Successfully saved to {}".format(save_file))
+
+	def close_project(self):
+		if DB.has_fasta():
+			if not self.project_file or (self.project_file and DB.changed):
+				ret = QMessageBox.question(self, "Confirmation",
+					"Would you like to save results before closing project",
+					QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+				)
+
+				if ret == QMessageBox.Cancel:
+					return
+
+				if ret == QMessageBox.Yes:
+					self.save_project()
+					self.wait_task_finish()
+
+		self.project_file = None
+		DB.change_db(':memory:')
+		self.file_table.update_table()
+
+		self.show_status_message("Project was successfully closed")
 
 	def import_fasta_files(self):
 		files = QFileDialog.getOpenFileNames(self,
@@ -461,27 +542,46 @@ class KraitMainWindow(QMainWindow):
 			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?)", fas)
 			self.file_table.update_table()
 
-	def perform_ssr_search(self):
-		self.threader = SSRSearchThread(self)
+	def wait_task_finish(self):
+		if self.threader:
+			self.threader.wait()
+
+	def perform_new_task(self, worker):
+		if not DB.has_fasta():
+			return QMessageBox.critical(self, "Error",
+				"There are no input fasta files to process. Please import fasta files!"
+			)
+
+		if not self.search_all:
+			if not self.file_table.has_selection():
+				return QMessageBox.critical(self, "Error",
+					'You have specified "Search for Selected Fastas" mode. However, no input fastas were selected to process!'
+				)
+
+		if self.threader is not None and self.threader.isRunning():
+			return QMessageBox.warning(self, "Warning",
+				"Could not start new task. There is already another task running. Please wait..."
+			)
+
+		self.threader = worker
 		self.threader.start()
+
+	def perform_ssr_search(self):
+		worker = SSRSearchThread(self)
+		self.perform_new_task(worker)
 
 	def perform_vntr_search(self):
-		#self.threader = VNTRSearchThread(self)
-		#self.threader.start()
-
-		if self.threader:
-			print('yes')
-		else:
-			print('no')
+		worker = VNTRSearchThread(self)
+		self.perform_new_task(worker)
 
 	def perform_itr_search(self):
-		self.threader = ITRSearchThread(self)
-		self.threader.start()
+		worker = ITRSearchThread(self)
+		self.perform_new_task(worker)
 
 	def perform_primer_design(self):
-		self.threader = PrimerDesignThread(self, self.current_table)
-		self.threader.finished.connect(self.show_primer_table)
-		self.threader.start()
+		worker = PrimerDesignThread(self, self.current_table)
+		worker.finished.connect(self.show_primer_table)
+		self.perform_new_task(worker)
 
 	def open_filter(self):
 		dialog = FilterDialog(self)

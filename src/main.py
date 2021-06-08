@@ -1,6 +1,5 @@
 import os
 import sys
-import ctypes
 import multiprocessing
 
 from PySide6.QtGui import *
@@ -22,6 +21,7 @@ if __name__ == '__main__':
 	QSettings.setDefaultFormat(QSettings.IniFormat)
 
 	if os.name == 'nt':
+		import ctypes
 		myappid = "BIG.Krait.Krait2.{}".format(KRAIT_VERSION)
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
