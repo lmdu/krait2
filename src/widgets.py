@@ -22,7 +22,7 @@ class KraitMainWindow(QMainWindow):
 		self.setWindowIcon(QIcon('icons/logo.svg'))
 
 		self.tab_widget = QTabWidget(self)
-		self.tab_widget.setStyleSheet("QTabWidget::pane { border: 0; }")
+		#self.tab_widget.setStyleSheet("QTabWidget::pane { border: 0; }")
 		#self.tab_widget.setTabBarAutoHide(True)
 		#self.tab_widget.setTabShape(QTabWidget.Triangular)
 		#self.tab_widget.setFrameStyle(QFrame.NoFrame)
@@ -54,7 +54,7 @@ class KraitMainWindow(QMainWindow):
 		self.threader = None
 
 		#current table in backend displayed
-		self.current_table = "fasta"
+		self.current_table = "fasta_0"
 
 		#current fasta file id
 		self.current_file = 0
@@ -118,6 +118,21 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.import_fasta_folder
 		)
 
+		self.export_select_action = QAction("&Export Selected Rows...", self,
+			statusTip = "Export selected rows in the current table",
+			triggered = self.export_selected_rows
+		)
+
+		self.export_whole_action = QAction("&Export All Rows...", self,
+			statusTip = "Export all rows in the current table",
+			triggered = self.export_current_table
+		)
+
+		self.export_all_action = QAction("&Export All Tables...", self,
+			statusTip = "Export all result tables of all input files to a folder",
+			triggered = self.export_all_tables
+		)
+
 		self.exit_action = QAction("&Exit", self,
 			shortcut = "Alt+Q",
 			statusTip = "Exit",
@@ -125,6 +140,10 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		#edit actions
+		self.filter_set_action = QAction("&Filter Rows in Current Table", self,
+			toolTip = "Filter rows from the current table",
+			triggered = self.open_filter
+		)
 		self.search_param_action = QAction("&Set Search Parameters", self,
 			shortcut = QKeySequence.Preferences,
 			statusTip = "Set search parameters",
@@ -143,7 +162,6 @@ class KraitMainWindow(QMainWindow):
 		self.search_sel_action = QAction("Search for Selected Fastas", self, checkable=True)
 		self.search_group_action.addAction(self.search_all_action)
 		self.search_group_action.addAction(self.search_sel_action)
-
 
 		#help actions
 		self.about_action = QAction("&About Krait2", self,
@@ -222,13 +240,17 @@ class KraitMainWindow(QMainWindow):
 		self.file_menu.addAction(self.annotin_action)
 		self.file_menu.addAction(self.annotfolder_action)
 		self.file_menu.addSeparator()
+		self.file_menu.addAction(self.export_select_action)
+		self.file_menu.addAction(self.export_whole_action)
+		self.file_menu.addAction(self.export_all_action)
+		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.exit_action)
 
 		self.edit_menu = self.menuBar().addMenu("&Edit")
+		self.edit_menu.addAction(self.filter_set_action)
+		self.edit_menu.addSeparator()
 		self.edit_menu.addAction(self.search_param_action)
 		self.edit_menu.addAction(self.primer_param_action)
-		self.edit_menu.addSeparator()
-		self.edit_menu.addAction("Filter Rows in Current Table")
 
 		self.run_menu = self.menuBar().addMenu("&Run")
 		self.run_menu.addAction(self.search_all_action)
@@ -541,6 +563,33 @@ class KraitMainWindow(QMainWindow):
 		if fas:
 			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?)", fas)
 			self.file_table.update_table()
+
+	def export_selected_rows(self):
+		out_file, _ = QFileDialog.getSaveFileName(self, filter="TSV (*.tsv);;CSV (*.csv)")
+
+		if not out_file:
+			return
+
+		worker = ExportSelectedRowsThread(self, self.current_table, out_file)
+		self.perform_new_task(worker)
+
+	def export_current_table(self):
+		out_file, _ = QFileDialog.getSaveFileName(self, filter="TSV (*.tsv);;CSV (*.csv)")
+
+		if not out_file:
+			return
+
+		worker = ExportWholeTableThread(self, self.current_table, out_file)
+		self.perform_new_task(worker)
+
+	def export_all_tables(self):
+		out_dir, _ = QFileDialog.getExistingDirectory(self)
+
+		if not out_file:
+			return
+
+		worker = ExportAllTablesThread(self, out_dir)
+		self.perform_new_task(worker)
 
 	def wait_task_finish(self):
 		if self.threader:

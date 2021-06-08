@@ -34,7 +34,7 @@ class PrimerParameterPanel(QWidget):
 
 		self.product_size = QLineEdit()
 		self.primer_num = QSpinBox()
-		self.primer_num.setMinimum(1)
+		self.primer_num.setRange(1, 100)
 		
 		product_layout.addWidget(PrimerTagLabel("Product size ranges", 'PRIMER_PRODUCT_SIZE_RANGE'), 0, 0)
 		product_layout.addWidget(PrimerTagLabel("# of primers to return", 'PRIMER_NUM_RETURN'), 0, 1)
@@ -50,12 +50,21 @@ class PrimerParameterPanel(QWidget):
 		self.size_min = QSpinBox()
 		self.size_opt = QSpinBox()
 		self.size_max = QSpinBox()
+		self.size_min.setRange(0, 1000)
+		self.size_opt.setRange(0, 1000)
+		self.size_max.setRange(0, 1000)
 		self.gc_min = QDoubleSpinBox()
 		self.gc_max = QDoubleSpinBox()
 		self.gc_opt = QDoubleSpinBox()
 		self.tm_min = QDoubleSpinBox()
 		self.tm_opt = QDoubleSpinBox()
 		self.tm_max = QDoubleSpinBox()
+		self.gc_min.setRange(0, 100)
+		self.gc_max.setRange(0, 100)
+		self.gc_opt.setRange(0, 100)
+		self.tm_min.setRange(0, 1000)
+		self.tm_opt.setRange(0, 1000)
+		self.tm_max.setRange(0, 1000)
 
 		size_layout.addWidget(QLabel("Primer size (bp)"), 0, 0)
 		size_layout.addWidget(PrimerTagLabel("Min", 'PRIMER_MIN_SIZE'), 0, 1)
@@ -83,11 +92,14 @@ class PrimerParameterPanel(QWidget):
 		advance_layout = QGridLayout()
 		advance_group.setLayout(advance_layout)
 
-		self.gc_clamp = QDoubleSpinBox()
+		self.gc_clamp = QSpinBox()
+		self.gc_clamp.setMaximum(1000)
 		self.max_end_stability = QDoubleSpinBox()
 		self.max_end_stability.setMaximum(1000)
 		self.max_ns = QSpinBox()
+		self.max_ns.setMaximum(1000)
 		self.max_diff_tm = QDoubleSpinBox()
+		self.max_diff_tm.setMaximum(1000)
 
 		advance_layout.addWidget(PrimerTagLabel("Max Ns", 'PRIMER_MAX_NS_ACCEPTED'), 0, 0)
 		advance_layout.addWidget(PrimerTagLabel("GC clamp", 'PRIMER_GC_CLAMP'), 1, 0)
@@ -173,6 +185,7 @@ class PrimerParameterPanel(QWidget):
 		self.tree.clear()
 
 	def read_settings(self):
+		self.settings.beginGroup("PRIMER")
 		for param in self._mappings:
 			box = self._mappings[param]
 			default, func = PRIMER_PARAMETERS[param]
@@ -181,8 +194,6 @@ class PrimerParameterPanel(QWidget):
 				box.setText(self.settings.value(param, default))
 			else:
 				box.setValue(self.settings.value(param, default, func))
-
-		self.settings.beginGroup("PRIMER")
 
 		for k in self.settings.allKeys():
 			if k not in self._mappings:
@@ -239,17 +250,17 @@ class SearchParameterPanel(QWidget):
 		ssr_group.setLayout(ssr_layout)
 
 		self.mono_box = QSpinBox()
-		self.mono_box.setMinimum(2)
+		self.mono_box.setRange(2, 1000)
 		self.di_box = QSpinBox()
-		self.di_box.setMinimum(2)
+		self.di_box.setRange(2, 1000)
 		self.tri_box = QSpinBox()
-		self.tri_box.setMinimum(2)
+		self.tri_box.setRange(2, 1000)
 		self.tetra_box = QSpinBox()
-		self.tetra_box.setMinimum(2)
+		self.tetra_box.setRange(2, 1000)
 		self.penta_box = QSpinBox()
-		self.penta_box.setMinimum(2)
+		self.penta_box.setRange(2, 1000)
 		self.hexa_box = QSpinBox()
-		self.hexa_box.setMinimum(2)
+		self.hexa_box.setRange(2, 1000)
 		
 		ssr_layout.setColumnStretch(1, 1)
 		ssr_layout.setColumnStretch(3, 1)
@@ -269,14 +280,12 @@ class SearchParameterPanel(QWidget):
 		ssr_layout.addWidget(QLabel("Hexa"), 2, 4)
 		ssr_layout.addWidget(self.hexa_box, 2, 5)
 
-
 		cssr_group = KraitGroupBox("Compound microsatellites (cSSRs)")
 		cssr_layout = QHBoxLayout()
 		cssr_group.setLayout(cssr_layout)
 
 		self.dmax_box = QSpinBox()
-		self.dmax_box.setMinimum(0)
-		self.dmax_box.setMaximum(1000)
+		self.dmax_box.setRange(0, 1000)
 		
 		cssr_layout.addWidget(QLabel("Maximum distance allowed between two adjacent SSRs (d<sub>MAX</sub>)"))
 		cssr_layout.addWidget(self.dmax_box, 1)
@@ -287,11 +296,11 @@ class SearchParameterPanel(QWidget):
 		vntr_group.setLayout(vntr_layout)
 
 		self.minmotif_box = QSpinBox()
-		self.minmotif_box.setMinimum(1)
+		self.minmotif_box.setRange(1, 1000)
 		self.maxmotif_box = QSpinBox()
-		self.maxmotif_box.setMinimum(1)
+		self.maxmotif_box.setRange(1, 1000)
 		self.minrep_box = QSpinBox()
-		self.minrep_box.setMinimum(2)
+		self.minrep_box.setRange(2, 1000)
 
 		vntr_layout.addWidget(QLabel("Min motif size"), 0, 0)
 		vntr_layout.addWidget(self.minmotif_box, 0, 1)
@@ -300,24 +309,28 @@ class SearchParameterPanel(QWidget):
 		vntr_layout.addWidget(QLabel("Min repeats"), 0, 4)
 		vntr_layout.addWidget(self.minrep_box, 0, 5)
 
-
 		itr_group = KraitGroupBox("Imperfect tandem repeats (ITRs)")
 		itr_layout = QGridLayout()
 		itr_group.setLayout(itr_layout)
 
 		self.minmsize_box = QSpinBox()
-		self.minmsize_box.setMinimum(1)
+		self.minmsize_box.setRange(1, 1000)
 		self.maxmsize_box = QSpinBox()
-		self.maxmsize_box.setMinimum(1)
+		self.maxmsize_box.setRange(1, 1000)
 		self.minsrep_box = QSpinBox()
-		self.minsrep_box.setMinimum(2)
+		self.minsrep_box.setRange(2, 1000)
 		self.minslen_box = QSpinBox()
+		self.minslen_box.setRange(1, 1000)
 		self.maxerr_box = QSpinBox()
+		self.maxerr_box.setRange(0, 1000)
 		self.subpena_box = QDoubleSpinBox()
+		self.subpena_box.setRange(0, 100)
 		self.subpena_box.setSingleStep(0.1)
 		self.inspena_box = QDoubleSpinBox()
+		self.inspena_box.setRange(0, 100)
 		self.inspena_box.setSingleStep(0.1)
 		self.delpena_box = QDoubleSpinBox()
+		self.delpena_box.setRange(0, 100)
 		self.delpena_box.setSingleStep(0.1)
 		self.matratio_box = QDoubleSpinBox()
 		self.matratio_box.setSingleStep(0.05)

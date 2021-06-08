@@ -1,4 +1,5 @@
 import os
+import csv
 import time
 import stria
 import pyfastx
@@ -16,7 +17,8 @@ from config import *
 __all__ = [
 	'SSRSearchThread', 'VNTRSearchThread',
 	'ITRSearchThread', 'PrimerDesignThread',
-	'SaveProjectThread'
+	'SaveProjectThread', 'ExportSelectedRowsThread',
+	'ExportWholeTableThread', 'ExportAllTablesThread'
 ]
 
 class WorkerSignal(QObject):
@@ -29,6 +31,7 @@ class WorkerSignal(QObject):
 class WorkerThread(QThread):
 	def __init__(self, parent=None):
 		super().__init__(parent)
+		self.parent = parent
 		self.signals = WorkerSignal()
 		self.signals.progress.connect(parent.change_progress)
 		self.signals.messages.connect(parent.show_status_message)
@@ -63,6 +66,7 @@ class SearchThread(WorkerThread):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.findex = 0
+		self.batch = 100
 
 	@property
 	def table(self):
@@ -70,9 +74,29 @@ class SearchThread(WorkerThread):
 
 	@property
 	def fastas(self):
+		if not self.search_all:
+			selected = sorted(self.parent.file_table.get_selected_rows())
+		else:
+			selected = []
+
 		self.total_file = DB.get_one("SELECT COUNT(1) FROM fasta_0 LIMIT 1")
-		for fasta in DB.query("SELECT * FROM fasta_0"):
-			yield fasta
+		
+		if self.parent.search_all or len(selected) == self.total_file:
+			for fasta in DB.query("SELECT * FROM fasta_0"):
+				yield fasta
+		else:
+			self.total_file = len(selected)
+			slice_start = 0
+			slice_end = 0
+			
+			while slice_start < self.total_file:
+				slice_end = slice_start + self.batch
+				ids = selected[slice_start:slice_end]
+				slice_start = slice_end
+
+				sql = "SELECT * FROM fasta_0 WHERE id IN ({})".format(','.join(['?']*len(ids)))
+				for fasta in DB.query(sql, ids):
+					yield fasta
 
 	def sql(self):
 		self.columns = len(DB.get_field(self.table)) - 1
@@ -265,7 +289,6 @@ class ITRSearchThread(SearchThread):
 class PrimerDesignThread(WorkerThread):
 	def __init__(self, parent=None, table=None):
 		super().__init__(parent)
-		self.parent = parent
 		self.batch = 100
 
 		#current table is tandem repeat table, not primer table
@@ -402,3 +425,76 @@ class SaveProjectThread(WorkerThread):
 					progress = p
 
 		self.signals.messages.emit("Successfully saved to {}".format(self.save_file))
+
+class ExportSelectedRowsThread(WorkerThread):
+	def __init__(self, parent=None, table=None, out_file=None):
+		super().__init__(parent)
+		self.table = table
+		self.out_file = out_file
+		self.batch = 100
+
+	def process(self):
+		selected = sorted(self.parent.get_selected_rows())
+		title = DB.get_field(self.table)
+
+		total = len(selected)
+		processed = 0
+		progress = 0
+		slice_start = 0
+		slice_end = 0
+
+		with open(self.out_file, 'w') as fh:
+			writer = csv.writer(fh)
+			writer.writerow(title)
+
+			while slice_start < total:
+				slice_end = slice_start + self.batch
+				ids = selected[slice_start:slice_end]
+				slice_start = slice_end
+				sql = "SELECT * FROM {} WHERE id IN ({})".format(self.table, ','.join(['?']*len(ids)))
+
+				for row in DB.query(sql, ids):
+					writer.writerow(row)
+
+				processed += len(ids)
+				p = int(processed/total*100)
+				if p > progress:
+					self.signals.progress.emit(p)
+					progress = p
+
+		self.signals.messages.emit("Successfully exported {} rows to {}".format(total, self.out_file))
+
+class ExportWholeTableThread(WorkerThread):
+	def __init__(self, parent=None, table=None, out_file=None):
+		super().__init__(parent)
+		self.table = table
+		self.out_file = out_file
+
+	def process(self):
+		title = DB.get_field(self.table)
+		total = DB.get_one("SELECT COUNT(1) FROM {}".format(self.table))
+		processed = 0
+		progress = 0
+
+		with open(self.out_file, 'w') as fh:
+			writer = csv.writer(fh)
+			writer.writerow(title)
+
+			for row in DB.query("SELECT * FROM {}".format(self.table)):
+				writer.writerow(row)
+
+				processed += 1
+				p = int(processed/total*100)
+				if p > progress:
+					self.signals.progress.emit(p)
+					progress = p
+
+		self.signals.messages.emit("Successfully exported the whole table to {}".format(total, self.out_file))
+
+class ExportAllTablesThread(WorkerThread):
+	def __init__(self, parent=None, out_dir=None):
+		super().__init__(parent)
+		self.out_dir = out_dir
+
+	def process(self):
+		pass
