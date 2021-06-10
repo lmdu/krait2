@@ -32,6 +32,7 @@ class WorkerThread(QThread):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.parent = parent
+		self.search_all = parent.search_all
 		self.signals = WorkerSignal()
 		self.signals.progress.connect(parent.change_progress)
 		self.signals.messages.connect(parent.show_status_message)
@@ -81,7 +82,7 @@ class SearchThread(WorkerThread):
 
 		self.total_file = DB.get_one("SELECT COUNT(1) FROM fasta_0 LIMIT 1")
 		
-		if self.parent.search_all or len(selected) == self.total_file:
+		if self.search_all or len(selected) == self.total_file:
 			for fasta in DB.query("SELECT * FROM fasta_0"):
 				yield fasta
 		else:
@@ -443,8 +444,13 @@ class ExportSelectedRowsThread(WorkerThread):
 		slice_start = 0
 		slice_end = 0
 
+		if self.out_file.endswith('.csv'):
+			separator = ','
+		else:
+			separator = '\t'
+
 		with open(self.out_file, 'w') as fh:
-			writer = csv.writer(fh)
+			writer = csv.writer(fh, delimiter=separator)
 			writer.writerow(title)
 
 			while slice_start < total:
@@ -476,8 +482,13 @@ class ExportWholeTableThread(WorkerThread):
 		processed = 0
 		progress = 0
 
+		if self.out_file.endswith('.csv'):
+			separator = ','
+		else:
+			separator = '\t'
+
 		with open(self.out_file, 'w') as fh:
-			writer = csv.writer(fh)
+			writer = csv.writer(fh, delimiter=separator)
 			writer.writerow(title)
 
 			for row in DB.query("SELECT * FROM {}".format(self.table)):
@@ -497,4 +508,32 @@ class ExportAllTablesThread(WorkerThread):
 		self.out_dir = out_dir
 
 	def process(self):
-		pass
+		tables = DB.get_tables()
+		total = len(tables)
+		processed = 0
+		progress = 0
+
+		#get fasta name and id mapping
+		fasta_mapping = {}
+		for row in DB.query("SELECT id, name FROM fasta_0"):
+			fasta_mapping[str(row[0])] = row[1]
+
+		for table in tables:
+			if table == 'fasta_0':
+				out_file = os.path.join(self.out_dir, 'input_fastas.csv')
+			else:
+				_type, _id = table.split('_')
+
+				out_file = os.path.join(self.out_dir, '{}_{}.csv'.format(
+					fasta_mapping[_id], _type
+				))
+
+			DB.export_to_csv(table, out_file)
+
+			processed += 1
+			p = processed/total*100
+			if p > progress:
+				self.signals.progress.emit(p)
+				progress = p
+
+

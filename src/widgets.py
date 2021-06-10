@@ -158,8 +158,8 @@ class KraitMainWindow(QMainWindow):
 		#run actions
 		self.search_group_action = QActionGroup(self)
 		self.search_group_action.triggered.connect(self.search_switch)
-		self.search_all_action = QAction("Search for All Fastas", self, checkable=True, checked=True)
-		self.search_sel_action = QAction("Search for Selected Fastas", self, checkable=True)
+		self.search_all_action = QAction("Running for All Fastas", self, checkable=True, checked=True)
+		self.search_sel_action = QAction("Running for Selected Fastas", self, checkable=True)
 		self.search_group_action.addAction(self.search_all_action)
 		self.search_group_action.addAction(self.search_sel_action)
 
@@ -207,8 +207,8 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.perform_itr_search
 		)
 
-		self.mapping_action = QAction(QIcon("icons/mapping.svg"), "Mapping", self,
-			toolTip = "Mapping tandem repeats to gene",
+		self.locating_action = QAction(QIcon("icons/locating.svg"), "locating", self,
+			toolTip = "Locate tandem repeat sequences to gene features",
 			triggered = self.close
 		)
 
@@ -277,7 +277,7 @@ class KraitMainWindow(QMainWindow):
 		self.tool_bar.addAction(self.search_cssr_action)
 		self.tool_bar.addAction(self.search_vntr_action)
 		self.tool_bar.addAction(self.search_itr_action)
-		self.tool_bar.addAction(self.mapping_action)
+		self.tool_bar.addAction(self.locating_action)
 		self.tool_bar.addAction(self.primer_action)
 		self.tool_bar.addAction(self.stat_action)
 		self.tool_bar.addAction(self.filter_action)
@@ -583,9 +583,9 @@ class KraitMainWindow(QMainWindow):
 		self.perform_new_task(worker)
 
 	def export_all_tables(self):
-		out_dir, _ = QFileDialog.getExistingDirectory(self)
+		out_dir = QFileDialog.getExistingDirectory(self)
 
-		if not out_file:
+		if not out_dir:
 			return
 
 		worker = ExportAllTablesThread(self, out_dir)

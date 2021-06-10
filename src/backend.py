@@ -112,6 +112,10 @@ class DataBackend:
 	def __init__(self):
 		self._connect_to_db()
 
+	def __del__(self):
+		if self.conn:
+			self.conn.close()
+
 	@property
 	def cursor(self):
 		return self.conn.cursor()
@@ -191,6 +195,10 @@ class DataBackend:
 	def get_field_type(self, table):
 		return [row[2] for row in self.query("PRAGMA table_info({})".format(table))]
 
+	def get_tables(self):
+		sql = "SELECT name FROM sqlite_master WHERE type=?"
+		return self.get_column(sql, ('table',))
+
 	def save_to_file(self, dbfile):
 		target = apsw.Connection(dbfile)
 		return target.backup("main", self.conn, "main")
@@ -209,5 +217,12 @@ class DataBackend:
 	@property
 	def changed(self):
 		return self.conn.changes() > 0
+
+	def export_to_csv(self, table, out_file):
+		with open(out_file, 'w') as fw:
+			shell = apsw.Shell(stdout=fw, db=self.conn)
+			shell.process_command(".mode csv")
+			shell.process_command(".headers on")
+			shell.process_complete_line("SELECT * FROM {}".format(table))
 
 DB = DataBackend()

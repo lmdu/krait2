@@ -100,6 +100,121 @@ def primer_tag_format(tag):
 	except:
 		raise Exception("The {} tag is not a primer3 tag".format(tag))
 
+#gff or gtf file validation
+def get_annotation_format(annot_file):
+	if is_gzip_compressed(annot_file):
+		handler = gzip.open(annot_file, 'rt')
+	else:
+		handler = open(annot_file)
+
+	with handler as fh:
+		for line in fh:
+			if line[0] == '#':
+				continue
+
+			cols = line.strip().split('\t')
+
+			if len(cols) != 9:
+				raise Exception("the annotation file is not GFF or GTF formatted file")
+
+			attr = cols[-1].split(';')[0]
+
+			if '=' in attr:
+				return 'gff'
+			elif ' ' in attr and '"' in attr:
+				return 'gtf'
+			else:
+				raise Exception("the annotation file is not GFF or GTF formatted file")
+
+class AttrDict(dict):
+	def __getattr__(self, attr):
+		return self[attr]
+
+class AnnotReader:
+	def __init__(annot_file):
+		if is_gzip_compressed(annot_file):
+			handler = gzip.open(annot_file, 'rt')
+		else:
+			handler = open(annot_file)
+
+		self.reader = csv.reader(handler, delimiter='\t')
+
+	def __del__(self):
+		self.handler.close()
+
+	def __iter__(self):
+		for row in self.reader:
+			yield AttrDict(
+				chrom = row[0],
+				feature = row[2].lower(),
+				start = int(row[3]),
+				end = int(row[4]),
+				strand = row[6],
+				attrs = 	
+			)
+
+	def parse_attrs(self, attr_str):
+		pass
+
+class GFFReader(AnnotReader):
+	def __init__(self, annot_file):
+		super().__init__(annot_file)
+
+	def parse_attrs(self, attr_str):
+		attrs = AttrDict()
+		for it in attr_str.strip().split(';'):
+			attr, val = it.strip().split('=')
+			attrs[attr] = val
+
+		return attrs
+
+class GTFReader(AnnotReader):
+	def __init__(self, annot_file):
+		super().__init__(annot_file)
+
+	def parse_attrs(self, attr_str)
+
+
+		
+
+
+
+
+
+
+
+
+def gff_attrs_parse(attrs_string):
+	for 
+
+	attrs_string.strip().strip('"').split('"')
+
+def gff_reader(annot_file):
+	
+	with handler as fh:
+		reader = csv.reader(fh, delimiter='\t')
+
+		for row in reader:
+			record = AttrDict(
+				
+			)
+
+			for it in row[-1].split(';'):
+
+
+
+
+
+
+def gtf_reader(annot_file):
+	pass
+
+def annotation_reader(annot_file):
+	fmt = get_annotation_format(annot_file)
+
+
+
+
 if __name__ == '__main__':
 	affix = iupac_numerical_multiplier(int(sys.argv[1]))
 	print(affix)
