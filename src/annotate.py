@@ -40,8 +40,12 @@ class AnnotReader:
 
 	def parse_attrs(self, attr_str):
 		attrs = AttrDict()
-		for it in attr_str.strip().split(';'):
-			attr, val = self.split_value(it)
+		items = attr_str.strip().split(';')
+		if not items[-1]:
+			items.pop()
+
+		for item in items:
+			attr, val = self.split_value(item)
 			attrs[attr] = val
 
 		return attrs
@@ -58,7 +62,7 @@ class GTFReader(AnnotReader):
 		super().__init__(annot_file)
 
 	def split_value(self, it):
-		cols = it.strip().strip('"').split('"')
+		cols = it.strip().split('"')
 		return (cols[0].strip(), cols[1].strip())
 
 if __name__ == '__main__':
