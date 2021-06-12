@@ -1,5 +1,6 @@
 import csv
 import gzip
+import pygrange
 
 from utils import *
 
@@ -35,7 +36,7 @@ class AnnotReader:
 				attrs = self.parse_attrs(row[-1])
 			)
 
-	def split_value(self, it):
+	def split_value(self, item):
 		pass
 
 	def parse_attrs(self, attr_str):
@@ -54,16 +55,29 @@ class GFFReader(AnnotReader):
 	def __init__(self, annot_file):
 		super().__init__(annot_file)
 
-	def split_value(self, it):
-		return it.strip().split('=')
+	def split_value(self, item):
+		return item.strip().split('=')
 
 class GTFReader(AnnotReader):
 	def __init__(self, annot_file):
 		super().__init__(annot_file)
 
-	def split_value(self, it):
-		cols = it.strip().split('"')
+	def split_value(self, item):
+		cols = item.strip().split('"')
 		return (cols[0].strip(), cols[1].strip())
+
+class GeneLocator:
+	def __init__(self, annot_file):
+		self.annot_file = annot_file
+		self.ranges = pygrange.Ranges()
+		self.create_reader()
+
+	def create_reader(self):
+		pass
+
+	def 
+
+
 
 if __name__ == '__main__':
 	gff = GFFReader('GCF_000005845.2.gff.gz')
