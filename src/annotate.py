@@ -69,14 +69,44 @@ class GTFReader(AnnotReader):
 class GeneLocator:
 	def __init__(self, annot_file):
 		self.annot_file = annot_file
+		self.parent_mapping = {0: 0}
+		self.feature_mapping = {}
 		self.ranges = pygrange.Ranges()
 		self.create_reader()
+		self.parse()
 
 	def create_reader(self):
 		pass
 
-	def 
+	def parse(self):
+		pass
 
+class GFFLocator(GeneLocator):
+	def __init__(self, annot_file):
+		super().__init__(annot_file)
+
+	def create_reader(self):
+		self.reader = GFFReader(self.annot_file)
+
+	def parse(self):
+		annot_id = 0
+		annot_rows = []
+
+		for r in self.reader:
+			annot_id += 1
+
+			if r.feature == 'cds':
+				pass
+
+			elif r.feature == 'exon':
+				pass
+
+			elif 'utr' in r.feature:
+				pass
+			else:
+				parent = self.parent_mapping[r.attrs.get('parent', 0)]
+
+				annot_rows.append((annot_id, parent, r.chrom, r.feature, r.start, r.end, r.strand))
 
 
 if __name__ == '__main__':

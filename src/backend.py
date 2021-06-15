@@ -89,6 +89,29 @@ CREATE TABLE IF NOT EXISTS primer_{} (
 )
 """
 
+ANNOT_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS annot_{} (
+	id INTEGER PRIMARY KEY,
+	parent INTEGER,
+	chrom TEXT,
+	type TEXT,
+	start INTEGER,
+	end INTEGER,
+	strand TEXT,
+	attributes TEXT,
+)
+"""
+
+LOCATE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS locate_{} (
+	id INTEGER PRIMARY KEY,
+	str_id INTEGER,
+	str_type INTEGER,
+	parent_id INTEGER,
+	feature_id INTEGER
+)
+"""
+
 TABLE_SQL_MAPPING = {
 	'fasta': FASTA_TABLE_SQL,
 	'ssr': SSR_TABLE_SQL,
@@ -96,6 +119,8 @@ TABLE_SQL_MAPPING = {
 	'cssr': CSSR_TABLE_SQL,
 	'itr': ITR_TABLE_SQL,
 	'primer': PRIMER_TABLE_SQL,
+	'annot': ANNOT_TABLE_SQL,
+	'locate': LOCATE_TABLE_SQL,
 }
 
 class DataRow(dict):
