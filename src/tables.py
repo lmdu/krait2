@@ -53,6 +53,9 @@ class KraitTableModel(QAbstractTableModel):
 
 		self._header = []
 
+		#has annotation
+		self.annotated = 0
+
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():
 			return 0
@@ -96,6 +99,10 @@ class KraitTableModel(QAbstractTableModel):
 					return Qt.Checked
 				else:
 					return Qt.Unchecked
+
+		elif role == Qt.BackgroundRole:
+			if self.annotated and self._table != 'primer':
+				return self.get_color(index)
 
 	def setData(self, index, value, role):
 		if not index.isValid():
@@ -229,6 +236,30 @@ class KraitTableModel(QAbstractTableModel):
 
 		return self.cache_row[1][col]
 
+
+	def get_color(self, index):
+		_id = self.displayed[index.row()]
+
+		colors = {
+			1: QColor(245, 183, 177), 
+			2: QColor(250, 215, 160), 
+			3: QColor(169, 223, 191),
+			4: QColor(174, 214, 241),
+			5: QColor(255, 255, 255),
+			6: QColor(255, 255, 255)
+		}
+
+		type_mapping = {
+			'ssr': 1, 'cssr': 2,
+			'vntr': 3, 'itr': 4
+		}
+		
+		sql = "SELECT feature_id FROM locate_{} WHERE str_id=? AND str_type=? LIMIT 1".format(self._index)
+		feat_id = DB.get_one(sql, (_id, type_mapping[self._table]))
+
+		if feat_id:
+			return colors.get(feat_id, QColor(255, 255, 255))
+
 	def update_cache(self, row):
 		_id = self.displayed[row]
 		self.cache_row[0] = row
@@ -293,6 +324,10 @@ class KraitTableView(QTableView):
 		self.setModel(self.model)
 
 	def update_table(self, file_index=0):
+		if DB.table_exists("locate_{}".format(file_index)):
+			self.model.annotated = 1
+		else:
+			self.model.annotated = 0
 		self.model.set_index(file_index)
 		self.real_table = "{}_{}".format(self.table, file_index)
 
@@ -344,7 +379,7 @@ class KraitTableView(QTableView):
 			self.checkbox.setCheckState(Qt.Checked)
 
 class FastaTableModel(KraitTableModel):
-	_custom_headers = ['id', 'name', 'size', 'status', 'path']
+	_custom_headers = ['id', 'name', 'size', 'status', 'fasta']
 
 	def __init__(self, parent=None, table="fasta"):
 		super(FastaTableModel, self).__init__(parent, table)
@@ -390,6 +425,15 @@ class FastaTableView(KraitTableView):
 		index = self.model.createIndex(row, 3)
 		self.model.update_cache(row)
 		self.model.dataChanged.emit(index, index)
+
+	def update_table(self, file_index=0):
+		self.model.set_index(file_index)
+		self.real_table = "{}_{}".format(self.table, file_index)
+		annots = DB.get_column("SELECT annotation FROM fasta_0")
+		if any(annots):
+			if 'annotation' not in self.model._custom_headers:
+				self.model._custom_headers.append('annotation')
+				self.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
 
 class PrimerTableDelegate(QStyledItemDelegate):
 	def __init__(self, parent=None):

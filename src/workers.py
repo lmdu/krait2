@@ -13,12 +13,14 @@ from backend import *
 from motif import *
 from utils import *
 from config import *
+from annotate import *
 
 __all__ = [
 	'SSRSearchThread', 'VNTRSearchThread',
 	'ITRSearchThread', 'PrimerDesignThread',
 	'SaveProjectThread', 'ExportSelectedRowsThread',
-	'ExportWholeTableThread', 'ExportAllTablesThread'
+	'ExportWholeTableThread', 'ExportAllTablesThread',
+	'TRELocatingThread'
 ]
 
 class WorkerSignal(QObject):
@@ -336,7 +338,7 @@ class PrimerDesignThread(WorkerThread):
 
 	def process(self):
 		#get fasta file path
-		fasta_file = DB.get_one("SELECT path FROM fasta_0 WHERE id=?", self.findex)
+		fasta_file = DB.get_one("SELECT fasta FROM fasta_0 WHERE id=?", self.findex)
 		fasta = pyfastx.Fasta(fasta_file, uppercase=True)
 
 		primerdesign.setGlobals(self.primer_tags, None, None)
@@ -536,4 +538,56 @@ class ExportAllTablesThread(WorkerThread):
 				self.signals.progress.emit(p)
 				progress = p
 
+class TRELocatingThread(SearchThread):
+	_table = 'locate'
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.type_mapping = {'ssr': 1, 'cssr': 2,
+							'vntr': 3, 'itr': 4}
 
+	def process(self):
+		progress = 0
+		processed = 0
+		for fasta in self.fastas:
+			self.findex = fasta[0]
+			self.change_status('running')
+
+			annot_file = fasta[5]
+
+			if not annot_file:
+				continue
+
+			tre_types = {
+				'ssr': DB.get_count("ssr_{}".format(self.findex)),
+				'vntr': DB.get_count("vntr_{}".format(self.findex)),
+				'cssr': DB.get_count("cssr_{}".format(self.findex)),
+				'itr': DB.get_count("itr_{}".format(self.findex))
+			}
+
+			if any(tre_types.values()):
+				#parse annotation file
+				locator = annotation_parser(annot_file)
+
+				#build index
+				locator.index()
+			else:
+				continue
+
+			#create annotation table for current file
+			DB.create_table(self._table, self.findex)
+
+			for tre_type in tre_types:
+				if not tre_types[tre_type]:
+					continue
+
+				feat_id = self.type_mapping[tre_type]
+
+				tre_annots = []
+				for tre in DB.query("SELECT * FROM {}_{}".format(tre_type, self.findex)):
+					locs = locator.locate(tre[1], tre[2], tre[3])
+					for loc in locs:
+						tre_annots.append((tre[0], feat_id, *loc))
+
+				if tre_annots:
+					DB.insert_rows(self.sql(), tre_annots)
+			

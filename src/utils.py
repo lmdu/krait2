@@ -1,11 +1,17 @@
 import sys
+import gzip
 import struct
 
 from config import PRIMER_PARAMETERS
 
 __all__ = ["get_uncompressed_size", "is_gzip_compressed",
 			"iupac_numerical_multiplier", "primer_tag_format",
-			"product_size_format", "get_annotation_format"]
+			"product_size_format", "get_annotation_format",
+			"AttrDict"]
+
+class AttrDict(dict):
+	def __getattr__(self, attr):
+		return self[attr]
 
 def is_gzip_compressed(fpath):
 	with open(fpath, 'rb') as f:

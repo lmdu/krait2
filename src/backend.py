@@ -8,8 +8,9 @@ CREATE TABLE IF NOT EXISTS fasta_0 (
 	name TEXT,
 	size INTEGER,
 	status TEXT,
-	path TEXT
-);
+	fasta TEXT,
+	annotation TEXT
+)
 """
 
 SSR_TABLE_SQL = """
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS ssr_{} (
 	type TEXT,
 	repeats INTEGER,
 	length INTEGER
-);
+)
 """
 
 VNTR_TABLE_SQL = """
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS vntr_{} (
 	type TEXT,
 	repeats INTEGER,
 	length INTEGER
-);
+)
 """
 
 CSSR_TABLE_SQL = """
@@ -98,7 +99,7 @@ CREATE TABLE IF NOT EXISTS annot_{} (
 	start INTEGER,
 	end INTEGER,
 	strand TEXT,
-	attributes TEXT,
+	attributes TEXT
 )
 """
 
@@ -108,7 +109,8 @@ CREATE TABLE IF NOT EXISTS locate_{} (
 	str_id INTEGER,
 	str_type INTEGER,
 	parent_id INTEGER,
-	feature_id INTEGER
+	feature_id INTEGER,
+	order_num INTEGER
 )
 """
 
@@ -213,6 +215,12 @@ class DataBackend:
 
 	def get_set(self, sql, paras=None):
 		return {row[0] for row in self.query(sql, paras)}
+
+	def get_count(self, table):
+		if self.table_exists(table):
+			return self.get_one("SELECT COUNT(1) FROM {}".format(table))
+		else:
+			return 0
 
 	def get_field(self, table):
 		return [row[1] for row in self.query("PRAGMA table_info({})".format(table))]

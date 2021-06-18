@@ -110,12 +110,12 @@ class KraitMainWindow(QMainWindow):
 
 		self.annotin_action = QAction("&Import Annotation Files...", self,
 			statusTip = "Import GFF or GTF formatted annotation files",
-			triggered = self.import_fasta_files
+			triggered = self.import_annot_files
 		)
 
 		self.annotfolder_action = QAction("&Import Annotation Files in Folder...", self,
 			statusTip = "Import all GFF or GTF formatted annotation files in a folder",
-			triggered = self.import_fasta_folder
+			triggered = self.import_annot_folder
 		)
 
 		self.export_select_action = QAction("&Export Selected Rows...", self,
@@ -209,7 +209,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.locating_action = QAction(QIcon("icons/locating.svg"), "locating", self,
 			toolTip = "Locate tandem repeat sequences to gene features",
-			triggered = self.close
+			triggered = self.perform_tre_locating
 		)
 
 		self.primer_action = QAction(QIcon("icons/primer.svg"), "Primer", self,
@@ -510,10 +510,7 @@ class KraitMainWindow(QMainWindow):
 		files = QFileDialog.getOpenFileNames(self,
 			caption = "Select one or more files to import",
 			dir = "",
-			filter = (
-				"Fastas (*.fa *.fas *.fna *.fasta);;Gzipped Fastas "
-				"(*.fa.gz *.fas.gz *.fna.gz *.fasta.gz);;All files (*.*)"
-			)
+			filter = "Fasta file (*.fa *.fas *.fna *.fasta *.fa.gz *.fas.gz *.fna.gz *.fasta.gz);;All files (*.*)"
 		)
 
 		fas = []
@@ -531,7 +528,7 @@ class KraitMainWindow(QMainWindow):
 			fas.append((name, size, 'pending', fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?)", fas)
+			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?,NULL)", fas)
 			self.file_table.update_table()
 
 	def import_fasta_folder(self):
@@ -561,7 +558,53 @@ class KraitMainWindow(QMainWindow):
 			fas.append((name, size, 'pending', fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?)", fas)
+			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?,NULL)", fas)
+			self.file_table.update_table()
+
+	def import_annot_files(self):
+		files = QFileDialog.getOpenFileNames(self,
+			caption = "Select one or more files to import",
+			dir = "",
+			filter = "GFF or GTF (*.gtf *.gff *.gtf.gz *.gff.gz);;All files (*.*)"
+		)
+
+		annot_files = []
+		for af in files[0]:
+			qf = QFileInfo(af)
+			name = qf.baseName()
+			fa_id = DB.get_one("SELECT id FROM fasta_0 WHERE name=?", (name,))
+
+			if fa_id:
+				annot_files.append((af, fa_id))
+
+		if annot_files:
+			DB.insert_rows("UPDATE fasta_0 SET annotation=? WHERE id=?", annot_files)
+			self.file_table.update_table()
+
+	def import_annot_folder(self):
+		folder = QFileDialog.getExistingDirectory(self,
+			caption = "Select a folder",
+			dir = "",
+			options = QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
+		)
+
+		if not folder:
+			return
+
+		it = QDirIterator(folder, QDir.Files, QDirIterator.Subdirectories)
+		annot_files = []
+		while it.hasNext():
+			af = it.next()
+			qf = QFileInfo(af)
+			name = qf.baseName()
+
+			fa_id = DB.get_one("SELECT id FROM fasta_0 WHERE name=?", (name,))
+
+			if fa_id:
+				annot_files.append((af, fa_id))
+
+		if annot_files:
+			DB.insert_rows("UPDATE fasta_0 SET annotation=? WHERE id=?", annot_files)
 			self.file_table.update_table()
 
 	def export_selected_rows(self):
@@ -630,6 +673,10 @@ class KraitMainWindow(QMainWindow):
 	def perform_primer_design(self):
 		worker = PrimerDesignThread(self, self.current_table)
 		worker.finished.connect(self.show_primer_table)
+		self.perform_new_task(worker)
+
+	def perform_tre_locating(self):
+		worker = TRELocatingThread(self)
 		self.perform_new_task(worker)
 
 	def open_filter(self):
