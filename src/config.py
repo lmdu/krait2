@@ -151,18 +151,20 @@ KRAIT_PARAMETERS = {
 	'VNTR/minmotif': (7, int),
 	'VNTR/maxmotif': (30, int),
 	'VNTR/minrep': (3, int),
-	'ITR/minmsize': (1, int),
-	'ITR/maxmsize': (6, int),
-	'ITR/minsrep': (3, int),
-	'ITR/minslen': (10, int),
-	'ITR/maxerr': (2, int),
-	'ITR/subpena': (0.5, float),
-	'ITR/inspena': (1.0, float),
-	'ITR/delpena': (1.0, float),
-	'ITR/matratio': (0.7, float),
-	'ITR/maxextend': (2000, int),
+	#'ITR/minmsize': (1, int),
+	#'ITR/maxmsize': (6, int),
+	'ISSR/minsrep': (3, int),
+	'ISSR/minslen': (10, int),
+	'ISSR/maxerr': (2, int),
+	'ISSR/subpena': (0.5, float),
+	'ISSR/inspena': (1.0, float),
+	'ISSR/delpena': (1.0, float),
+	'ISSR/matratio': (0.7, float),
+	'ISSR/maxextend': (2000, int),
 	'STR/level': (3, int),
-	'STR/flank': (50, int)
+	'STR/flank': (50, int),
+	'STAT/unit': (0, int),
+	'STAT/unkown': (0, int)
 }
 
 #default parameter and type for primer3

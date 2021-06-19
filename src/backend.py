@@ -53,12 +53,13 @@ CREATE TABLE IF NOT EXISTS cssr_{} (
 """
 
 ITR_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS itr_{} (
+CREATE TABLE IF NOT EXISTS issr_{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
 	start INTEGER,
 	end INTEGER,
 	motif TEXT,
+	standard TEXT,
 	type TEXT,
 	length INTEGER,
 	match INTEGER,
@@ -111,6 +112,15 @@ CREATE TABLE IF NOT EXISTS locate_{} (
 	parent_id INTEGER,
 	feature_id INTEGER,
 	order_num INTEGER
+)
+"""
+
+STATS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS stats_{} (
+	id INTEGER PRIMARY KEY,
+	category INTEGER,
+	option TEXT,
+	value TEXT
 )
 """
 

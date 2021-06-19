@@ -47,7 +47,7 @@ class KraitMainWindow(QMainWindow):
 			'ssr': None,
 			'cssr': None,
 			'vntr': None,
-			'itr': None,
+			'issr': None,
 			'primer': None
 		}
 
@@ -202,9 +202,9 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.perform_vntr_search
 		)
 
-		self.search_itr_action = QAction(QIcon("icons/itr.svg"), "ITRs", self,
-			toolTip = "Search for imperfect tandem repeats",
-			triggered = self.perform_itr_search
+		self.search_issr_action = QAction(QIcon("icons/issr.svg"), "iSSRs", self,
+			toolTip = "Search for imperfect microsatellites",
+			triggered = self.perform_issr_search
 		)
 
 		self.locating_action = QAction(QIcon("icons/locating.svg"), "locating", self,
@@ -276,7 +276,7 @@ class KraitMainWindow(QMainWindow):
 		self.tool_bar.addAction(self.search_ssr_action)
 		self.tool_bar.addAction(self.search_cssr_action)
 		self.tool_bar.addAction(self.search_vntr_action)
-		self.tool_bar.addAction(self.search_itr_action)
+		self.tool_bar.addAction(self.search_issr_action)
 		self.tool_bar.addAction(self.locating_action)
 		self.tool_bar.addAction(self.primer_action)
 		self.tool_bar.addAction(self.stat_action)
@@ -410,7 +410,7 @@ class KraitMainWindow(QMainWindow):
 	def change_current_file(self, index):
 		#get current fasta id in backend
 		self.current_file = self.file_table.get_clicked_rowid(index)
-		tables = ['ssr', 'cssr', 'vntr', 'itr', 'primer']
+		tables = ['ssr', 'cssr', 'vntr', 'issr', 'primer']
 
 		for table in tables:
 			self.show_table(table)
@@ -666,8 +666,8 @@ class KraitMainWindow(QMainWindow):
 		worker = VNTRSearchThread(self)
 		self.perform_new_task(worker)
 
-	def perform_itr_search(self):
-		worker = ITRSearchThread(self)
+	def perform_issr_search(self):
+		worker = ISSRSearchThread(self)
 		self.perform_new_task(worker)
 
 	def perform_primer_design(self):

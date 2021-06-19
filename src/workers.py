@@ -17,7 +17,7 @@ from annotate import *
 
 __all__ = [
 	'SSRSearchThread', 'VNTRSearchThread',
-	'ITRSearchThread', 'PrimerDesignThread',
+	'ISSRSearchThread', 'PrimerDesignThread',
 	'SaveProjectThread', 'ExportSelectedRowsThread',
 	'ExportWholeTableThread', 'ExportAllTablesThread',
 	'TRELocatingThread'
@@ -266,18 +266,21 @@ class VNTRSearchThread(SearchThread):
 			row[4] = iupac_numerical_multiplier(row[4])
 			yield row
 
-class ITRSearchThread(SearchThread):
-	_table = 'itr'
+class ISSRSearchThread(SearchThread):
+	_table = 'issr'
 
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.params = []
-		params = ['ITR/minmsize', 'ITR/maxmsize', 'ITR/minsrep', 'ITR/minslen',
-					'ITR/maxerr', 'ITR/subpena', 'ITR/inspena', 'ITR/delpena',
+		self.params = [1, 6]
+		params = ['ITR/minsrep', 'ITR/minslen', 'ITR/maxerr', 
+					'ITR/subpena', 'ITR/inspena', 'ITR/delpena',
 					'ITR/matratio', 'ITR/maxextend']
 		for param in params:
 			default, func = KRAIT_PARAMETERS[param]
 			self.params.append(self.settings.value(param, default, func))
+
+		standard_level = self.settings.value('STR/level', 3, type=int)
+		self.motifs = StandardMotif(standard_level)
 
 	def args(self, name, seq):
 		return (name, seq, *self.params)
@@ -286,8 +289,13 @@ class ITRSearchThread(SearchThread):
 	def search(*args):
 		return stria.ITRMiner(*args).as_list()
 
-	def rows(self, itrs):
-		return itrs
+	def rows(self, issrs):
+		for issr in issrs:
+			row = issr[0:4]
+			row.append(self.motifs.standard(issr[3]))
+			row.append(iupac_numerical_multiplier(ssr[4]))
+			row.extend(issr[5:])
+			yield row
 
 class PrimerDesignThread(WorkerThread):
 	def __init__(self, parent=None, table=None):

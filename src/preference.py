@@ -20,6 +20,10 @@ class PrimerTagLabel(QLabel):
 		url = QUrl(self.base_url.format(self.tag))
 		QDesktopServices.openUrl(url)
 
+class PrimerTagTree(QTreeWidget):
+	def sizeHint(self):
+		return QSize(0, 0)
+
 class PrimerParameterPanel(QWidget):
 	def __init__(self, parent=None):
 		super(PrimerParameterPanel, self).__init__(parent)
@@ -134,18 +138,18 @@ class PrimerParameterPanel(QWidget):
 		btn_layout.addWidget(self.del_btn)
 		btn_layout.addWidget(self.clr_btn)
 
-		self.tree = QTreeWidget()
+		self.tree = PrimerTagTree()
 		self.tree.setHeaderLabels(["Primer3 tags", "Value"])
 		self.tree.header().setStretchLastSection(False)
 		self.tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
 
 		other_layout.addLayout(btn_layout)
-		other_layout.addWidget(self.tree)
+		other_layout.addWidget(self.tree, 1)
 
 		mainLayout = QVBoxLayout()
 		mainLayout.addWidget(general_group)
 		mainLayout.addWidget(advance_group)
-		mainLayout.addWidget(other_group)
+		mainLayout.addWidget(other_group, 1)
 
 		self.setLayout(mainLayout)
 
@@ -309,14 +313,14 @@ class SearchParameterPanel(QWidget):
 		vntr_layout.addWidget(QLabel("Min repeats"), 0, 4)
 		vntr_layout.addWidget(self.minrep_box, 0, 5)
 
-		itr_group = KraitGroupBox("Imperfect tandem repeats (ITRs)")
+		itr_group = KraitGroupBox("Imperfect microsatellites (iSSRs)")
 		itr_layout = QGridLayout()
 		itr_group.setLayout(itr_layout)
 
-		self.minmsize_box = QSpinBox()
-		self.minmsize_box.setRange(1, 1000)
-		self.maxmsize_box = QSpinBox()
-		self.maxmsize_box.setRange(1, 1000)
+		#self.minmsize_box = QSpinBox()
+		#self.minmsize_box.setRange(1, 1000)
+		#self.maxmsize_box = QSpinBox()
+		#self.maxmsize_box.setRange(1, 1000)
 		self.minsrep_box = QSpinBox()
 		self.minsrep_box.setRange(2, 1000)
 		self.minslen_box = QSpinBox()
@@ -339,27 +343,28 @@ class SearchParameterPanel(QWidget):
 		self.maxextend_box.setMaximum(1000000)
 		self.maxextend_box.setSingleStep(50)
 
-		itr_layout.addWidget(QLabel("Min motif size"), 0, 0)
-		itr_layout.addWidget(QLabel("Max motif size"), 1, 0)
-		itr_layout.addWidget(QLabel("Min seed repeats"),2, 0)
-		itr_layout.addWidget(QLabel("Min seed length"), 3, 0)
-		itr_layout.addWidget(QLabel("Max continuous errors"), 4, 0)
-		itr_layout.addWidget(self.minmsize_box, 0, 1)
-		itr_layout.addWidget(self.maxmsize_box, 1, 1)
-		itr_layout.addWidget(self.minsrep_box, 2, 1)
-		itr_layout.addWidget(self.minslen_box, 3, 1)
-		itr_layout.addWidget(self.maxerr_box, 4, 1)
+		#itr_layout.addWidget(QLabel("Min motif size"), 0, 0)
+		#itr_layout.addWidget(QLabel("Max motif size"), 1, 0)
+		itr_layout.addWidget(QLabel("Min seed repeats"),0, 0)
+		itr_layout.addWidget(QLabel("Min seed length"), 1, 0)
+		itr_layout.addWidget(QLabel("Max continuous errors"), 2, 0)
+		itr_layout.addWidget(QLabel("Max extend length"), 3, 0)
+		#itr_layout.addWidget(self.minmsize_box, 0, 1)
+		#itr_layout.addWidget(self.maxmsize_box, 1, 1)
+		itr_layout.addWidget(self.minsrep_box, 0, 1)
+		itr_layout.addWidget(self.minslen_box, 1, 1)
+		itr_layout.addWidget(self.maxerr_box, 2, 1)
+		itr_layout.addWidget(self.maxextend_box, 3, 1)
 
 		itr_layout.addWidget(QLabel("Substitution penalty"), 0, 2)
 		itr_layout.addWidget(QLabel("Insertion penalty"), 1, 2)
 		itr_layout.addWidget(QLabel("Deletion penalty"), 2, 2)
 		itr_layout.addWidget(QLabel("Min match ratio"), 3, 2)
-		itr_layout.addWidget(QLabel("Max extend length"), 4, 2)
 		itr_layout.addWidget(self.subpena_box, 0, 3)
 		itr_layout.addWidget(self.inspena_box, 1, 3)
 		itr_layout.addWidget(self.delpena_box, 2, 3)
 		itr_layout.addWidget(self.matratio_box, 3, 3)
-		itr_layout.addWidget(self.maxextend_box, 4, 3)
+		
 
 		other_layout = QHBoxLayout()
 		level_group = KraitGroupBox("Motif standardization")
@@ -368,13 +373,7 @@ class SearchParameterPanel(QWidget):
 		level_group.setLayout(level_layout)
 
 		self.level_box = QComboBox()
-		self.level_box.addItems([
-			"Level 0",
-			"Level 1",
-			"Level 2",
-			"Level 3",
-			"Level 4"
-		])
+		self.level_box.addItems(["Level {}".format(i) for i in range(5)])
 
 		level_layout.addWidget(QLabel("Level"))
 		level_layout.addWidget(self.level_box, 1)
@@ -390,13 +389,30 @@ class SearchParameterPanel(QWidget):
 
 		flank_layout.addWidget(QLabel("Length"))
 		flank_layout.addWidget(self.flank_box, 1)
-		
+
+
+		stats_group = KraitGroupBox("Statistics")
+		other_layout.addWidget(stats_group)
+		stats_layout = QHBoxLayout()
+		stats_group.setLayout(stats_layout)
+
+		self.unit_box = QComboBox()
+		self.unit_box.addItems(["Mb", "Kb"])
+
+		self.ns_box = QComboBox()
+		self.ns_box.addItems(["exclude", "include"])
+
+		stats_layout.addWidget(QLabel("Unit"))
+		stats_layout.addWidget(self.unit_box, 1)
+		stats_layout.addWidget(QLabel("Ns"))
+		stats_layout.addWidget(self.ns_box, 1)
+
 
 		main_layout = QVBoxLayout()
 		main_layout.addWidget(ssr_group)
 		main_layout.addWidget(cssr_group)
-		main_layout.addWidget(vntr_group)
 		main_layout.addWidget(itr_group)
+		main_layout.addWidget(vntr_group)
 		main_layout.addLayout(other_layout)
 		self.setLayout(main_layout)
 
@@ -411,18 +427,20 @@ class SearchParameterPanel(QWidget):
 			'VNTR/minmotif': self.minmotif_box,
 			'VNTR/maxmotif': self.maxmotif_box,
 			'VNTR/minrep': self.minrep_box,
-			'ITR/minmsize': self.minmsize_box,
-			'ITR/maxmsize': self.maxmsize_box,
-			'ITR/minsrep': self.minsrep_box,
-			'ITR/minslen': self.minslen_box,
-			'ITR/maxerr': self.maxerr_box,
-			'ITR/subpena': self.subpena_box,
-			'ITR/inspena': self.inspena_box,
-			'ITR/delpena': self.delpena_box,
-			'ITR/matratio': self.matratio_box,
-			'ITR/maxextend': self.maxextend_box,
+			#'ITR/minmsize': self.minmsize_box,
+			#'ITR/maxmsize': self.maxmsize_box,
+			'ISSR/minsrep': self.minsrep_box,
+			'ISSR/minslen': self.minslen_box,
+			'ISSR/maxerr': self.maxerr_box,
+			'ISSR/subpena': self.subpena_box,
+			'ISSR/inspena': self.inspena_box,
+			'ISSR/delpena': self.delpena_box,
+			'ISSR/matratio': self.matratio_box,
+			'ISSR/maxextend': self.maxextend_box,
 			'STR/level': self.level_box,
 			'STR/flank': self.flank_box,
+			'STAT/unit': self.unit_box,
+			'STAT/unkown': self.ns_box
 		}
 
 		self.read_settings()
@@ -432,7 +450,7 @@ class SearchParameterPanel(QWidget):
 			box = self._mappings[param]
 			default, func = KRAIT_PARAMETERS[param]
 
-			if box == self.level_box:
+			if isinstance(box, QComboBox):
 				box.setCurrentIndex(self.settings.value(param, default, func))
 			else:
 				box.setValue(self.settings.value(param, default, func))
@@ -441,14 +459,14 @@ class SearchParameterPanel(QWidget):
 		for param in self._mappings:
 			box = self._mappings[param]
 
-			if box == self.level_box:
+			if isinstance(box, QComboBox):
 				self.settings.setValue(param, box.currentIndex())
 			else:
 				self.settings.setValue(param, box.value())
 
 class PreferenceDialog(QDialog):
 	def __init__(self, parent=None):
-		super(PreferenceDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.settings = QSettings()
 		self.setWindowTitle(self.tr("Preferences"))
 		#self.setMinimumWidth(500)
