@@ -48,7 +48,8 @@ class KraitMainWindow(QMainWindow):
 			'cssr': None,
 			'vntr': None,
 			'issr': None,
-			'primer': None
+			'primer': None,
+			'stats': None
 		}
 
 		self.threader = None
@@ -353,16 +354,28 @@ class KraitMainWindow(QMainWindow):
 				if table == 'primer':
 					self.table_widgets[table] = PrimerTableView(self)
 					title = "Primer Results"
+
+				elif table == 'stats':
+					self.table_widgets[table] = QTextEdit(self)
+					title = "Statistical Report"
+
 				else:
 					self.table_widgets[table] = KraitTableView(self, table)
 					title = "{} Results".format(table.upper())
 
 				self.tab_widget.addTab(self.table_widgets[table], title)
+
 			else:
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, True)
 
-			self.table_widgets[table].update_table(self.current_file)
+			if table == 'stats':
+				sql = "SELECT value FROM stats_{} WHERE option=?".format(self.current_file)
+				report = DB.get_column(sql, ('statsreport',))
+				self.table_widgets[table].setHtml(report)
+			else:
+				self.table_widgets[table].update_table(self.current_file)
+
 		else:
 			if self.table_widgets[table] is not None:
 				idx = self.tab_widget.indexOf(self.table_widgets[table])

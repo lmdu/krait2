@@ -2,6 +2,9 @@ import json
 
 from backend import *
 
+__all__ = ['SSRStatistics', 'CSSRStatistics', 'ISSRStatistics',
+			'VNTRStatistics']
+
 class Statistics:
 	#total sequence counts
 	_count = 0
@@ -86,6 +89,9 @@ class Statistics:
 	def write(self):
 		DB.insert_rows(self.sql, result_lists)
 
+	def report(self):
+		pass
+
 	def frequency(self, count):
 		return round(count/self.transize, 2)
 
@@ -105,6 +111,26 @@ class Statistics:
 					self.density(row[2])
 				))
 			self.add(k, json.dumps(res))
+
+	def table_format(self, title, headers, rows):
+		table = """
+		<h3>{}</h3>
+		<table>
+			<thead>
+				<tr>{}</tr>
+			</thead>
+			<tbody>{}</tbody>
+		</table>
+		"""
+
+		titles = "".join(["<th>{}</th>".format(h) for h in headers])
+		contents = []
+		for row in rows:
+			data = "".join(["<td>{}</td>".format(col) for col in row])
+			contents.append("<tr>{}</tr>".format(data))
+		contents = "".join(contents)
+
+		return table.format(title, titles, contents)
 
 class FastaStatistics(Statistics):
 	_category = 'fasta'
@@ -126,7 +152,17 @@ class FastaStatistics(Statistics):
 		self.add('unknownbase', self._unknown)
 
 		#get GC content
-		self.add('gccontent', round(self.fasta.gc_content, 2))
+		gc = round(self.fasta.gc_content, 2)
+		self.add('gccontent', gc)
+
+		#generate statistical report
+		table = self.table(
+			"General information of input fasta file"
+			["Fasta name", "Sequence count", "Total bases", "Unknown bases", "GC content"],
+			[self.name, self.count, self.length, self._unknown, gc]
+		)
+
+
 
 class SSRStatistics(Statistics):
 	_category = 'ssr'
