@@ -4,12 +4,13 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import * 
 
+from utils import *
+from stats import *
+from filter import *
 from config import *
 from tables import *
 from backend import *
 from workers import *
-from utils import *
-from filter import *
 from preference import *
 
 __all__ = ['KraitMainWindow']
@@ -220,7 +221,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.stat_action = QAction(QIcon("icons/statistics.svg"), "Statistics", self,
 			toolTip = "Perform statistics and generate statistics report",
-			triggered = self.close
+			triggered = self.perform_stats_analysis
 		)
 
 		self.filter_action = QAction(QIcon("icons/filter.svg"), "Filter", self,
@@ -357,6 +358,7 @@ class KraitMainWindow(QMainWindow):
 
 				elif table == 'stats':
 					self.table_widgets[table] = QTextEdit(self)
+					self.table_widgets[table].setReadOnly(True)
 					title = "Statistical Report"
 
 				else:
@@ -370,8 +372,7 @@ class KraitMainWindow(QMainWindow):
 				self.tab_widget.setTabVisible(idx, True)
 
 			if table == 'stats':
-				sql = "SELECT value FROM stats_{} WHERE option=?".format(self.current_file)
-				report = DB.get_column(sql, ('statsreport',))
+				report = get_stats_report(self.current_file)
 				self.table_widgets[table].setHtml(report)
 			else:
 				self.table_widgets[table].update_table(self.current_file)
@@ -391,6 +392,10 @@ class KraitMainWindow(QMainWindow):
 	@Slot()
 	def show_primer_table(self):
 		self.show_table('primer')
+
+	@Slot()
+	def show_stats_view(self):
+		self.show_table('stats')
 
 	@Slot(int)
 	def change_progress(self, p):
@@ -415,15 +420,19 @@ class KraitMainWindow(QMainWindow):
 	@Slot(int)
 	def change_current_table(self, index):
 		widget = self.tab_widget.widget(index)
-		widget.emit_count()
-		self.current_table = widget.real_table
 		self.current_filter = []
+
+		if not isinstance(widget, QTextEdit):
+			self.current_table = widget.real_table
+			widget.emit_count()
+		else:
+			self.current_table = None
 
 	@Slot()
 	def change_current_file(self, index):
 		#get current fasta id in backend
 		self.current_file = self.file_table.get_clicked_rowid(index)
-		tables = ['ssr', 'cssr', 'vntr', 'issr', 'primer']
+		tables = ['ssr', 'cssr', 'vntr', 'issr', 'primer', 'stats']
 
 		for table in tables:
 			self.show_table(table)
@@ -690,6 +699,11 @@ class KraitMainWindow(QMainWindow):
 
 	def perform_tre_locating(self):
 		worker = TRELocatingThread(self)
+		self.perform_new_task(worker)
+
+	def perform_stats_analysis(self):
+		worker = StatisticsThread(self)
+		worker.finished.connect(self.show_stats_view)
 		self.perform_new_task(worker)
 
 	def open_filter(self):

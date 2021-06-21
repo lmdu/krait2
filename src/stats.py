@@ -1,9 +1,11 @@
 import json
+import pyfastx
 
+from config import *
 from backend import *
 
 __all__ = ['SSRStatistics', 'CSSRStatistics', 'ISSRStatistics',
-			'VNTRStatistics']
+			'VNTRStatistics', 'FastaStatistics', 'get_stats_report']
 
 class Statistics:
 	#total sequence counts
@@ -25,9 +27,9 @@ class Statistics:
 	_unknown = 0
 
 	def __init__(self, findex=0, unit=0, letter=0):
-		'''unit 0: Mb, 1: Kb; letter 0: exclude ns, 1: include
+		'''unit 0: Mb, 1: Kb; letter 0: exclude ns, 1: include ns
 		'''
-		self.unit = unit
+		self._unit = unit
 		self.letter = letter
 		self.findex = findex
 		self.result_lists = []
@@ -39,6 +41,10 @@ class Statistics:
 		name, fasta = DB.get_row("SELECT name,fasta FROM fasta_0 WHERE id=?", (self.findex,))
 		self.name = name
 		self.fasta = pyfastx.Fasta(fasta, full_index=True)
+
+	@property
+	def unit(self):
+		return {0: 'Mb', 1: 'Kb'}[self._unit]
 
 	@property
 	def count(self):
@@ -56,13 +62,13 @@ class Statistics:
 	def size(self):
 		if not self._size:
 			self._unknown = self.fasta.composition.get('N', 0)
-			self._size = self._length - self._unknown
+			self._size = self.length - self._unknown
 		return self._size
 
 	@property
 	def sql(self):
 		if not self._sql:
-			self._sql = self.fsql("INSERT INTO stats_{} VALUES (NULL,?,?,?)")
+			self._sql = "INSERT INTO stats_{} VALUES (NULL,?,?,?)"
 		return self._sql
 
 	@property
@@ -75,7 +81,7 @@ class Statistics:
 
 		scales = {0: 1000000, 1: 1000}
 
-		return total/scales[self.unit]
+		return total/scales[self._unit]
 
 	def fsql(self, sql):
 		return sql.format("{}_{}".format(self._category, self.findex))
@@ -87,7 +93,7 @@ class Statistics:
 		pass
 
 	def write(self):
-		DB.insert_rows(self.sql, result_lists)
+		DB.insert_rows(self.sql.format(self.findex), self.result_lists)
 
 	def report(self):
 		pass
@@ -100,6 +106,7 @@ class Statistics:
 
 	def calc_group(self, fields, total_count):
 		#calc counts and length
+		ret = {}
 		for k, v in fields.items():
 			res = []
 			for row in DB.query(self.fsql("SELECT {{0}},COUNT(1),SUM(length) FROM {} GROUP BY {{0}}").format(v)):
@@ -111,11 +118,14 @@ class Statistics:
 					self.density(row[2])
 				))
 			self.add(k, json.dumps(res))
+			ret[k] = res
+
+		return ret
 
 	def table_format(self, title, headers, rows):
 		table = """
 		<h3>{}</h3>
-		<table>
+		<table width="100%">
 			<thead>
 				<tr>{}</tr>
 			</thead>
@@ -130,7 +140,7 @@ class Statistics:
 			contents.append("<tr>{}</tr>".format(data))
 		contents = "".join(contents)
 
-		return table.format(title, titles, contents)
+		self.add('statsreport', table.format(title, titles, contents))
 
 class FastaStatistics(Statistics):
 	_category = 'fasta'
@@ -156,13 +166,11 @@ class FastaStatistics(Statistics):
 		self.add('gccontent', gc)
 
 		#generate statistical report
-		table = self.table(
-			"General information of input fasta file"
-			["Fasta name", "Sequence count", "Total bases", "Unknown bases", "GC content"],
-			[self.name, self.count, self.length, self._unknown, gc]
+		table = self.table_format(
+			"General information of input fasta file",
+			["Fasta name", "Sequence count", "Total bases (bp)", "Unknown bases (bp)", "GC content (%)"],
+			[(self.name, self.count, self.length, self._unknown, gc)]
 		)
-
-
 
 class SSRStatistics(Statistics):
 	_category = 'ssr'
@@ -178,18 +186,22 @@ class SSRStatistics(Statistics):
 			return
 
 		self.add('ssrcount', ssr_count)
-		self.add('frequency', self.frequency(ssr_count))
+		freq = self.frequency(ssr_count)
+		self.add('frequency', freq)
 
 		#calc all ssr length
 		ssr_length = DB.get_one(self.fsql("SELECT SUM(length) FROM {} LIMIT 1"))
 		self.add('ssrlength', ssr_length)
-		self.add('density', self.density(ssr_length))
+		dens = self.density(ssr_length)
+		self.add('density', dens)
 
 		#genome coverage percent
-		self.add('coverage', round(ssr_length/self.length*100, 2))
+		coverage = round(ssr_length/self.length*100, 2)
+		self.add('coverage', coverage)
 
 		#calc average length
-		self.add('avglen', round(ssr_length/ssr_count, 2))
+		avg_len = round(ssr_length/ssr_count, 2)
+		self.add('avglen', avg_len)
 
 		#calc max repeat
 		max_repeat = DB.get_one(self.fsql("SELECT MAX(repeats) FROM {} LIMIT 1"))
@@ -199,8 +211,30 @@ class SSRStatistics(Statistics):
 		max_len = DB.get_one(self.fsql("SELECT MAX(length) FROM {} LIMIT 1"))
 		self.add('maxlen', max_len)
 
+		table = self.table_format(
+			"Overview of SSRs",
+			["Number of SSRs", "Total length (bp)", "Average length (bp)",
+			 "Frequency (loci/{})".format(self.unit), "Density (bp/{})".format(self.unit),
+			 "Max repeats", "Max length (bp)", "Coverage (%)"],
+			[(ssr_count, ssr_length, avg_len, freq, dens, max_repeat, max_len, coverage)]
+		)
+
 		fields = {'ssrtypes': 'type', 'ssrmotifs': 'standard', 'ssrrepeats': 'repeats'}
-		self.calc_group(fields, ssr_count)
+		res = self.calc_group(fields, ssr_count)
+
+		titles = {
+			'ssrtypes': ['Type', "Statistical information for each SSR type"],
+			'ssrmotifs': ['Motif', "Statistical information for each motif type"],
+			'ssrrepeats':['Repeat', "Statistical information for each repeat type"],
+		}
+
+		for field in fields:
+			self.table_format(
+				titles[field][1],
+				[titles[field][0], "Counts", "Total length (bp)", "Percentage (%)", "Average length (bp)",
+				 "Frequency (loci/{})".format(self.unit), "Density (bp/{})".format(self.unit)],
+				res[field]
+			)
 
 class CSSRStatistics(Statistics):
 	_category = 'cssr'
@@ -316,3 +350,37 @@ class ISSRStatistics(Statistics):
 
 		fields = {'issrtypes': 'type', 'issrmotifs': 'standard'}
 		self.calc_group(fields, issr_count)
+
+def get_stats_report(file_index):
+	sql = "SELECT value FROM stats_{} WHERE option=?".format(file_index)
+	reports = DB.get_column(sql, ('statsreport',))
+
+	html = """
+	<html>
+	<head>
+	<style type="text/css">
+	body {{
+		margin: 20px;
+	}}
+	table {{
+		border-collapse: collapse;
+		border-width: 1px;
+		border-color:black;
+	}}
+	table th,
+	table td {{
+		padding: 5px 15px;
+	}}
+	.center {{
+		text-align: center;
+	}}
+	</style>
+	</head>
+	<body>
+		<h2 class="center">Statistical Report</h2>
+		<p class="center"><i>This report was generate by Krait2 v{0}.</i></p>
+		{1}
+	</body>
+	</html>"""
+
+	return html.format(KRAIT_VERSION, "".join(reports))

@@ -9,10 +9,12 @@ import multiprocessing
 from PySide6.QtCore import *
 from primer3 import primerdesign
 
-from backend import *
+
 from motif import *
+from stats import *
 from utils import *
 from config import *
+from backend import *
 from annotate import *
 
 __all__ = [
@@ -20,7 +22,7 @@ __all__ = [
 	'ISSRSearchThread', 'PrimerDesignThread',
 	'SaveProjectThread', 'ExportSelectedRowsThread',
 	'ExportWholeTableThread', 'ExportAllTablesThread',
-	'TRELocatingThread'
+	'TRELocatingThread', 'StatisticsThread'
 ]
 
 class WorkerSignal(QObject):
@@ -272,9 +274,9 @@ class ISSRSearchThread(SearchThread):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self.params = [1, 6]
-		params = ['ITR/minsrep', 'ITR/minslen', 'ITR/maxerr', 
-					'ITR/subpena', 'ITR/inspena', 'ITR/delpena',
-					'ITR/matratio', 'ITR/maxextend']
+		params = ['ISSR/minsrep', 'ISSR/minslen', 'ISSR/maxerr', 
+					'ISSR/subpena', 'ISSR/inspena', 'ISSR/delpena',
+					'ISSR/matratio', 'ISSR/maxextend']
 		for param in params:
 			default, func = KRAIT_PARAMETERS[param]
 			self.params.append(self.settings.value(param, default, func))
@@ -598,4 +600,37 @@ class TRELocatingThread(SearchThread):
 
 				if tre_annots:
 					DB.insert_rows(self.sql(), tre_annots)
-			
+
+class StatisticsThread(WorkerThread):
+	def __init__(self, parent=None):
+		super().__init__(parent)
+
+	@property
+	def fastas(self):
+		if not self.search_all:
+			selected = sorted(self.parent.file_table.get_selected_rows())
+		else:
+			selected = []
+
+		self.total_file = DB.get_one("SELECT COUNT(1) FROM fasta_0 LIMIT 1")
+		
+		if self.search_all or len(selected) == self.total_file:
+			for fasta in DB.query("SELECT id FROM fasta_0"):
+				yield fasta[0]
+		else:
+			for _id in selected:
+				return _id
+
+	def process(self):
+		for fasta_id in self.fastas:
+			#create stats result table
+			DB.create_table('stats', fasta_id)
+
+			#perform fasta general stats
+			self.signals.messages.emit("Extracting fasta file information...")
+			FastaStatistics(fasta_id)
+
+			#perform ssr stats
+			if DB.table_exists('ssr_{}'.format(fasta_id)):
+				self.signals.messages.emit("Performing SSR statistics...")
+				SSRStatistics(fasta_id)

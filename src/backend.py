@@ -133,6 +133,7 @@ TABLE_SQL_MAPPING = {
 	'primer': PRIMER_TABLE_SQL,
 	'annot': ANNOT_TABLE_SQL,
 	'locate': LOCATE_TABLE_SQL,
+	'stats': STATS_TABLE_SQL,
 }
 
 class DataRow(dict):

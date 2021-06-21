@@ -15,3 +15,4 @@ src/GCF_000005845.2.gtf.gz
 src/__pycache__/annotate.cpython-38.pyc
 src/pygrange.cp38-win_amd64.pyd
 src/pygrange.cpython-38-x86_64-linux-gnu.so
+src/__pycache__/stats.cpython-38.pyc
