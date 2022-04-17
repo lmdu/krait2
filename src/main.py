@@ -20,6 +20,7 @@ if __name__ == '__main__':
 
 	QSettings.setDefaultFormat(QSettings.IniFormat)
 
+	#fix taskbar icon display
 	if os.name == 'nt':
 		import ctypes
 		myappid = "BIG.Krait.Krait2.{}".format(KRAIT_VERSION)
@@ -28,4 +29,4 @@ if __name__ == '__main__':
 	app = QApplication(sys.argv)
 	win = KraitMainWindow()
 	win.show()
-	sys.exit(app.exec_())
+	sys.exit(app.exec())
