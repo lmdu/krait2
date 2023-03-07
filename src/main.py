@@ -6,7 +6,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from widgets import *
+from window import *
 from config import *
 
 if __name__ == '__main__':

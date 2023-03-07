@@ -9,9 +9,9 @@ __all__ = ['KRAIT_VERSION', 'KRAIT_BUILD', 'KRAIT_ABOUT',
 			'KRAIT_PARAMETERS', 'PRIMER_PARAMETERS',
 			'PRIMER_COMMONS']
 
-KRAIT_VERSION = "0.1.0"
+KRAIT_VERSION = "2.0.0"
 
-KRAIT_BUILD = "20210528"
+KRAIT_BUILD = "20230307"
 
 KRAIT_CITATION = """
 Du L, Zhang C, Liu Q, Zhang X, Yue B (2018)
@@ -73,24 +73,6 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 		<td>
 	</tr>
 	<tr>
-		<td>SQLite3</td>
-		<td>v{sqlite}</td>
-		<td>
-			<a href="https://www.sqlite.org/index.html">
-				https://www.sqlite.org/index.html
-			</a>
-		<td>
-	</tr>
-	<tr>
-		<td>primer3</td>
-		<td>v2.3.7</td>
-		<td>
-			<a href="https://primer3.org/">
-				https://primer3.org
-			</a>
-		<td>
-	</tr>
-	<tr>
 		<td>primer3-py</td>
 		<td>v{primerpy}</td>
 		<td>
@@ -136,6 +118,7 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	pyfastx = pyfastx.version(),
 	apsw = apsw.apswversion(),
 	sqlite = apsw.sqlitelibversion(),
+	primer3 = '2.6.1',
 	primerpy = primer3.__version__
 )
 

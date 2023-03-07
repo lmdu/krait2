@@ -2,14 +2,19 @@ import apsw
 
 __all__ = ['DB']
 
-FASTA_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS fasta_0 (
+FASTX_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS fastx (
 	id INTEGER PRIMARY KEY,
 	name TEXT,
+	format TEXT,
 	size INTEGER,
-	status TEXT,
-	fasta TEXT,
-	annotation TEXT
+	count INTEGER,
+	gc REAL,
+	ns INTEGER,
+	status INTEGER,
+	message TEXT,
+	fpath TEXT,
+	apath TEXT
 )
 """
 
@@ -20,7 +25,7 @@ CREATE TABLE IF NOT EXISTS ssr_{} (
 	start INTEGER,
 	end INTEGER,
 	motif TEXT,
-	standard TEXT,
+	smotif TEXT,
 	type TEXT,
 	repeats INTEGER,
 	length INTEGER
@@ -125,7 +130,7 @@ CREATE TABLE IF NOT EXISTS stats_{} (
 """
 
 TABLE_SQL_MAPPING = {
-	'fasta': FASTA_TABLE_SQL,
+	'fastx': FASTX_TABLE_SQL,
 	'ssr': SSR_TABLE_SQL,
 	'vntr': VNTR_TABLE_SQL,
 	'cssr': CSSR_TABLE_SQL,
@@ -160,7 +165,7 @@ class DataBackend:
 
 	def _optimize(self):
 		self.query("PRAGMA synchronous=OFF")
-		self.query(TABLE_SQL_MAPPING['fasta'])
+		self.query(TABLE_SQL_MAPPING['fastx'])
 		self.begin()
 
 	#def _create_tables(self):
