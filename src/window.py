@@ -11,6 +11,7 @@ from config import *
 from tables import *
 from backend import *
 from workers import *
+from widgets import *
 from preference import *
 
 __all__ = ['KraitMainWindow']
@@ -39,10 +40,13 @@ class KraitMainWindow(QMainWindow):
 		self.create_toolbar()
 		self.create_statusbar()
 
-		self.file_table = FastaTableView(self)
+		#self.file_table = FastaTableView(self)
+
+		self.fastx_tree = KraitFastxTree(self)
+
 		self.file_dock = QDockWidget("Input Files", self)
 		self.file_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
-		self.file_dock.setWidget(self.file_table)
+		self.file_dock.setWidget(self.fastx_tree)
 		self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
 		
 		#self.tab_widget.addTab(self.file_table, "Input Files")
@@ -548,19 +552,13 @@ class KraitMainWindow(QMainWindow):
 		for fa in files[0]:
 			qf = QFileInfo(fa)
 			name = qf.baseName()
-			size = qf.size()
 
-			if is_gzip_compressed(fa):
-				isize = get_uncompressed_size(fa)
-
-				if isize > size:
-					size = isize
-
-			fas.append((name, size, 'pending', fa))
+			fas.append((name, fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?,NULL)", fas)
-			self.file_table.update_table()
+			sql = "INSERT INTO fastx (name, fpath) VALUES (?,?)"
+			DB.insert_rows(sql, fas)
+			self.fastx_tree.update_model()
 
 	def import_fasta_folder(self):
 		folder = QFileDialog.getExistingDirectory(self,

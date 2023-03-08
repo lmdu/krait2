@@ -6,13 +6,13 @@ FASTX_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS fastx (
 	id INTEGER PRIMARY KEY,
 	name TEXT,
-	format TEXT,
 	size INTEGER,
 	count INTEGER,
 	gc REAL,
 	ns INTEGER,
 	status INTEGER,
 	message TEXT,
+	format TEXT,
 	fpath TEXT,
 	apath TEXT
 )
