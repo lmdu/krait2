@@ -24,6 +24,81 @@ __all__ = [
 	'TRELocatingThread', 'StatisticsThread'
 ]
 
+class WorkerSignals(QObject):
+	finished = Signal()
+	progress = Signal(int)
+	failure = Signal(str)
+
+class BaseWorker(QRunnable):
+	def __init__(self):
+		super().__init__()
+		self.setAutoDelete(True)
+
+		self.total_fastx = 0
+		self.fastx_query = None
+		self.processes = {}
+
+		self.settings = QSettings()
+		self.signals = WorkerSignals()
+		self.params = self.get_params()
+		self.receiver, self.sender = multiprocessing.Pipe(duplex=False)
+		self.concurrent = self.settings.value('Run/concurrent', 1, int)
+
+	def __exit__(self):
+		self.sender.close()
+
+	def get_params(self):
+		pass
+
+	def get_fastx(self):
+		self.total_fastx = DB.get_count('fastx')
+		self.fastx_query = DB.query("SELECT fpath FROM fastx")
+
+	def update_progress(self):
+		pass
+
+	def start_process(self, fastx):
+		proc = self.processer(self.sender, fastx)
+		proc.start()
+		self.processes[fastx.id] = proc
+
+	def submit_job(self):
+		if self.fastx_query is None:
+			return
+
+		if len(self.processes) > self.concurrent:
+			return
+
+		row = self.fastx_query.fetchone()
+
+		if row:
+			self.start_process(row)
+
+	@Slot()
+	def run(self):
+		self.get_fastx()
+		self.signals.progress.emit(0)
+
+		try:
+			for i in range(self.concurrent):
+				self.submit_job()
+
+			while True:
+				try:
+					data = self.receiver.recv()
+
+					if data['']
+
+				except EOFError:
+					break
+
+		except:
+			error = traceback.format_exc()
+			print(error)
+
+		finally:
+			self.signals.progress.emit(100)
+
 class WorkerSignal(QObject):
 	progress = Signal(int)
 	messages = Signal(str)

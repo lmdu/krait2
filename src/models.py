@@ -136,6 +136,7 @@ class KraitBaseModel(QAbstractTableModel):
 		self.displayed = []
 		self.total_count = 0
 		self.endResetModel()
+		self.row_count.emit(self.total_count)
 
 	def clear(self):
 		DB.query("DELETE FROM {}".format(self.table))
@@ -147,6 +148,7 @@ class KraitBaseModel(QAbstractTableModel):
 		self.total_count -= 1
 		self.read_count -= 1
 		self.endRemoveRows()
+		self.row_count.emit(self.total_count)
 
 class KraitFastxModel(KraitBaseModel):
 	table = 'fastx'

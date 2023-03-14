@@ -17,8 +17,7 @@ if __name__ == '__main__':
 	QCoreApplication.setApplicationName("Kriat2")
 
 	#QFontDatabase.addApplicationFont("fonts/Cousine.ttf")
-
-	QSettings.setDefaultFormat(QSettings.IniFormat)
+	#QSettings.setDefaultFormat(QSettings.IniFormat)
 
 	#fix taskbar icon display
 	if os.name == 'nt':

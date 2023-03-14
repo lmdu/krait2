@@ -200,8 +200,8 @@ class DataBackend:
 		sql = "UPDATE fasta_0 SET status=? WHERE id=?"
 		self.query(sql, (status, rowid))
 
-	def has_fasta(self):
-		sql = "SELECT 1 FROM fasta_0 LIMIT 1"
+	def has_fastx(self):
+		sql = "SELECT 1 FROM fastx LIMIT 1"
 		res = self.get_one(sql)
 		return True if res else False
 

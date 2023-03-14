@@ -41,13 +41,8 @@ class KraitMainWindow(QMainWindow):
 		self.create_statusbar()
 
 		#self.file_table = FastaTableView(self)
-
-		self.fastx_tree = KraitFastxTree(self)
-
-		self.file_dock = QDockWidget("Input Files", self)
-		self.file_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
-		self.file_dock.setWidget(self.fastx_tree)
-		self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+		self.create_fastx_tree()
+		
 		
 		#self.tab_widget.addTab(self.file_table, "Input Files")
 
@@ -79,9 +74,14 @@ class KraitMainWindow(QMainWindow):
 		#opened project file
 		self.project_file = None
 
-	def create_file_tree(self):
-		pass
+	def create_fastx_tree(self):
+		self.fastx_tree = KraitFastxTree(self)
+		self.fastx_tree.row_changed.connect(self.file_counter.setNum)
 
+		self.fastx_dock = QDockWidget("Input Files", self)
+		self.fastx_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
+		self.fastx_dock.setWidget(self.fastx_tree)
+		self.addDockWidget(Qt.LeftDockWidgetArea, self.fastx_dock)
 
 	def closeEvent(self, event):
 		self.write_settings()
@@ -318,23 +318,29 @@ class KraitMainWindow(QMainWindow):
 		self.status_bar = self.statusBar()
 		self.status_bar.showMessage("Welcome to Krait2")
 
+		#file count label
+		flabel = QLabel("File:", self)
+		self.status_bar.addPermanentWidget(flabel)
+		self.file_counter = QLabel("0", self)
+		self.status_bar.addPermanentWidget(self.file_counter)
+
 		#row count label
 		rlabel = QLabel("Row:", self)
 		self.status_bar.addPermanentWidget(rlabel)
-		self.row_label = QLabel("0", self)
-		self.status_bar.addPermanentWidget(self.row_label)
+		self.row_counter = QLabel("0", self)
+		self.status_bar.addPermanentWidget(self.row_counter)
 
 		#column count label
 		clabel = QLabel("Column:", self)
 		self.status_bar.addPermanentWidget(clabel)
-		self.col_label = QLabel("0", self)
-		self.status_bar.addPermanentWidget(self.col_label)
+		self.column_counter = QLabel("0", self)
+		self.status_bar.addPermanentWidget(self.column_counter)
 
 		#select count label
 		slabel = QLabel("Select:", self)
 		self.status_bar.addPermanentWidget(slabel)
-		self.sel_label = QLabel("0", self)
-		self.status_bar.addPermanentWidget(self.sel_label)
+		self.select_counter = QLabel("0", self)
+		self.status_bar.addPermanentWidget(self.select_counter)
 
 		#progress bar
 		self.progress_bar = QProgressBar(self)
@@ -687,9 +693,20 @@ class KraitMainWindow(QMainWindow):
 		self.threader = worker
 		self.threader.start()
 
+	def check_input_fastx(self):
+		if not DB.has_fastx():
+			QMessageBox.critical(self, "Error", "no fasta or fastq files")
+			return False
+
+		return True
+
 	def perform_ssr_search(self):
-		worker = SSRSearchThread(self)
-		self.perform_new_task(worker)
+		#worker = SSRSearchThread(self)
+		#self.perform_new_task(worker)
+		ssr_worker
+
+
+		QThreadPool.globalInstance().start()
 
 	def perform_vntr_search(self):
 		worker = VNTRSearchThread(self)
