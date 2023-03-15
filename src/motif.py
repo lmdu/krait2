@@ -85,6 +85,7 @@ def motif_sorted(motifs):
 
 class StandardMotif:
 	_motifs = {}
+
 	def __init__(self, level=0):
 		self.level = level
 

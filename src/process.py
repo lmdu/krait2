@@ -4,33 +4,41 @@ import multiprocessing
 
 from PySide6.QtCore import *
 
-__all__ = []
+from motif import *
 
-class BaseProcess(multiprocessing.Process):
-	def __init__(self, infile, params, producer):
+__all__ = ['SSRSearchProcess']
+
+class SearchProcess(multiprocessing.Process):
+	def __init__(self, fastx, params, sender):
 		super().__init__()
 		self.daemon = True
-		self.infile = infile
+		self.fastx = fastx
 		self.params = params
-		self.producer = producer
+		self.sender = sender
+		self.progress = 0
 
 	def build_index(self):
-		if self.infile.size:
+		if self.fastx['size']:
 			return
 
-		if self.infile.format == 'fasta':
-			fx = pyfastx.Fasta(self.infile.fpath, full_index=True)
+		fastx_format = check_fastx_format(self.fastx)
 
-		elif self.infile.format == 'fastq':
-			fx = pyfastx.Fastq(self.infile.fpath, full_index=True)
+		if fastx_format == 'fasta':
+			fx = pyfastx.Fasta(self.fastx['fpath'], full_index=True)
 
-		self.seq_size = fx.size
-		self.seq_count = len(fx)
-		self.seq_gc = fx.gc_content
-		self.seq_ns = fx.composition['N']
+		elif fastx_format == 'fastq':
+			fx = pyfastx.Fastq(self.fastx['fpath'], full_index=True)
+
+		else:
+			raise Exception("the file format is not fasta or fastq")
+
+		self.fastx['size'] = fx.size
 
 		self.producer.send({
-			'data': (self.infile.id, self.seq_size, self.seq_count, self.seq_gc, self.seq_ns)
+			'type': 'fastx',
+			'records': [fx.size, len(fx), fx.gc_content,
+				fx.composition['N'], fastx_format, self.fastx['id']
+			]
 		})
 
 	def do(self):
@@ -44,16 +52,33 @@ class BaseProcess(multiprocessing.Process):
 			error = traceback.format_exc()
 			print(error)
 		finally:
-			self.producer.close()
+			self.sender.close()
 
-class SSRProcess(BaseProcess):
+class SSRSearchProcess(SearchProcess):
 	def do(self):
-		fx = pyfastx.Fastx(self.infile.fpath, uppercase=True)
+		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
+		SM = StandardMotif(self.params['standard_level'])
 
 		for item in fx:
 			name, seq = item[0:2]
 
-			ssrs = stria.SSRMiner(name, seq, self.params.min_reps).as_list()
+			miner = stria.SSRMiner(name, seq, self.params['min_repeats'])
+			ssrs = miner.as_list()
 
+			records = []
+			for ssr in ssrs:
+				standard_motif = SM.standard(ssr[3])
+				ssr_type = iupac_numerical_multiplier(ssr[4])
+				records.append((None, name, ssr[1], ssr[2], ssr[3],
+					standard_motif, ssr_type, ssr[5], ssr[6]))
 
+			self.progress += len(seq)
+			progress = self.progress/self.fastx['size']
+
+			self.sender.send({
+				'id': self.fastx['id'],
+				'type': 'ssr',
+				'records': records,
+				'progress': progress
+			})
 

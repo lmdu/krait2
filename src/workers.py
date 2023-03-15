@@ -14,6 +14,7 @@ from stats import *
 from utils import *
 from config import *
 from backend import *
+from process import *
 from annotate import *
 
 __all__ = [
@@ -30,39 +31,90 @@ class WorkerSignals(QObject):
 	failure = Signal(str)
 
 class BaseWorker(QRunnable):
+	processer = None
+
 	def __init__(self):
 		super().__init__()
 		self.setAutoDelete(True)
 
-		self.total_fastx = 0
-		self.fastx_query = None
 		self.processes = {}
-
-		self.settings = QSettings()
 		self.signals = WorkerSignals()
-		self.params = self.get_params()
 		self.receiver, self.sender = multiprocessing.Pipe(duplex=False)
-		self.concurrent = self.settings.value('Run/concurrent', 1, int)
 
 	def __exit__(self):
 		self.sender.close()
 
-	def get_params(self):
+	def start_process(self, fastx):
+		proc = self.processer(fastx, self.params, self.sender)
+		proc.start()
+		self.processes[proc.pid] = proc
+
+	def before_run(self):
 		pass
+
+	def submit_process(self):
+		pass
+
+	def call_response(self, data):
+		pass
+
+	@Slot()
+	def run(self):
+		self.before_run()
+		self.signals.progress.emit(0)
+
+		try:
+			for i in range(self.concurrent):
+				self.submit_process()
+
+			while True:
+				try:
+					data = self.receiver.recv()
+					self.call_response(data)
+
+				except EOFError:
+					break
+
+		except:
+			error = traceback.format_exc()
+			print(error)
+
+		finally:
+			self.signals.progress.emit(100)
+
+class SearchWorker(BaseWorker):
+	table_name = None
+
+	def __init__(self):
+		super().__init__()
+
+		self.total_fastx = 0
+		self.fastx_query = None
+
+		self.settings = QSettings()
+		self.params = self.get_params()
+		self.concurrent = self.settings.value('Run/concurrent', 1, int)
+
+	def get_params(self):
+		keys = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
+		min_repeats = [int(self.settings.value(k, KRAIT_PARAMETERS[k][0])) for k in keys]
+		standard_level = self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
+		return {'min_repeats': min_repeats, 'standard_level': standard_level}
 
 	def get_fastx(self):
 		self.total_fastx = DB.get_count('fastx')
-		self.fastx_query = DB.query("SELECT fpath FROM fastx")
+		self.fastx_query = DB.query("SELECT * FROM fastx")
 
 	def update_progress(self):
 		pass
 
 	def start_process(self, fastx):
-		proc = self.processer(self.sender, fastx)
+		DB.create_table(self.table_name, fastx['id'])
+		proc = self.processer(fastx, self.params, self.sender)
 		proc.start()
-		self.processes[fastx.id] = proc
+		self.processes[proc.pid] = proc
 
-	def submit_job(self):
+	def submit_process(self):
 		if self.fastx_query is None:
 			return
 
@@ -74,30 +126,14 @@ class BaseWorker(QRunnable):
 		if row:
 			self.start_process(row)
 
-	@Slot()
-	def run(self):
+	def before_run(self):
 		self.get_fastx()
-		self.signals.progress.emit(0)
 
-		try:
-			for i in range(self.concurrent):
-				self.submit_job()
+	def call_response(self, data):
+		if data['type'] = 'fastx':
+			DB.update_fastx(data['records'])
 
-			while True:
-				try:
-					data = self.receiver.recv()
 
-					if data['']
-
-				except EOFError:
-					break
-
-		except:
-			error = traceback.format_exc()
-			print(error)
-
-		finally:
-			self.signals.progress.emit(100)
 
 class WorkerSignal(QObject):
 	progress = Signal(int)

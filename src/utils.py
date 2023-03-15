@@ -1,28 +1,36 @@
 import sys
 import gzip
-import struct
+import pyfastx
 
 from config import PRIMER_PARAMETERS
 
-__all__ = ["get_uncompressed_size", "is_gzip_compressed",
+__all__ = ["check_fastx_format", "AttrDict",
 			"iupac_numerical_multiplier", "primer_tag_format",
 			"product_size_format", "get_annotation_format",
-			"AttrDict"]
+			]
 
 class AttrDict(dict):
 	def __getattr__(self, attr):
 		return self[attr]
 
-def is_gzip_compressed(fpath):
-	with open(fpath, 'rb') as f:
-		return f.read(2) == b'\x1f\x8b'
+def check_fastx_format(fastx):
+	if pyfastx.gzip_check(fastx):
+		fp = gzip.open(fastx)
+	else:
+		fp = open(fastx)
 
-def get_uncompressed_size(fpath):
-	with open(fpath, 'rb') as f:
-		f.seek(-4, 2)
-		size, = struct.unpack("<I", f.read(4))
+	for line in fp:
+		line = line.strip()
 
-	return size
+		if not line:
+			continue
+
+		if line[0] == '>':
+			return 'fasta'
+		elif line[0] == '@':
+			return 'fastq'
+		else:
+			return None
 
 #https://en.wikipedia.org/wiki/IUPAC_numerical_multiplier
 #https://www.qmul.ac.uk/sbcs/iupac/misc/numb.html

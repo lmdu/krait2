@@ -197,8 +197,12 @@ class DataBackend:
 		self.cursor.executemany(sql, rows)
 
 	def update_status(self, rowid, status):
-		sql = "UPDATE fasta_0 SET status=? WHERE id=?"
+		sql = "UPDATE fastx SET status=? WHERE id=?"
 		self.query(sql, (status, rowid))
+
+	def update_fastx(self, row):
+		sql = "UPDATE fastx SET size=?,count=?,gc=?,ns=?,format=? WHERE id=?"
+		self.query(sql, row)
 
 	def has_fastx(self):
 		sql = "SELECT 1 FROM fastx LIMIT 1"
@@ -243,6 +247,11 @@ class DataBackend:
 
 	def get_field_type(self, table):
 		return [row[2] for row in self.query("PRAGMA table_info({})".format(table))]
+
+	def get_sql(self, table):
+		fields = self.get_field(table)
+		sql = "INSERT INTO {} VALUES ({})".format(table, ','.join(['?']*len(fields)))
+		return sql
 
 	def get_tables(self):
 		sql = "SELECT name FROM sqlite_master WHERE type=?"
