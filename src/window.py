@@ -48,14 +48,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.read_settings()
 
-		self.table_widgets = {
-			'ssr': None,
-			'cssr': None,
-			'vntr': None,
-			'issr': None,
-			'primer': None,
-			'stats': None
-		}
+		self.table_widgets = {}
 
 		self.threader = None
 
@@ -77,6 +70,7 @@ class KraitMainWindow(QMainWindow):
 	def create_fastx_tree(self):
 		self.fastx_tree = KraitFastxTree(self)
 		self.fastx_tree.row_changed.connect(self.file_counter.setNum)
+		self.fastx_tree.row_clicked.connect(self.on_fastx_changed)
 
 		self.fastx_dock = QDockWidget("Input Files", self)
 		self.fastx_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
@@ -368,21 +362,37 @@ class KraitMainWindow(QMainWindow):
 		self.resize(settings.value("size", QSize(800, 600)))
 		self.move(settings.value("pos", QPoint(200, 200)))
 
-	def show_table(self, table):
-		if DB.table_exists("{}_{}".format(table, self.current_file)):
-			if self.table_widgets[table] is None:
+	@Slot(int)
+	def on_fastx_changed(self, index):
+		print(index)
+
+	@Slot()
+	def change_current_file(self, index):
+		#get current fasta id in backend
+		self.current_file = self.file_table.get_clicked_rowid(index)
+		tables = ['ssr', 'cssr', 'vntr', 'issr', 'primer', 'stats']
+
+		for table in tables:
+			self.show_table(table)
+
+
+	def show_table_widget(self, table, index):
+		has_table = DB.table_exists("{}_{}".format(table, index))
+
+		if has_table:
+			if table not in self.table_widgets:
 				if table == 'primer':
 					self.table_widgets[table] = PrimerTableView(self)
-					title = "Primer Results"
+					title = "Primers"
 
 				elif table == 'stats':
 					self.table_widgets[table] = QTextEdit(self)
 					self.table_widgets[table].setReadOnly(True)
-					title = "Statistical Report"
+					title = "Statistics"
 
 				else:
 					self.table_widgets[table] = KraitTableView(self, table)
-					title = "{} Results".format(table.upper())
+					title = "{}s".format(table.upper())
 
 				self.tab_widget.addTab(self.table_widgets[table], title)
 
@@ -391,13 +401,13 @@ class KraitMainWindow(QMainWindow):
 				self.tab_widget.setTabVisible(idx, True)
 
 			if table == 'stats':
-				report = get_stats_report(self.current_file)
+				report = get_stats_report(index)
 				self.table_widgets[table].setHtml(report)
 			else:
-				self.table_widgets[table].update_table(self.current_file)
+				self.table_widgets[table].update_table(index)
 
 		else:
-			if self.table_widgets[table] is not None:
+			if table in self.table_widgets:
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, False)
 
@@ -446,15 +456,6 @@ class KraitMainWindow(QMainWindow):
 			widget.emit_count()
 		else:
 			self.current_table = None
-
-	@Slot()
-	def change_current_file(self, index):
-		#get current fasta id in backend
-		self.current_file = self.file_table.get_clicked_rowid(index)
-		tables = ['ssr', 'cssr', 'vntr', 'issr', 'primer', 'stats']
-
-		for table in tables:
-			self.show_table(table)
 
 	@Slot(str)
 	def show_status_message(self, msg):

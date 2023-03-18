@@ -90,6 +90,7 @@ class SearchWorker(BaseWorker):
 
 		self.total_fastx = 0
 		self.fastx_query = None
+		self.progresses = {}
 
 		self.settings = QSettings()
 		self.params = self.get_params()
@@ -97,7 +98,7 @@ class SearchWorker(BaseWorker):
 
 	def get_params(self):
 		keys = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
-		min_repeats = [int(self.settings.value(k, KRAIT_PARAMETERS[k][0])) for k in keys]
+		min_repeats = [self.settings.value(k, KRAIT_PARAMETERS[k][0], int) for k in keys]
 		standard_level = self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
 		return {'min_repeats': min_repeats, 'standard_level': standard_level}
 
@@ -106,7 +107,8 @@ class SearchWorker(BaseWorker):
 		self.fastx_query = DB.query("SELECT * FROM fastx")
 
 	def update_progress(self):
-		pass
+		p = sum(self.processes.values())/self.total_fastx
+		self.signals.progress.emit(p)
 
 	def start_process(self, fastx):
 		DB.create_table(self.table_name, fastx['id'])
@@ -130,10 +132,14 @@ class SearchWorker(BaseWorker):
 		self.get_fastx()
 
 	def call_response(self, data):
-		if data['type'] = 'fastx':
+		if data['type'] == 'fastx':
 			DB.update_fastx(data['records'])
 
-
+		else:
+			table = "{}_{}".format(data['type'], data['id'])
+			DB.insert_rows(DB.get_sql(table), data['records'])
+			self.processes[data['id']] = data['progress']
+			self.update_progress()
 
 class WorkerSignal(QObject):
 	progress = Signal(int)

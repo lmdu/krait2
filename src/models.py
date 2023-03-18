@@ -152,14 +152,4 @@ class KraitBaseModel(QAbstractTableModel):
 
 class KraitFastxModel(KraitBaseModel):
 	table = 'fastx'
-	custom_headers = ["Name", "Size", "Count", "GC", "Ns"]
-
-	@property
-	def get_sql(self):
-		return "SELECT name,size,count,gc,ns FROM {} WHERE id=? LIMIT 1".format(self.table)
-
-	#def index(self, row, column, parent):
-	#	return QModelIndex()
-
-	#def parent(self, index):
-	#	return QModelIndex()
+	custom_headers = ["ID", "Name"]
