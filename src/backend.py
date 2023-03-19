@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS issr_{} (
 	start INTEGER,
 	end INTEGER,
 	motif TEXT,
-	standard TEXT,
+	smotif TEXT,
 	type TEXT,
 	length INTEGER,
 	match INTEGER,

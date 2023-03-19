@@ -30,6 +30,8 @@ class KraitFastxTree(QTreeView):
 		self.row_clicked.emit(row_id)
 
 class KraitTableView(QTableView):
+	modeler = None
+
 	def __init__(self, parent=None):
 		super().__init__(parent)
 
@@ -45,10 +47,16 @@ class KraitTableView(QTableView):
 		self.checkbox.setGeometry(QRect(3,5,20,20))
 		self.checkbox.clicked.connect(self.check_all_action)
 
+		self.create_model()
+
 		self.model.signals.sel_autom.connect(self.change_checkbox_state)
 		self.model.signals.col_count.connect(parent.change_column_count)
 		self.model.signals.row_count.connect(parent.change_row_count)
 		self.model.signals.sel_count.connect(parent.change_select_count)
+
+	def create_model(self):
+		self._model = self.modeler()
+		self.setModel(self._model)
 
 	def update_table(self, file_index=0):
 		if DB.table_exists("locate_{}".format(file_index)):
@@ -106,3 +114,29 @@ class KraitTableView(QTableView):
 		elif state == Qt.PartiallyChecked:
 			self.model.select_all()
 			self.checkbox.setCheckState(Qt.Checked)
+
+class KraitSSRTable(KraitTableView):
+	modeler = KraitSSRModel
+
+class KraitPrimerDelegate(QStyledItemDelegate):
+	def __init__(self, parent=None):
+		super().__init__(parent)
+
+	def setEditorData(self, editor, index):
+		val = index.data()
+		editor.setText(val)
+
+class KraitPrimerTable(KraitTableView):
+	modeler = KraitPrimerModel
+
+	def __init__(self, parent=None):
+		super().__init__(parent)
+
+		width = self.verticalHeader().defaultSectionSize()
+		self.verticalHeader().setDefaultSectionSize(int(width*1.25))
+
+	def create_model(self):
+		super().create_model()
+
+		self._delegate = KraitPrimerDelegate(self)
+		self.setItemDelegate(self._delegate)
