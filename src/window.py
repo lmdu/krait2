@@ -28,7 +28,7 @@ class KraitMainWindow(QMainWindow):
 		#self.tab_widget.setTabBarAutoHide(True)
 		#self.tab_widget.setTabShape(QTabWidget.Triangular)
 		#self.tab_widget.setFrameStyle(QFrame.NoFrame)
-		self.tab_widget.currentChanged.connect(self.change_current_table)
+		#self.tab_widget.currentChanged.connect(self.change_current_table)
 		self.setCentralWidget(self.tab_widget)
 
 		#self.filter_box = QLineEdit(self)
@@ -50,7 +50,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.table_widgets = {}
 
-		self.threader = None
+		self.current_worker = None
 
 		#current table in backend displayed
 		self.current_table = "fasta_0"
@@ -69,7 +69,6 @@ class KraitMainWindow(QMainWindow):
 
 	def create_fastx_tree(self):
 		self.fastx_tree = KraitFastxTree(self)
-		self.fastx_tree.row_changed.connect(self.file_counter.setNum)
 		self.fastx_tree.row_clicked.connect(self.on_fastx_changed)
 
 		self.fastx_dock = QDockWidget("Input Files", self)
@@ -79,6 +78,10 @@ class KraitMainWindow(QMainWindow):
 
 	def closeEvent(self, event):
 		self.write_settings()
+
+		#stop the running worker
+		if self.current_worker:
+			del self.current_worker
 
 	def create_actions(self):
 		#menu actions
@@ -165,12 +168,16 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		#run actions
-		self.search_group_action = QActionGroup(self)
-		self.search_group_action.triggered.connect(self.search_switch)
-		self.search_all_action = QAction("Running for All Fastas", self, checkable=True, checked=True)
-		self.search_sel_action = QAction("Running for Selected Fastas", self, checkable=True)
-		self.search_group_action.addAction(self.search_all_action)
-		self.search_group_action.addAction(self.search_sel_action)
+		#self.search_group_action = QActionGroup(self)
+		#self.search_group_action.triggered.connect(self.search_switch)
+		#self.search_all_action = QAction("Running for All Fastas", self, checkable=True, checked=True)
+		#self.search_sel_action = QAction("Running for Selected Fastas", self, checkable=True)
+		#self.search_group_action.addAction(self.search_all_action)
+		#self.search_group_action.addAction(self.search_sel_action)
+		self.cancel_action = QAction("&Cancel Running Tasks", self,
+			triggered = self.cancel_running_tasks
+		)
+
 
 		#help actions
 		self.about_action = QAction("&About Krait", self,
@@ -198,7 +205,7 @@ class KraitMainWindow(QMainWindow):
 		self.search_ssr_action = QAction(QIcon("icons/ssr.svg"), "SSRs", self,
 			#statusTip = "Search for perfect microsatellites",
 			toolTip = "Search for perferct microsatellites",
-			triggered = self.perform_ssr_search
+			triggered = self.do_ssr_search
 		)
 
 		self.search_cssr_action = QAction(QIcon("icons/cssr.svg"), "cSSRs", self,
@@ -216,8 +223,8 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.perform_issr_search
 		)
 
-		self.locating_action = QAction(QIcon("icons/locating.svg"), "locating", self,
-			toolTip = "Locate tandem repeat sequences to gene features",
+		self.locating_action = QAction(QIcon("icons/locating.svg"), "Mapping", self,
+			toolTip = "Mapping tandem repeat sequences to gene features",
 			triggered = self.perform_tre_locating
 		)
 
@@ -262,8 +269,9 @@ class KraitMainWindow(QMainWindow):
 		self.edit_menu.addAction(self.primer_param_action)
 
 		self.run_menu = self.menuBar().addMenu("&Run")
-		self.run_menu.addAction(self.search_all_action)
-		self.run_menu.addAction(self.search_sel_action)
+		#self.run_menu.addAction(self.search_all_action)
+		#self.run_menu.addAction(self.search_sel_action)
+		self.run_menu.addAction(self.cancel_action)
 
 		#self.menuBar().addSeparator()
 
@@ -306,7 +314,6 @@ class KraitMainWindow(QMainWindow):
 		#progress_circle.setFixedSize(30, 30)
 		#self.tool_bar.addWidget(progress_circle)
 		#self.tool_bar.addWidget(self.filter_box)
-
 
 	def create_statusbar(self):
 		self.status_bar = self.statusBar()
@@ -362,38 +369,37 @@ class KraitMainWindow(QMainWindow):
 		self.resize(settings.value("size", QSize(800, 600)))
 		self.move(settings.value("pos", QPoint(200, 200)))
 
+	@Slot()
+	def cancel_running_tasks(self):
+		pass
+
 	@Slot(int)
 	def on_fastx_changed(self, index):
-		print(index)
-
-	@Slot()
-	def change_current_file(self, index):
-		#get current fasta id in backend
-		self.current_file = self.file_table.get_clicked_rowid(index)
-		tables = ['ssr', 'cssr', 'vntr', 'issr', 'primer', 'stats']
+		tables = ['info', 'ssr', 'cssr', 'issr','vntr', 'primer', 'stats']
 
 		for table in tables:
-			self.show_table(table)
+			self.show_tab_widgets(table, index)
 
+	def show_tab_widgets(self, table, index):
+		tab_creators = {
+			'info': (QTextBrowser, 'Info'),
+			'ssr': (KraitSSRTable, 'SSRs'),
+			'cssr': (KraitCSSRTable, 'cSSRs'),
+			'issr': (KraitISSRTable, 'iSSRs'),
+			'vntr': (KraitVNTRTable, 'VNTRs'),
+			'primer': (KraitPrimerTable, 'Primers'),
+			'stats': (QTextBrowser, 'Statistics')
+		}
 
-	def show_table_widget(self, table, index):
-		has_table = DB.table_exists("{}_{}".format(table, index))
+		if table == 'info':
+			has_table = True
+		else:
+			has_table = DB.table_exists("{}_{}".format(table, index))
 
 		if has_table:
 			if table not in self.table_widgets:
-				if table == 'primer':
-					self.table_widgets[table] = PrimerTableView(self)
-					title = "Primers"
-
-				elif table == 'stats':
-					self.table_widgets[table] = QTextEdit(self)
-					self.table_widgets[table].setReadOnly(True)
-					title = "Statistics"
-
-				else:
-					self.table_widgets[table] = KraitTableView(self, table)
-					title = "{}s".format(table.upper())
-
+				creator, title = tab_creators[table]
+				self.table_widgets[table] = creator(self)
 				self.tab_widget.addTab(self.table_widgets[table], title)
 
 			else:
@@ -403,20 +409,18 @@ class KraitMainWindow(QMainWindow):
 			if table == 'stats':
 				report = get_stats_report(index)
 				self.table_widgets[table].setHtml(report)
+	
+			elif table == 'info':
+				content = get_fastx_info(index)
+				self.table_widgets[table].setHtml(content)
+
 			else:
-				self.table_widgets[table].update_table(index)
+				self.table_widgets[table].set_index(index)
 
 		else:
 			if table in self.table_widgets:
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, False)
-
-	@Slot()
-	def search_switch(self, action):
-		if action == self.search_all_action:
-			self.search_all = True
-		else:
-			self.search_all = False
 
 	@Slot()
 	def show_primer_table(self):
@@ -694,20 +698,35 @@ class KraitMainWindow(QMainWindow):
 		self.threader = worker
 		self.threader.start()
 
-	def check_input_fastx(self):
-		if not DB.has_fastx():
-			QMessageBox.critical(self, "Error", "no fasta or fastq files")
+	def check_work_thread(self):
+		pool = QThreadPool.globalInstance()
+
+		if pool.activeThreadCount() > 0:
+			QMessageBox.warning(self, "Warning", "A task is already running.")
 			return False
 
 		return True
 
-	def perform_ssr_search(self):
+	def check_input_fastx(self):
+		if not DB.has_fastx():
+			QMessageBox.critical(self, "Error", "There are no input fasta or fastq files.")
+			return False
+
+		return True
+
+	def do_ssr_search(self):
 		#worker = SSRSearchThread(self)
 		#self.perform_new_task(worker)
-		ssr_worker
+		if not self.check_input_fastx():
+			return
 
+		if not self.check_work_thread():
+			return
 
-		QThreadPool.globalInstance().start()
+		self.current_worker = SSRSearchWorker()
+		self.current_worker.signals.progress.connect(self.progress_bar.setValue)
+		self.current_worker.signals.failure.connect(self.show_error_message)
+		QThreadPool.globalInstance().start(self.current_worker)
 
 	def perform_vntr_search(self):
 		worker = VNTRSearchThread(self)

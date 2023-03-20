@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS cssr_{} (
 )
 """
 
-ITR_TABLE_SQL = """
+ISSR_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS issr_{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
@@ -134,7 +134,7 @@ TABLE_SQL_MAPPING = {
 	'ssr': SSR_TABLE_SQL,
 	'vntr': VNTR_TABLE_SQL,
 	'cssr': CSSR_TABLE_SQL,
-	'itr': ITR_TABLE_SQL,
+	'issr': ISSR_TABLE_SQL,
 	'primer': PRIMER_TABLE_SQL,
 	'annot': ANNOT_TABLE_SQL,
 	'locate': LOCATE_TABLE_SQL,
@@ -241,6 +241,13 @@ class DataBackend:
 			return self.get_one("SELECT COUNT(1) FROM {}".format(table))
 		else:
 			return 0
+
+	def get_dict(self, sql, paras=None):
+		cur = self.query(sql, paras)
+
+		for row in cur:
+			fields = [col[0] for col in cur.getdescription()]
+			return DataRow(zip(fields, row))
 
 	def get_field(self, table):
 		return [row[1] for row in self.query("PRAGMA table_info({})".format(table))]

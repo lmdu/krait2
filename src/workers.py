@@ -22,9 +22,11 @@ __all__ = [
 	'ISSRSearchThread', 'PrimerDesignThread',
 	'SaveProjectThread', 'ExportSelectedRowsThread',
 	'ExportWholeTableThread', 'ExportAllTablesThread',
-	'TRELocatingThread', 'StatisticsThread'
+	'TRELocatingThread', 'StatisticsThread',
+	'SSRSearchWorker',
 ]
 
+#signals can only be emit from QObject
 class WorkerSignals(QObject):
 	finished = Signal()
 	progress = Signal(int)
@@ -37,9 +39,9 @@ class BaseWorker(QRunnable):
 		super().__init__()
 		self.setAutoDelete(True)
 
-		self.processes = {}
-		self.signals = WorkerSignals()
+		self.processes = 0
 		self.receiver, self.sender = multiprocessing.Pipe(duplex=False)
+		self.signals = WorkerSignals()
 
 	def __exit__(self):
 		self.sender.close()
@@ -47,7 +49,7 @@ class BaseWorker(QRunnable):
 	def start_process(self, fastx):
 		proc = self.processer(fastx, self.params, self.sender)
 		proc.start()
-		self.processes[proc.pid] = proc
+		self.processes += 1
 
 	def before_run(self):
 		pass
@@ -77,6 +79,7 @@ class BaseWorker(QRunnable):
 
 		except:
 			error = traceback.format_exc()
+			self.signals.failure.emit(error)
 			print(error)
 
 		finally:
@@ -97,49 +100,71 @@ class SearchWorker(BaseWorker):
 		self.concurrent = self.settings.value('Run/concurrent', 1, int)
 
 	def get_params(self):
-		keys = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
-		min_repeats = [self.settings.value(k, KRAIT_PARAMETERS[k][0], int) for k in keys]
-		standard_level = self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
-		return {'min_repeats': min_repeats, 'standard_level': standard_level}
+		pass
 
-	def get_fastx(self):
+	def query_fastx(self):
 		self.total_fastx = DB.get_count('fastx')
 		self.fastx_query = DB.query("SELECT * FROM fastx")
 
-	def update_progress(self):
-		p = sum(self.processes.values())/self.total_fastx
+	def update_progress(self, data):
+		self.progresses[data['id']] = data['progress']
+		p = sum(self.progresses.values())/self.total_fastx
 		self.signals.progress.emit(p)
 
 	def start_process(self, fastx):
 		DB.create_table(self.table_name, fastx['id'])
 		proc = self.processer(fastx, self.params, self.sender)
 		proc.start()
-		self.processes[proc.pid] = proc
+		self.processes += 1
+
+	def get_fastx(self):
+		row = self.fastx_query.fetchone()
+
+		if row:
+			fields = [name for name, _ in self.fastx_query.getdescription()]
+			return dict(zip(fields, row))
 
 	def submit_process(self):
 		if self.fastx_query is None:
 			return
 
-		if len(self.processes) > self.concurrent:
+		if self.processes >= self.concurrent:
 			return
 
-		row = self.fastx_query.fetchone()
+		fastx = self.get_fastx()
 
-		if row:
-			self.start_process(row)
+		if fastx:
+			self.start_process(fastx)
 
 	def before_run(self):
-		self.get_fastx()
+		self.query_fastx()
 
 	def call_response(self, data):
 		if data['type'] == 'fastx':
 			DB.update_fastx(data['records'])
 
+		elif data['type'] == 'finish':
+			self.processes -= 1
+			self.submit_process()
+
+			if self.processes == 0:
+				self.sender.close()
+
 		else:
 			table = "{}_{}".format(data['type'], data['id'])
 			DB.insert_rows(DB.get_sql(table), data['records'])
-			self.processes[data['id']] = data['progress']
-			self.update_progress()
+			self.update_progress(data)
+
+class SSRSearchWorker(SearchWorker):
+	table_name = 'ssr'
+	processer = SSRSearchProcess
+
+	def get_params(self):
+		keys = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
+		min_repeats = [self.settings.value(k, KRAIT_PARAMETERS[k][0], int) for k in keys]
+		standard_level = self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
+		return {'min_repeats': min_repeats, 'standard_level': standard_level}
+
 
 class WorkerSignal(QObject):
 	progress = Signal(int)

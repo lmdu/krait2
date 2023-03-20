@@ -1,9 +1,12 @@
 import os
 import stria
+import pyfastx
+import traceback
 import multiprocessing
 
 from PySide6.QtCore import *
 
+from utils import *
 from motif import *
 
 __all__ = ['SSRSearchProcess']
@@ -21,7 +24,7 @@ class SearchProcess(multiprocessing.Process):
 		if self.fastx['size']:
 			return
 
-		fastx_format = check_fastx_format(self.fastx)
+		fastx_format = check_fastx_format(self.fastx['fpath'])
 
 		if fastx_format == 'fasta':
 			fx = pyfastx.Fasta(self.fastx['fpath'], full_index=True)
@@ -34,10 +37,10 @@ class SearchProcess(multiprocessing.Process):
 
 		self.fastx['size'] = fx.size
 
-		self.producer.send({
+		self.sender.send({
 			'type': 'fastx',
-			'records': [fx.size, len(fx), fx.gc_content,
-				fx.composition['N'], fastx_format, self.fastx['id']
+			'records': [fx.size, len(fx), round(fx.gc_content, 2),
+				fx.composition.get('N', 0), fastx_format, self.fastx['id']
 			]
 		})
 
@@ -81,4 +84,9 @@ class SSRSearchProcess(SearchProcess):
 				'records': records,
 				'progress': progress
 			})
+
+		self.sender.send({
+			'id': self.fastx['id'],
+			'type': 'finish'
+		})
 

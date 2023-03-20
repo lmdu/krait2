@@ -5,7 +5,7 @@ from PySide6.QtWidgets import *
 from backend import *
 
 __all__ = ['KraitFastxModel', 'KraitSSRModel', 'KraitCSSRModel',
-'KraitISSRModel', 'KraitVNTRModel', 'KraitPrimerModel']
+			'KraitISSRModel', 'KraitVNTRModel', 'KraitPrimerModel']
 
 class KraitBaseModel(QAbstractTableModel):
 	table = None
@@ -67,7 +67,7 @@ class KraitBaseModel(QAbstractTableModel):
 		else:
 			self._order_by = ''
 
-		self.reset_table()
+		self.select()
 
 	def data(self, index, role=Qt.DisplayRole):
 		if not index.isValid():
@@ -83,45 +83,47 @@ class KraitBaseModel(QAbstractTableModel):
 			if col == 0:
 				if self.displayed[row] in self.selected:
 					return Qt.Checked
+
 				else:
 					return Qt.Unchecked
 
-		elif role == Qt.BackgroundRole:
-			pass
+		#elif role == Qt.BackgroundRole:
+		#	pass
 
 	def setData(self, index, value, role):
 		if not index.isValid():
 			return False
 
-		row = index.row()
 		col = index.column()
+
+		if col != 0:
+			return False
+
+		row = index.row()
 		row_id = self.displayed[row]
 
-		if col == 0 and role == Qt.CheckStateRole:
+		if role == Qt.CheckStateRole:
 			if value == Qt.Checked:
 				self.selected.add(row_id)
 
-			elif value == Qt.Unchecked:
+			else:
 				if row_id in self.selected:
 					self.selected.remove(row_id)
 
+			self.dataChanged.emit(index, index)
 			self.sel_count.emit(len(self.selected))
 
 			return True
 
 		return False
 
-
 	def headerData(self, section, orientation, role=Qt.DisplayRole):
 		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
 			return self.custom_headers[section]
 
-		#elif orientation == Qt.Vertical and role == Qt.DisplayRole:
-		#	return section+1
-
 	def flags(self, index):
 		if not index.isValid():
-			return Qt.ItemIsSelectable
+			return
 
 		flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
@@ -264,6 +266,17 @@ class KraitBaseModel(QAbstractTableModel):
 		self.selected = set()
 		self.endResetModel()
 		self.sel_count.emit(0)
+
+	def get_select_state(self):
+		select_count = len(self.selected)
+
+		if select_count:
+			if select_count == self.total_count:
+				return Qt.Checked
+			else:
+				return Qt.PartiallyChecked
+
+		return Qt.Unchecked
 
 class KraitFastxModel(KraitBaseModel):
 	table = 'fastx'

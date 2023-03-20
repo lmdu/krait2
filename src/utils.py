@@ -2,9 +2,10 @@ import sys
 import gzip
 import pyfastx
 
-from config import PRIMER_PARAMETERS
+from config import *
+from backend import *
 
-__all__ = ["check_fastx_format", "AttrDict",
+__all__ = ["check_fastx_format", "AttrDict", "get_fastx_info",
 			"iupac_numerical_multiplier", "primer_tag_format",
 			"product_size_format", "get_annotation_format",
 			]
@@ -15,7 +16,7 @@ class AttrDict(dict):
 
 def check_fastx_format(fastx):
 	if pyfastx.gzip_check(fastx):
-		fp = gzip.open(fastx)
+		fp = gzip.open(fastx, 'rt')
 	else:
 		fp = open(fastx)
 
@@ -139,6 +140,59 @@ def get_annotation_format(annot_file):
 				return 'gtf'
 			else:
 				raise Exception("the annotation file is not GFF or GTF formatted file")
+
+def get_fastx_info(index):
+	fastx = DB.get_dict("SELECT * FROM fastx WHERE id=?", (index,))
+
+	fields = [
+		('id', 'File ID'),
+		('name', 'File name'),
+		('format', 'Sequence format'),
+		('fpath', 'Full path'),
+		('apath', 'Annotation file'),
+		['hr', False],
+		('size', 'Total bases'),
+		('ns', 'Unknown bases'),
+		('count', 'Sequence count'),
+		('gc', 'GC content'),
+		['hr', False],
+		('message', 'Message')
+	]
+
+	if any((fastx.size, fastx.ns, fastx.count, fastx.gc)):
+		fields[5][1] = True
+
+	if fastx.message:
+		fields[10][1] = True
+
+	contents = ['<table width="100%">']
+
+	for field, title in fields:
+		if field == 'hr':
+			if title:
+				contents.append("""
+					<tr>
+						<td colspan="2"><hr></td>
+					</tr>
+				""")
+		else:
+			val = fastx[field]
+
+			if val:
+				contents.append("""
+					<tr>
+						<th align="left">{}: </th>
+						<td></td>
+					</tr>
+					<tr>
+						<th></th>
+						<td align="left">{}</td>
+					</tr>
+				""".format(title, val))
+
+	contents.append('</table>')
+
+	return ''.join(contents)
 
 if __name__ == '__main__':
 	affix = iupac_numerical_multiplier(int(sys.argv[1]))
