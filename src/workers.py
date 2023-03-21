@@ -108,7 +108,7 @@ class SearchWorker(BaseWorker):
 
 	def update_progress(self, data):
 		self.progresses[data['id']] = data['progress']
-		p = sum(self.progresses.values())/self.total_fastx
+		p = sum(self.progresses.values())/self.total_fastx*100
 		self.signals.progress.emit(p)
 
 	def start_process(self, fastx):
@@ -164,6 +164,13 @@ class SSRSearchWorker(SearchWorker):
 		min_repeats = [self.settings.value(k, KRAIT_PARAMETERS[k][0], int) for k in keys]
 		standard_level = self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
 		return {'min_repeats': min_repeats, 'standard_level': standard_level}
+
+class CSSRSearchWorker(SearchWorker):
+	table_name = 'cssr'
+	processer = CSSRSearchProcess
+
+	def get_params(self):
+		return {'dmax': self.settings.value('CSSR/dmax' KRAIT_PARAMETERS['CSSR/dmax'][0], int)}
 
 
 class WorkerSignal(QObject):

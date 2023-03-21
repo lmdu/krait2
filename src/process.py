@@ -9,7 +9,7 @@ from PySide6.QtCore import *
 from utils import *
 from motif import *
 
-__all__ = ['SSRSearchProcess']
+__all__ = ['SSRSearchProcess', 'CSSRSearchProcess']
 
 class SearchProcess(multiprocessing.Process):
 	def __init__(self, fastx, params, sender):
@@ -89,4 +89,56 @@ class SSRSearchProcess(SearchProcess):
 			'id': self.fastx['id'],
 			'type': 'finish'
 		})
+
+class CSSRSearchProcess(SearchProcess):
+	def do(self):
+		table =  "ssr_{}".format(self.fastx['id'])
+		self.total_ssrs = DB.get_count(table)
+		ssrs = DB.query("SELECT * FROM {}".format(table))
+		cssrs = [next(ssrs)]
+
+		records = []
+		for ssr in ssrs:
+			d = ssr[2] - cssrs[-1][3] - 1
+
+			if ssr[1] == cssrs[-1][1]:
+				if d <= self.params['dmax']:
+					cssrs.append(ssr)
+
+				else:
+					if len(cssrs) > 1:
+						records.append(self.join_ssrs(cssrs))
+
+					cssrs = [ssr]
+			else:
+				self.sender.send({
+					'id': self.fastx['id'],
+					'type': 'cssr',
+					'records': records
+				})
+				records = []
+				cssrs = [ssr]
+
+		if len(cssrs) > 1:
+			records.append(self.join_ssrs(cssrs))
+
+		if records:
+			self.sender.send({
+				'id': self.fastx['id'],
+				'type': 'cssr',
+				'records': records
+			})
+
+	def join_ssrs(cssrs):
+		chrom = cssrs[0][1]
+		start = cssrs[0][2]
+		end = cssrs[-1][3]
+		complexity = len(cssrs)
+		length = sum(cssr[8] for cssr in cssrs)
+		structure = '-'.join("({}){}".format(cssr[4], cssr[7]) for cssr in ssrs)
+		return (None, chrom, start, end, complexity, length, structure)
+
+
+
+
 

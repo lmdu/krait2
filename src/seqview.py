@@ -1,8 +1,12 @@
+import pyfastx
+
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-__all__ = ['SeqViewer']
+from backend import *
+
+__all__ = ['KraitSequenceViewer']
 
 class SequenceHighlighter(QSyntaxHighlighter):
 	def __init__(self, parent=None):
@@ -57,7 +61,7 @@ class SequenceScaler(QWidget):
 	def paintEvent(self, event):
 		self._editor.scale_bar_paint_event(event)
 
-class SequenceViewer(QPlainTextEdit):
+class KraitSequenceViewer(QPlainTextEdit):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.parent = parent
@@ -67,7 +71,7 @@ class SequenceViewer(QPlainTextEdit):
 
 		#set font family
 		font = QFont("Roboto Mono")
-		font.setPointSize(12)
+		font.setPointSize(10)
 		self.setFont(font)
 
 		#set line letter spacing
@@ -104,6 +108,14 @@ class SequenceViewer(QPlainTextEdit):
 
 		#event connect
 		self.selectionChanged.connect(self.change_select_count)
+
+		self.fastx_file = None
+		self.fastx_index = None
+
+		#self.set_sequence()
+
+	def sizeHint(self):
+		return QSize(100, 100)
 
 	def set_locus_position(self, start, length):
 		self.locus_start = start
@@ -146,10 +158,12 @@ class SequenceViewer(QPlainTextEdit):
 		painter = QPainter(self.scale_bar_area)
 		painter.fillRect(event.rect(), Qt.white)
 
-		start = self.line_number_area_width()
 		block = self.firstVisibleBlock()
+		start = self.line_number_area_width()
 		line = block.layout().lineAt(0)
 		column_count = line.textLength()
+		if column_count == 0:
+			return
 		column_width = line.naturalTextWidth()/column_count
 		char_width = self.fontMetrics().averageCharWidth()
 		char_height = self.fontMetrics().height()
@@ -196,6 +210,8 @@ class SequenceViewer(QPlainTextEdit):
 		height = self.fontMetrics().height()
 
 		line_char = block.layout().lineAt(0).textLength()
+		if line_char == 0:
+			return
 
 		line_number = 0
 
@@ -238,7 +254,7 @@ class SequenceViewer(QPlainTextEdit):
 			count += block.lineCount()
 			block = block.next()
 
-		self.parent.line_number.setText(str(count))
+		#self.parent.line_number.setText(str(count))
 
 	@Slot()
 	def change_select_count(self):
@@ -248,7 +264,7 @@ class SequenceViewer(QPlainTextEdit):
 		else:
 			count = 0
 
-		self.parent.select_count.setText(str(count))
+		#self.parent.select_count.setText(str(count))
 
 	def add_format(self):
 		fmt = QTextCharFormat()
@@ -268,7 +284,6 @@ class SequenceViewer(QPlainTextEdit):
 		selection.cursor.setPosition(25, QTextCursor.KeepAnchor)
 		extra_selections.append(selection)
 
-
 		selection = QTextEdit.ExtraSelection()
 		#selection.format.setBackground(Qt.yellow)
 		selection.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.darkGray))
@@ -279,6 +294,40 @@ class SequenceViewer(QPlainTextEdit):
 
 		self.setExtraSelections(extra_selections)
 
+	#def set_sequence(self, seq="ATGCAAAGCCTTTG", start=1456789):
+	#	seq = "ATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTG"
+	def get_slice(self):
+		start = self.sub_start - self.sub_flank - 1
+		if start < 0:
+			start = 0
+
+		end = self.sub_end + self.sub_flank + 1
+		seq = self.fastx_file[self.sub_name][start:end].seq
+
+		return seq
+
+	def set_sequence(self, index, name, start, end):
+		if self.fastx_index != index:
+			self.fastx_index = index
+			fastx = DB.get_dict("SELECT * FROM fastx LIMIT 1")
+
+			if fastx.format == 'fasta':
+				self.fastx_file = pyfastx.Fasta(fastx.fpath)
+			else:
+				self.fastx_file = pyfastx.Fastq(fastx.fpath)
+
+		self.sub_name = name
+		self.sub_start = start
+		self.sub_end = end
+		self.sub_flank = 100
+
+		seq = self.get_slice()
+
+		self.setPlainText(seq)
+		self.set_locus_position(start, len(seq))
+		self.add_format()
+		self.update_line_number_area_width(0)
+
 class SequenceDialog(QMainWindow):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -288,7 +337,7 @@ class SequenceDialog(QMainWindow):
 
 		self.create_statusbar()
 
-		self.editor = SequenceViewer(self)
+		self.editor = KraitSequenceViewer(self)
 		self.setCentralWidget(self.editor)
 		self.resize(QSize(600, 400))
 
@@ -334,15 +383,11 @@ class SequenceDialog(QMainWindow):
 	def on_flank_changed(self):
 		print(self.flank_slider.value())
 
-
-
-
-
 if __name__ == '__main__':
 	import sys
 	app = QApplication(sys.argv)
 	QFontDatabase.addApplicationFont("fonts/robotomono.ttf")
 	win = SequenceDialog()
-	win.set_sequence()
+	#win.set_sequence()
 	win.show()
-	sys.exit(app.exec_())
+	sys.exit(app.exec())

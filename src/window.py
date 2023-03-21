@@ -9,6 +9,7 @@ from stats import *
 from filter import *
 from config import *
 from tables import *
+from seqview import *
 from backend import *
 from workers import *
 from widgets import *
@@ -35,14 +36,15 @@ class KraitMainWindow(QMainWindow):
 		#self.filter_box.setPlaceholderText("e.g. motif=AT and repeat>10")
 		#self.filter_box.returnPressed.connect(self.set_table_filters)
 
-		self.create_actions()
-		self.create_menus()
-		self.create_toolbar()
 		self.create_statusbar()
 
 		#self.file_table = FastaTableView(self)
 		self.create_fastx_tree()
-		
+		self.create_seq_view()
+
+		self.create_actions()
+		self.create_menus()
+		self.create_toolbar()
 		
 		#self.tab_widget.addTab(self.file_table, "Input Files")
 
@@ -55,7 +57,7 @@ class KraitMainWindow(QMainWindow):
 		#current table in backend displayed
 		self.current_table = "fasta_0"
 
-		#current fasta file id
+		#current fastx file id
 		self.current_file = 0
 
 		#filters
@@ -71,10 +73,18 @@ class KraitMainWindow(QMainWindow):
 		self.fastx_tree = KraitFastxTree(self)
 		self.fastx_tree.row_clicked.connect(self.on_fastx_changed)
 
-		self.fastx_dock = QDockWidget("Input Files", self)
+		self.fastx_dock = QDockWidget("Files", self)
 		self.fastx_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
 		self.fastx_dock.setWidget(self.fastx_tree)
 		self.addDockWidget(Qt.LeftDockWidgetArea, self.fastx_dock)
+
+	def create_seq_view(self):
+		self.seq_view = KraitSequenceViewer(self)
+
+		self.seq_dock = QDockWidget("Sequence", self)
+		self.seq_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
+		self.seq_dock.setWidget(self.seq_view)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.seq_dock)
 
 	def closeEvent(self, event):
 		self.write_settings()
@@ -166,6 +176,13 @@ class KraitMainWindow(QMainWindow):
 			statusTip = "Set primer parameters",
 			triggered = self.open_primer_param_dialog
 		)
+
+		#view actions
+		self.fastx_action = self.fastx_dock.toggleViewAction()
+		self.fastx_action.setText("Show File List")
+
+		self.seqview_action = self.seq_dock.toggleViewAction()
+		self.seqview_action.setText("Show Sequence Viewer")
 
 		#run actions
 		#self.search_group_action = QActionGroup(self)
@@ -267,6 +284,10 @@ class KraitMainWindow(QMainWindow):
 		self.edit_menu.addSeparator()
 		self.edit_menu.addAction(self.search_param_action)
 		self.edit_menu.addAction(self.primer_param_action)
+
+		self.view_menu = self.menuBar().addMenu("&View")
+		self.view_menu.addAction(self.fastx_action)
+		self.view_menu.addAction(self.seqview_action)
 
 		self.run_menu = self.menuBar().addMenu("&Run")
 		#self.run_menu.addAction(self.search_all_action)
@@ -375,6 +396,8 @@ class KraitMainWindow(QMainWindow):
 
 	@Slot(int)
 	def on_fastx_changed(self, index):
+		self.current_file = index
+
 		tables = ['info', 'ssr', 'cssr', 'issr','vntr', 'primer', 'stats']
 
 		for table in tables:

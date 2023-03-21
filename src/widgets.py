@@ -23,13 +23,13 @@ class KraitFastxTree(QTreeView):
 
 		self.setColumnHidden(0, True)
 
-		self.clicked.connect(self.on_row_clicked)
+		self.clicked.connect(self.on_fastx_file_clicked)
 
 	def update_model(self):
 		self._model.select()
 
 	@Slot(QModelIndex)
-	def on_row_clicked(self, index):
+	def on_fastx_file_clicked(self, index):
 		row_id = index.siblingAtColumn(0).data()
 		self.row_clicked.emit(row_id)
 
@@ -40,13 +40,14 @@ class KraitTableView(QTableView):
 		super().__init__(parent)
 		self.parent = parent
 
+		self.setSortingEnabled(True)
 		self.verticalHeader().hide()
 		self.horizontalHeader().setHighlightSections(False)
 		self.horizontalHeader().setStretchLastSection(True)
 		#self.setEditTriggers(QAbstractItemView.DoubleClicked)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setSelectionMode(QAbstractItemView.SingleSelection)
-		self.setSortingEnabled(True)
+		self.clicked.connect(self.on_row_clicked)
 
 		self.create_check()
 		self.create_model()
@@ -76,6 +77,15 @@ class KraitTableView(QTableView):
 			return True
 		else:
 			return False
+
+	@Slot()
+	def on_row_clicked(self, index):
+		name = index.siblingAtColumn(1).data()
+		start = index.siblingAtColumn(2).data()
+		end = index.siblingAtColumn(3).data()
+
+		self.parent.seq_view.set_sequence(self.parent.current_file,
+			name, start, end)
 
 	@Slot()
 	def change_select_all_state(self, select):
