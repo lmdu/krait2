@@ -159,6 +159,12 @@ class DataBackend:
 		if self.conn:
 			self.conn.close()
 
+	#def __getstate__(self):
+	#	return self.db_file
+
+	#def __setstate__(self, state):
+	#	self._connect_to_db(state)
+
 	@property
 	def cursor(self):
 		return self.conn.cursor()
@@ -178,6 +184,7 @@ class DataBackend:
 			#self.conn.setrowtrace(row_factory)
 			self._optimize()
 			#self._create_tables()
+			self.db_file = db_file
 
 	def change_db(self, db_file):
 		if self.conn:
@@ -185,6 +192,7 @@ class DataBackend:
 		
 		self.conn = apsw.Connection(db_file)
 		self._optimize()
+		self.db_file = db_file
 
 	def create_table(self, table, idx):
 		sql = TABLE_SQL_MAPPING[table].format(idx)
@@ -229,6 +237,9 @@ class DataBackend:
 	def get_row(self, sql, paras=None):
 		for row in self.query(sql, paras):
 			return row
+
+	def get_rows(self, sql, paras=None):
+		return [row for row in self.query(sql, paras)]
 
 	def get_column(self, sql, paras=None):
 		return [row[0] for row in self.query(sql, paras)]

@@ -278,6 +278,11 @@ class KraitBaseModel(QAbstractTableModel):
 
 		return Qt.Unchecked
 
+	def count_emit(self):
+		self.row_count.emit(self.total_count)
+		self.sel_count.emit(len(self.selected))
+		self.col_count.emit(len(self.custom_headers))
+
 class KraitFastxModel(KraitBaseModel):
 	table = 'fastx'
 	custom_headers = ["ID", "Name"]

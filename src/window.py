@@ -25,6 +25,7 @@ class KraitMainWindow(QMainWindow):
 		self.setWindowIcon(QIcon('icons/logo.svg'))
 
 		self.tab_widget = QTabWidget(self)
+		self.tab_widget.currentChanged.connect(self.on_tab_changed)
 		#self.tab_widget.setStyleSheet("QTabWidget::pane { border: 0; }")
 		#self.tab_widget.setTabBarAutoHide(True)
 		#self.tab_widget.setTabShape(QTabWidget.Triangular)
@@ -91,7 +92,7 @@ class KraitMainWindow(QMainWindow):
 
 		#stop the running worker
 		if self.current_worker:
-			del self.current_worker
+			self.current_worker.exit()
 
 	def create_actions(self):
 		#menu actions
@@ -227,17 +228,17 @@ class KraitMainWindow(QMainWindow):
 
 		self.search_cssr_action = QAction(QIcon("icons/cssr.svg"), "cSSRs", self,
 			toolTip = "Search for compound microsatellites",
-			triggered = self.close
+			triggered = self.do_cssr_search
 		)
 
 		self.search_vntr_action = QAction(QIcon("icons/vntr.svg"), "VNTRs", self,
 			toolTip = "Search for VNTRs",
-			triggered = self.perform_vntr_search
+			triggered = self.do_vntr_search
 		)
 
 		self.search_issr_action = QAction(QIcon("icons/issr.svg"), "iSSRs", self,
 			toolTip = "Search for imperfect microsatellites",
-			triggered = self.perform_issr_search
+			triggered = self.do_issr_search
 		)
 
 		self.locating_action = QAction(QIcon("icons/locating.svg"), "Mapping", self,
@@ -391,6 +392,11 @@ class KraitMainWindow(QMainWindow):
 		self.move(settings.value("pos", QPoint(200, 200)))
 
 	@Slot()
+	def on_tab_changed(self, index):
+		widget = self.tab_widget.currentWidget()
+		widget.count_emit()
+
+	@Slot()
 	def cancel_running_tasks(self):
 		pass
 
@@ -405,13 +411,13 @@ class KraitMainWindow(QMainWindow):
 
 	def show_tab_widgets(self, table, index):
 		tab_creators = {
-			'info': (QTextBrowser, 'Info'),
+			'info': (KraitTextBrowser, 'Info'),
 			'ssr': (KraitSSRTable, 'SSRs'),
 			'cssr': (KraitCSSRTable, 'cSSRs'),
 			'issr': (KraitISSRTable, 'iSSRs'),
 			'vntr': (KraitVNTRTable, 'VNTRs'),
 			'primer': (KraitPrimerTable, 'Primers'),
-			'stats': (QTextBrowser, 'Statistics')
+			'stats': (KraitTextBrowser, 'Statistics')
 		}
 
 		if table == 'info':
@@ -431,11 +437,11 @@ class KraitMainWindow(QMainWindow):
 
 			if table == 'stats':
 				report = get_stats_report(index)
-				self.table_widgets[table].setHtml(report)
+				self.table_widgets[table].set_html(report)
 	
 			elif table == 'info':
 				content = get_fastx_info(index)
-				self.table_widgets[table].setHtml(content)
+				self.table_widgets[table].set_html(content)
 
 			else:
 				self.table_widgets[table].set_index(index)
@@ -444,6 +450,12 @@ class KraitMainWindow(QMainWindow):
 			if table in self.table_widgets:
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, False)
+
+	def show_dna_sequence(self, name, start, end):
+		if not self.seqview_action.isChecked():
+			return
+
+		self.seq_view.set_sequence(self.current_file, name, start, end)
 
 	@Slot()
 	def show_primer_table(self):
@@ -737,27 +749,42 @@ class KraitMainWindow(QMainWindow):
 
 		return True
 
-	def do_ssr_search(self):
-		#worker = SSRSearchThread(self)
-		#self.perform_new_task(worker)
+	def run_work_thread(self, threader):
 		if not self.check_input_fastx():
 			return
 
 		if not self.check_work_thread():
 			return
 
-		self.current_worker = SSRSearchWorker()
+		self.current_worker = threader()
 		self.current_worker.signals.progress.connect(self.progress_bar.setValue)
 		self.current_worker.signals.failure.connect(self.show_error_message)
 		QThreadPool.globalInstance().start(self.current_worker)
 
-	def perform_vntr_search(self):
-		worker = VNTRSearchThread(self)
-		self.perform_new_task(worker)
+	def do_ssr_search(self):
+		self.run_work_thread(SSRSearchWorker)
 
-	def perform_issr_search(self):
-		worker = ISSRSearchThread(self)
-		self.perform_new_task(worker)
+	def check_ssr_search(self):
+		for table in DB.get_tables():
+			if table.startswith('ssr'):
+				if DB.get_count(table):
+					return True
+
+		QMessageBox.critical(self, "Error", "Please search for SSRs first before searching cSSRs.")
+		return False
+
+	def do_cssr_search(self):
+		if not self.check_ssr_search():
+			return
+
+		self.run_work_thread(CSSRSearchWorker)
+
+	def do_vntr_search(self):
+		self.run_work_thread(VNTRSearchWorker)
+
+	def do_issr_search(self):
+		self.run_work_thread(ISSRSearchWorker)
+		
 
 	def perform_primer_design(self):
 		worker = PrimerDesignThread(self, self.current_table)

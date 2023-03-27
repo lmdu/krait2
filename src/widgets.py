@@ -6,7 +6,7 @@ from models import *
 
 __all__ = ['KraitFastxTree', 'KraitSSRTable', 'KraitCSSRTable',
 			'KraitISSRTable', 'KraitVNTRTable', 'KraitVNTRTable',
-			'KraitPrimerTable']
+			'KraitPrimerTable', 'KraitTextBrowser']
 
 class KraitFastxTree(QTreeView):
 	row_clicked = Signal(int)
@@ -28,10 +28,23 @@ class KraitFastxTree(QTreeView):
 	def update_model(self):
 		self._model.select()
 
-	@Slot(QModelIndex)
+	@Slot()
 	def on_fastx_file_clicked(self, index):
 		row_id = index.siblingAtColumn(0).data()
 		self.row_clicked.emit(row_id)
+
+class KraitTextBrowser(QTextBrowser):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.parent = parent
+
+	def set_html(self, html):
+		self.setHtml(html)
+
+	def count_emit(self):
+		self.parent.column_counter.setNum(0)
+		self.parent.row_counter.setNum(0)
+		self.parent.select_counter.setNum(0)
 
 class KraitTableView(QTableView):
 	modeler = None
@@ -83,9 +96,7 @@ class KraitTableView(QTableView):
 		name = index.siblingAtColumn(1).data()
 		start = index.siblingAtColumn(2).data()
 		end = index.siblingAtColumn(3).data()
-
-		self.parent.seq_view.set_sequence(self.parent.current_file,
-			name, start, end)
+		self.parent.show_dna_sequence(name, start, end)
 
 	@Slot()
 	def change_select_all_state(self, select):
@@ -105,6 +116,9 @@ class KraitTableView(QTableView):
 		elif state == Qt.PartiallyChecked:
 			self._model.select_all()
 			self.select_all_btn.setCheckState(Qt.Checked)
+
+	def count_emit(self):
+		self._model.count_emit()
 
 class KraitSSRTable(KraitTableView):
 	modeler = KraitSSRModel

@@ -23,7 +23,9 @@ __all__ = [
 	'SaveProjectThread', 'ExportSelectedRowsThread',
 	'ExportWholeTableThread', 'ExportAllTablesThread',
 	'TRELocatingThread', 'StatisticsThread',
-	'SSRSearchWorker',
+
+	'SSRSearchWorker', 'CSSRSearchWorker',
+	'ISSRSearchWorker', 'VNTRSearchWorker'
 ]
 
 #signals can only be emit from QObject
@@ -44,6 +46,9 @@ class BaseWorker(QRunnable):
 		self.signals = WorkerSignals()
 
 	def __exit__(self):
+		self.sender.close()
+
+	def exit(self):
 		self.sender.close()
 
 	def start_process(self, fastx):
@@ -169,9 +174,54 @@ class CSSRSearchWorker(SearchWorker):
 	table_name = 'cssr'
 	processer = CSSRSearchProcess
 
-	def get_params(self):
-		return {'dmax': self.settings.value('CSSR/dmax' KRAIT_PARAMETERS['CSSR/dmax'][0], int)}
+	def start_process(self, fastx):
+		DB.create_table(self.table_name, fastx['id'])
+		sql = "SELECT * FROM ssr_{}".format(fastx['id'])
+		self.params['ssrs'] = DB.get_rows(sql)
+		proc = self.processer(fastx, self.params, self.sender)
+		proc.start()
+		self.processes += 1
 
+	def get_params(self):
+		return {
+			'dmax': self.settings.value('CSSR/dmax', KRAIT_PARAMETERS['CSSR/dmax'][0], int)
+		}
+
+class ISSRSearchWorker(SearchWorker):
+	table_name = 'issr'
+	processer = ISSRSearchProcess
+
+	def get_params(self):
+		params = {
+			'standard_level': self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
+		}
+
+		for k in KRAIT_PARAMETERS:
+			if not k.startswith('ISSR'):
+				continue
+
+			default, converter = KRAIT_PARAMETERS[k]
+			p = k.split('/')[1]
+			params[p] = self.settings.value(k, default, converter)
+
+		return params
+
+class VNTRSearchWorker(SearchWorker):
+	table_name = 'vntr'
+	processer = VNTRSearchProcess
+
+	def get_params(self):
+		params = {}
+
+		for k in KRAIT_PARAMETERS:
+			if not k.startswith('VNTR'):
+				continue
+
+			default, converter = KRAIT_PARAMETERS[k]
+			p = k.split('/')[1]
+			params[p] = self.settings.value(k, default, converter)
+
+		return params
 
 class WorkerSignal(QObject):
 	progress = Signal(int)
