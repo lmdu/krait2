@@ -1,7 +1,7 @@
 import csv
 import json
 import gzip
-import pygrange
+import pygros
 
 from utils import *
 
@@ -68,7 +68,7 @@ class GeneLocator:
 		self.annot_file = annot_file
 		self.parent_mapping = {0: 0}
 		self.feature_mapping = {}
-		self.ranges = pygrange.Ranges()
+		self.ranges = pygros.Ranges()
 		self.create_reader()
 		self.parse()
 
