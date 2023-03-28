@@ -283,6 +283,11 @@ class KraitBaseModel(QAbstractTableModel):
 		self.sel_count.emit(len(self.selected))
 		self.col_count.emit(len(self.custom_headers))
 
+	def get_row(self, index):
+		row_id = index.siblingAtColumn(0).data()
+		sql = "SELECT * FROM {} WHERE id=? LIMIT 1".format(self.table)
+		return DB.get_dict(sql, (row_id,))
+
 class KraitFastxModel(KraitBaseModel):
 	table = 'fastx'
 	custom_headers = ["ID", "Name"]

@@ -451,11 +451,11 @@ class KraitMainWindow(QMainWindow):
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, False)
 
-	def show_dna_sequence(self, name, start, end):
+	def show_dna_sequence(self, cat, trs):
 		if not self.seqview_action.isChecked():
 			return
 
-		self.seq_view.set_sequence(self.current_file, name, start, end)
+		self.seq_view.set_sequence(self.current_file, cat, trs)
 
 	@Slot()
 	def show_primer_table(self):

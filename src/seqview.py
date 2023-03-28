@@ -112,13 +112,39 @@ class KraitSequenceViewer(QPlainTextEdit):
 		self.fastx_file = None
 		self.fastx_index = None
 
+		self.tandem_repeat = None
+		self.repeat_type = None
+		self.flank_length = 100
+		self.target_start = 0
+		self.target_end = 0
+
 		#self.set_sequence()
 
 	def wheelEvent(self, event):
-		print(event.angleDelta(), event.pixelDelta(), event.phase())
+		y = event.angleDelta().y()
+		
+		if y > 0:
+			if self.flank_length == 10000:
+				return
+
+			self.flank_length += 100
+
+			if self.flank_length > 10000:
+				self.flank_length = 10000
+
+		else:
+			if self.flank_length == 100:
+				return
+
+			self.flank_length -= 100
+
+			if self.flank_length < 100:
+				self.flank_length = 100
+
+		self.update_sequence()
 
 	def sizeHint(self):
-		return QSize(100, 100)
+		return QSize(100, 150)
 
 	def set_locus_position(self, start, length):
 		self.locus_start = start
@@ -291,7 +317,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 
 		selection = QTextEdit.ExtraSelection()
 		#selection.format.setBackground(Qt.yellow)
-		selection.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.darkGray))
+		selection.format.setProperty(QTextFormat.OutlinePen, QPen(QColor(125, 60, 152)))
 		selection.cursor = self.textCursor()
 		selection.cursor.setPosition(25)
 		selection.cursor.setPosition(30, QTextCursor.KeepAnchor)
@@ -299,38 +325,57 @@ class KraitSequenceViewer(QPlainTextEdit):
 
 		self.setExtraSelections(extra_selections)
 
-	#def set_sequence(self, seq="ATGCAAAGCCTTTG", start=1456789):
-	#	seq = "ATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTGATGCAAAGCCTTTG"
+	def format_tandem_repeat(self):
+		extra_selections = []
+		motif_length = len(self.tandem_repeat.motif)
+		positions = range(self.target_start, self.target_end, motif_length)
+
+		for pos in positions:
+			selection = QTextEdit.ExtraSelection()
+			selection.format.setProperty(QTextFormat.BackgroundBrush, QBrush(Qt.lightGray))
+			selection.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.darkGray))
+			selection.cursor = self.textCursor()
+			selection.cursor.setPosition(pos)
+			selection.cursor.setPosition(pos + motif_length, QTextCursor.KeepAnchor)
+			extra_selections.append(selection)
+
+		self.setExtraSelections(extra_selections)
+
 	def get_slice(self):
-		start = self.sub_start - self.sub_flank - 1
+		start = self.tandem_repeat.start - self.flank_length - 1
 		if start < 0:
 			start = 0
 
-		end = self.sub_end + self.sub_flank + 1
-		seq = self.fastx_file[self.sub_name][start:end].seq
+		self.locus_start = start + 1
+		self.target_start = self.tandem_repeat.start - self.locus_start
+
+		end = self.tandem_repeat.end + self.flank_length + 1
+		seq = self.fastx_file[self.tandem_repeat.chrom][start:end].seq
+
+		self.locus_length = len(seq)
+		self.target_end = self.target_start + self.tandem_repeat.length
 
 		return seq
 
-	def set_sequence(self, index, name, start, end):
+	def set_sequence(self, index, cat, trs):
 		if self.fastx_index != index:
 			self.fastx_index = index
-			fastx = DB.get_dict("SELECT * FROM fastx LIMIT 1")
+			fastx = DB.get_dict("SELECT * FROM fastx WHERE id=? LIMIT 1", (index,))
 
 			if fastx.format == 'fasta':
 				self.fastx_file = pyfastx.Fasta(fastx.fpath)
 			else:
 				self.fastx_file = pyfastx.Fastq(fastx.fpath)
 
-		self.sub_name = name
-		self.sub_start = start
-		self.sub_end = end
-		self.sub_flank = 100
+		self.repeat_type = cat
+		self.tandem_repeat = trs
 
+		self.update_sequence()
+
+	def update_sequence(self):
 		seq = self.get_slice()
-
 		self.setPlainText(seq)
-		self.set_locus_position(start, len(seq))
-		self.add_format()
+		self.format_tandem_repeat()
 		self.update_line_number_area_width(0)
 
 class SequenceDialog(QMainWindow):

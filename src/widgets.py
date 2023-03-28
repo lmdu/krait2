@@ -93,10 +93,15 @@ class KraitTableView(QTableView):
 
 	@Slot()
 	def on_row_clicked(self, index):
-		name = index.siblingAtColumn(1).data()
-		start = index.siblingAtColumn(2).data()
-		end = index.siblingAtColumn(3).data()
-		self.parent.show_dna_sequence(name, start, end)
+		model = index.model()
+		table = model.table.split('_')[0]
+		types = {'ssr', 'cssr', 'issr', 'vntr', 'primer'}
+
+		if table not in types:
+			return
+
+		trs = model.get_row(index)
+		self.parent.show_dna_sequence(table, trs)
 
 	@Slot()
 	def change_select_all_state(self, select):
