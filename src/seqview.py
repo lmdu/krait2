@@ -114,6 +114,9 @@ class KraitSequenceViewer(QPlainTextEdit):
 
 		#self.set_sequence()
 
+	def wheelEvent(self, event):
+		print(event.angleDelta(), event.pixelDelta(), event.phase())
+
 	def sizeHint(self):
 		return QSize(100, 100)
 
@@ -233,6 +236,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 	def update_line_number_area_width(self, newBlockCount):
 		self.setViewportMargins(self.line_number_area_width(), self.scale_bar_area_height(), 0, 0)
 		self.change_line_number()
+		self.scale_bar_area.update()
 
 	@Slot(QRect, int)
 	def update_line_number_area(self, rect, dy):
@@ -246,6 +250,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 			self.update_line_number_area_width(0)
 
 		self.change_line_number()
+
 
 	def change_line_number(self):
 		count = 0
