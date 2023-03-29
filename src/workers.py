@@ -24,27 +24,29 @@ __all__ = [
 	'ExportWholeTableThread', 'ExportAllTablesThread',
 	'TRELocatingThread', 'StatisticsThread',
 
-	'SSRSearchWorker', 'CSSRSearchWorker',
-	'ISSRSearchWorker', 'VNTRSearchWorker',
-	'PrimerDesignWorker'
+	'KraitSSRSearchWorker', 'KraitCSSRSearchWorker',
+	'KraitISSRSearchWorker', 'KraitVNTRSearchWorker',
+	'KraitPrimerDesignWorker'
 ]
 
 #signals can only be emit from QObject
-class WorkerSignals(QObject):
+class KraitWorkerSignals(QObject):
 	finished = Signal()
 	progress = Signal(int)
 	failure = Signal(str)
 
-class BaseWorker(QRunnable):
+class KraitBaseWorker(QRunnable):
 	processer = None
 
 	def __init__(self):
 		super().__init__()
 		self.setAutoDelete(True)
-
+		self.fastx = None
 		self.processes = 0
 		self.receiver, self.sender = multiprocessing.Pipe(duplex=False)
-		self.signals = WorkerSignals()
+		self.signals = KraitWorkerSignals()
+		self.settings = QSettings()
+		self.params = self.get_params()
 
 	def __exit__(self):
 		self.sender.close()
@@ -52,10 +54,13 @@ class BaseWorker(QRunnable):
 	def exit(self):
 		self.sender.close()
 
-	def start_process(self, fastx):
-		proc = self.processer(fastx, self.params, self.sender)
+	def start_process(self):
+		proc = self.processer(self.fastx, self.params, self.sender)
 		proc.start()
 		self.processes += 1
+
+	def get_params(self):
+		pass
 
 	def before_run(self):
 		pass
@@ -91,7 +96,7 @@ class BaseWorker(QRunnable):
 		finally:
 			self.signals.progress.emit(100)
 
-class SearchWorker(BaseWorker):
+class KraitSearchWorker(KraitBaseWorker):
 	table_name = None
 
 	def __init__(self):
@@ -100,9 +105,6 @@ class SearchWorker(BaseWorker):
 		self.total_fastx = 0
 		self.fastx_query = None
 		self.progresses = {}
-
-		self.settings = QSettings()
-		self.params = self.get_params()
 		self.concurrent = self.settings.value('Run/concurrent', 1, int)
 
 	def get_params(self):
@@ -161,19 +163,19 @@ class SearchWorker(BaseWorker):
 			DB.insert_rows(DB.get_sql(table), data['records'])
 			self.update_progress(data)
 
-class SSRSearchWorker(SearchWorker):
+class KraitSSRSearchWorker(KraitSearchWorker):
 	table_name = 'ssr'
-	processer = SSRSearchProcess
+	processer = KraitSSRSearchProcess
 
 	def get_params(self):
 		keys = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
-		min_repeats = [self.settings.value(k, KRAIT_PARAMETERS[k][0], int) for k in keys]
-		standard_level = self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
+		min_repeats = [self.settings.value(k, KRAIT_SEARCH_PARAMETERS[k][0], int) for k in keys]
+		standard_level = self.settings.value('STR/level', KRAIT_SEARCH_PARAMETERS['STR/level'][0], int)
 		return {'min_repeats': min_repeats, 'standard_level': standard_level}
 
-class CSSRSearchWorker(SearchWorker):
+class KraitCSSRSearchWorker(KraitSearchWorker):
 	table_name = 'cssr'
-	processer = CSSRSearchProcess
+	processer = KraitCSSRSearchProcess
 
 	def start_process(self, fastx):
 		DB.create_table(self.table_name, fastx['id'])
@@ -185,62 +187,80 @@ class CSSRSearchWorker(SearchWorker):
 
 	def get_params(self):
 		return {
-			'dmax': self.settings.value('CSSR/dmax', KRAIT_PARAMETERS['CSSR/dmax'][0], int)
+			'dmax': self.settings.value('CSSR/dmax', KRAIT_SEARCH_PARAMETERS['CSSR/dmax'][0], int)
 		}
 
-class ISSRSearchWorker(SearchWorker):
+class KraitISSRSearchWorker(KraitSearchWorker):
 	table_name = 'issr'
-	processer = ISSRSearchProcess
+	processer = KraitISSRSearchProcess
 
 	def get_params(self):
 		params = {
-			'standard_level': self.settings.value('STR/level', KRAIT_PARAMETERS['STR/level'][0], int)
+			'standard_level': self.settings.value('STR/level', KRAIT_SEARCH_PARAMETERS['STR/level'][0], int)
 		}
 
-		for k in KRAIT_PARAMETERS:
+		for k in KRAIT_SEARCH_PARAMETERS:
 			if not k.startswith('ISSR'):
 				continue
 
-			default, converter = KRAIT_PARAMETERS[k]
+			default, converter = KRAIT_SEARCH_PARAMETERS[k]
 			p = k.split('/')[1]
 			params[p] = self.settings.value(k, default, converter)
 
 		return params
 
-class VNTRSearchWorker(SearchWorker):
+class KraitVNTRSearchWorker(KraitSearchWorker):
 	table_name = 'vntr'
-	processer = VNTRSearchProcess
+	processer = KraitVNTRSearchProcess
 
 	def get_params(self):
 		params = {}
 
-		for k in KRAIT_PARAMETERS:
+		for k in KRAIT_SEARCH_PARAMETERS:
 			if not k.startswith('VNTR'):
 				continue
 
-			default, converter = KRAIT_PARAMETERS[k]
+			default, convert = KRAIT_SEARCH_PARAMETERS[k]
 			p = k.split('/')[1]
-			params[p] = self.settings.value(k, default, converter)
+			params[p] = self.settings.value(k, default, convert)
 
 		return params
 
-class PrimerDesignWorker(BaseWorker):
+class KraitPrimerDesignWorker(KraitBaseWorker):
 	table_name = 'primer'
-	processer = PrimerDesignProcess
+	processer = KraitPrimerDesignProcess
 
-	def __init__(self, index, total, generator):
+	def __init__(self, index, total, repeats):
 		super().__init__()
 		self.index = index
 		self.total_count = total
-		self.generator = generator
+		self.repeats = repeats
 		self.concurrent = 1
 		self.progress = 0
 
 	def get_params(self):
 		params = {}
 
-	def start_process(self, fastx, trs):
-		proc = self.processer(fastx, trs, self.params, self.sender)
+		self.settings.beginGroup("PRIMER")
+
+		for k in KRAIT_PRIMER_TAGS:
+			default, convert = KRAIT_PRIMER_TAGS[k]
+			v = self.settings.value(k, default, convert)
+
+			if v != default or k == 'PRIMER_FLANK_LENGTH':
+				params[k] = v
+
+		self.settings.endGroup()
+
+		p = 'PRIMER_PRODUCT_SIZE_RANGE'
+
+		if p in params:
+			params[p] = [r.split('-') for r in params[p].split()]
+
+		return params
+
+	def start_process(self, trs):
+		proc = self.processer(self.fastx, trs, self.params, self.sender)
 		proc.start()
 		self.processes += 1
 
@@ -255,14 +275,13 @@ class PrimerDesignWorker(BaseWorker):
 
 	def submit_process(self):
 		try:
-			trs = next(self.generator)
+			trs = next(self.repeats)
 		except StopIteration:
 			return
 
-		self.start_process(self.fastx, trs)
+		self.start_process(trs)
 
 	def call_response(self, data):
-
 		if data['type'] == 'finish':
 			self.processes -= 1
 			self.submit_process()
@@ -460,10 +479,10 @@ class CSSRSearchThread(SearchThread):
 		params = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
 		self.min_repeats = []
 		for param in params:
-			default, func = KRAIT_PARAMETERS[param]
+			default, func = KRAIT_SEARCH_PARAMETERS[param]
 			self.min_repeats.append(self.settings.value(param, default, func))
 
-		default, func = KRAIT_PARAMETERS['CSSR/dmax']
+		default, func = KRAIT_SEARCH_PARAMETERS['CSSR/dmax']
 		self.dmax = self.settings.value('CSSR/dmax', default, func)
 
 	def args(self, name, seq):
@@ -507,7 +526,7 @@ class VNTRSearchThread(SearchThread):
 
 		params = ['VNTR/minmotif', 'VNTR/maxmotif', 'VNTR/minrep']
 		for param in params:
-			default, func = KRAIT_PARAMETERS[param]
+			default, func = KRAIT_SEARCH_PARAMETERS[param]
 			self.params.append(self.settings.value(param, default, func))
 
 	def args(self, name, seq):
@@ -533,7 +552,7 @@ class ISSRSearchThread(SearchThread):
 					'ISSR/subpena', 'ISSR/inspena', 'ISSR/delpena',
 					'ISSR/matratio', 'ISSR/maxextend']
 		for param in params:
-			default, func = KRAIT_PARAMETERS[param]
+			default, func = KRAIT_SEARCH_PARAMETERS[param]
 			self.params.append(self.settings.value(param, default, func))
 
 		standard_level = self.settings.value('STR/level', 3, type=int)
@@ -563,7 +582,7 @@ class PrimerDesignThread(WorkerThread):
 		self.table, self.findex = table.split('_')		
 
 		param = "STR/flank"
-		default, func = KRAIT_PARAMETERS[param]
+		default, func = KRAIT_SEARCH_PARAMETERS[param]
 		self.flank_len = self.settings.value(param, default, func)
 		
 		self._sql = "SELECT * FROM {} WHERE id IN ({})".format(table, ','.join(['?']*self.batch))

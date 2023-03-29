@@ -10,11 +10,11 @@ from PySide6.QtCore import *
 from utils import *
 from motif import *
 
-__all__ = ['SSRSearchProcess', 'CSSRSearchProcess',
-			'ISSRSearchProcess', 'VNTRSearchProcess',
-			'PrimerDesignProcess']
+__all__ = ['KraitSSRSearchProcess', 'KraitCSSRSearchProcess',
+			'KraitISSRSearchProcess', 'KraitVNTRSearchProcess',
+			'KraitPrimerDesignProcess']
 
-class SearchProcess(multiprocessing.Process):
+class KraitSearchProcess(multiprocessing.Process):
 	def __init__(self, fastx, params, sender):
 		super().__init__()
 		self.daemon = True
@@ -67,7 +67,7 @@ class SearchProcess(multiprocessing.Process):
 		finally:
 			self.sender.close()
 
-class SSRSearchProcess(SearchProcess):
+class KraitSSRSearchProcess(KraitSearchProcess):
 	def do(self):
 		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
 		SM = StandardMotif(self.params['standard_level'])
@@ -95,7 +95,7 @@ class SSRSearchProcess(SearchProcess):
 				'progress': progress
 			})
 
-class CSSRSearchProcess(SearchProcess):
+class KraitCSSRSearchProcess(KraitSearchProcess):
 	def do(self):
 		ssrs = self.params['ssrs']
 		dmax = self.params['dmax']
@@ -156,7 +156,7 @@ class CSSRSearchProcess(SearchProcess):
 		structure = '-'.join("({}){}".format(cssr[4], cssr[7]) for cssr in cssrs)
 		return (None, chrom, start, end, complexity, length, structure)
 
-class ISSRSearchProcess(SearchProcess):
+class KraitISSRSearchProcess(KraitSearchProcess):
 	def do(self):
 		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
 		SM = StandardMotif(self.params['standard_level'])
@@ -196,7 +196,7 @@ class ISSRSearchProcess(SearchProcess):
 				'progress': progress
 			})
 
-class VNTRSearchProcess(SearchProcess):
+class KraitVNTRSearchProcess(KraitSearchProcess):
 	def do(self):
 		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
 
@@ -226,11 +226,12 @@ class VNTRSearchProcess(SearchProcess):
 				'progress': progress
 			})
 
-class PrimerDesignProcess(multiprocessing.Process):
-	def __init__(self, fastx, params, sender):
+class KraitPrimerDesignProcess(multiprocessing.Process):
+	def __init__(self, fastx, repeats, params, sender):
 		super().__init__()
 		self.daemon = True
 		self.fastx = fastx
+		self.repeats = repeats
 		self.params = params
 		self.sender = sender
 		self.progress = 0
@@ -242,7 +243,65 @@ class PrimerDesignProcess(multiprocessing.Process):
 		})
 
 	def do(self):
-		pass
+		seq_name = None
+		seq_cache = None
+		flank_len = self.params.pop('PRIMER_FLANK_LENGTH')
+
+		if self.fastx['format'] == 'fasta':
+			fx = pyfastx.Fasta(self.fastx['fpath'])
+		else:
+			fx = pyfastx.Fastq(self.fastx['fpath'])
+
+		records = []
+		for trs in self.repeats:
+			if trs[1] != seq_name:
+				seq_name = trs[1]
+				seq_cache = fx[seq_name].seq
+
+			start = trs[2] - flank_len
+
+			if start < 1:
+				start = 1
+
+			end = trs[3] + flank_len
+
+			target_start = trs[2] - start
+			target_len = trs[3] - trs[2] + 1
+
+			results = primer3.design_primers(
+				seq_args = {
+					'SEQUENCE_ID': "{}-tr-{}".format(trs[1], trs[0]),
+					'SEQUENCE_TEMPLATE': seq_cache[start-1:end],
+					'SEQUENCE_TARGET': [target_start, target_len],
+					'SEQUENCE_INTERNAL_EXCLUDED_REGION': [target_start, target_len]
+				},
+				global_args = self.params
+			)
+
+			primer_count = results['PRIMER_PAIR_NUM_RETURNED']
+
+			for i in range(primer_count):
+				primer = [None, trs[0], i+1]
+				primer.append(results['PRIMER_PAIR_{}_PRODUCT_SIZE'.format(i)])
+				primer.append(round(results['PRIMER_LEFT_{}_TM'.format(i)], 2))
+				primer.append(round(results['PRIMER_LEFT_{}_GC_PERCENT'.format(i)], 2))
+				primer.append(round(results['PRIMER_LEFT_{}_END_STABILITY'.format(i)], 2))
+				primer.append(results['PRIMER_LEFT_{}_SEQUENCE'.format(i)])
+				primer.append(round(results['PRIMER_RIGHT_{}_TM'.format(i)], 2))
+				primer.append(round(results['PRIMER_RIGHT_{}_GC_PERCENT'.format(i)], 2))
+				primer.append(round(results['PRIMER_RIGHT_{}_END_STABILITY'.format(i)], 2))
+				primer.append(results['PRIMER_RIGHT_{}_SEQUENCE'.format(i)])
+				primer.extend(results['PRIMER_LEFT_{}'.format(i)])
+				primer.extend(results['PRIMER_RIGHT_{}'.format(i)])
+
+				records.append(primer)
+
+		self.sender.send({
+			'id': self.fastx['id'],
+			'type': 'primer',
+			'records': records,
+			'progress': len(self.repeats)
+		})
 
 	def run(self):
 		try:

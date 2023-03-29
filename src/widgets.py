@@ -93,7 +93,7 @@ class KraitTableView(QTableView):
 
 	@property
 	def table_name(self):
-		return self._model.table.split('-')[0]
+		return self._model.table.split('_')[0]
 
 	def get_selected_rows(self):
 		count = self._model.get_selected_count()

@@ -762,7 +762,7 @@ class KraitMainWindow(QMainWindow):
 		QThreadPool.globalInstance().start(self.current_worker)
 
 	def do_ssr_search(self):
-		self.run_work_thread(SSRSearchWorker)
+		self.run_work_thread(KraitSSRSearchWorker)
 
 	def check_ssr_search(self):
 		for table in DB.get_tables():
@@ -777,13 +777,13 @@ class KraitMainWindow(QMainWindow):
 		if not self.check_ssr_search():
 			return
 
-		self.run_work_thread(CSSRSearchWorker)
+		self.run_work_thread(KraitCSSRSearchWorker)
 
 	def do_vntr_search(self):
-		self.run_work_thread(VNTRSearchWorker)
+		self.run_work_thread(KraitVNTRSearchWorker)
 
 	def do_issr_search(self):
-		self.run_work_thread(ISSRSearchWorker)
+		self.run_work_thread(KraitISSRSearchWorker)
 
 	def do_primer_design(self):
 		try:
@@ -796,7 +796,7 @@ class KraitMainWindow(QMainWindow):
 			QMessageBox.warning(self, "Warning", "Please select some tandem repeats for primer design.")
 			return
 
-		self.run_work_thread(PrimerDesignWorker, self.current_file, count, rows)
+		self.run_work_thread(KraitPrimerDesignWorker, self.current_file, count, rows)
 
 	def perform_primer_design(self):
 		worker = PrimerDesignThread(self, self.current_table)

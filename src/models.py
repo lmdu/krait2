@@ -295,7 +295,7 @@ class KraitBaseModel(QAbstractTableModel):
 		if not self.selected:
 			return
 
-		select_total = len(self.selected)
+		select_count = len(self.selected)
 		extract_once = 100
 
 		if select_count == self.total_count:
@@ -317,7 +317,9 @@ class KraitBaseModel(QAbstractTableModel):
 
 			for i in range(0, select_count, extract_once):
 				ids = selected_rows[i:i+extract_once]
-				sql = "SELECT * FROM {} WHERE id IN ({})".format(table, ','.join(map(str, ids)))
+				sql = "SELECT * FROM {} WHERE id IN ({})".format(
+					self.table, ','.join(map(str, ids))
+				)
 
 				yield DB.get_rows(sql)
 
@@ -354,7 +356,7 @@ class KraitISSRModel(KraitTableModel):
 class KraitPrimerModel(KraitTableModel):
 	table = 'primer'
 	custom_headers = ['ID', 'Locus', 'Entry', 'Product size', 'Strand',
-					 'Sequence', 'Tm (°C)', 'GC (%)', 'End stability']
+					  'Tm (°C)', 'GC content (%)', 'End stability', 'Sequence']
 
 	def get_value(self, row, col):
 		if row != self.cache_row[0]:
