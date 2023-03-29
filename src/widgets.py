@@ -91,17 +91,24 @@ class KraitTableView(QTableView):
 		else:
 			return False
 
+	@property
+	def table_name(self):
+		return self._model.table.split('-')[0]
+
+	def get_selected_rows(self):
+		count = self._model.get_selected_count()
+		rows = self._model.get_selected_rows()
+		return (self.table_name, count, rows)
+
 	@Slot()
 	def on_row_clicked(self, index):
-		model = index.model()
-		table = model.table.split('_')[0]
 		types = {'ssr', 'cssr', 'issr', 'vntr', 'primer'}
 
-		if table not in types:
+		if self.table_name not in types:
 			return
 
-		trs = model.get_row(index)
-		self.parent.show_dna_sequence(table, trs)
+		trs = self._model.get_row(index)
+		self.parent.show_dna_sequence(self.table_name, trs)
 
 	@Slot()
 	def change_select_all_state(self, select):

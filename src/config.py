@@ -6,8 +6,8 @@ import pyfastx
 import PySide6
 
 __all__ = ['KRAIT_VERSION', 'KRAIT_BUILD', 'KRAIT_ABOUT',
-			'KRAIT_PARAMETERS', 'PRIMER_PARAMETERS',
-			'PRIMER_COMMONS']
+			'KRAIT_SEARCH_PARAMETERS', 'KRAIT_PRIMER_TAGS',
+			'KRAIT_PRIMER_COMMONS']
 
 KRAIT_VERSION = "2.0.0"
 
@@ -123,7 +123,7 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 )
 
 #default parameter and type for krait
-KRAIT_PARAMETERS = {
+KRAIT_SEARCH_PARAMETERS = {
 	'SSR/mono': (12, int),
 	'SSR/di': (7, int),
 	'SSR/tri': (5, int),
@@ -151,7 +151,8 @@ KRAIT_PARAMETERS = {
 }
 
 #default parameter and type for primer3
-PRIMER_PARAMETERS = {
+KRAIT_PRIMER_TAGS = {
+	'PRIMER_FLANK_LENGTH': (100, int),
 	'PRIMER_PICK_LEFT_PRIMER': (1, int),
 	'PRIMER_PICK_INTERNAL_OLIGO': (0, int),
 	'PRIMER_PICK_RIGHT_PRIMER': (1, int),
@@ -266,7 +267,7 @@ PRIMER_PARAMETERS = {
 	'PRIMER_INTERNAL_WT_END_QUAL': (0.0, float)
 }
 
-PRIMER_COMMONS = [
+KRAIT_PRIMER_COMMONS = [
 	'PRIMER_PRODUCT_SIZE_RANGE',
 	'PRIMER_NUM_RETURN',
 	'PRIMER_MIN_SIZE',

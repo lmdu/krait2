@@ -288,6 +288,39 @@ class KraitBaseModel(QAbstractTableModel):
 		sql = "SELECT * FROM {} WHERE id=? LIMIT 1".format(self.table)
 		return DB.get_dict(sql, (row_id,))
 
+	def get_selected_count(self):
+		return len(self.selected)
+
+	def get_selected_rows(self):
+		if not self.selected:
+			return
+
+		select_total = len(self.selected)
+		extract_once = 100
+
+		if select_count == self.total_count:
+			sql = self.all_sql.replace("SELECT id FROM", "SELECT * FROM")
+
+			rows = []
+
+			for row in DB.query(sql):
+				rows.append(row)
+
+				if len(rows) == extract_once:
+					yield rows
+
+			if rows:
+				yield rows
+
+		else:
+			selected_rows = sorted(self.selected)
+
+			for i in range(0, select_count, extract_once):
+				ids = selected_rows[i:i+extract_once]
+				sql = "SELECT * FROM {} WHERE id IN ({})".format(table, ','.join(map(str, ids)))
+
+				yield DB.get_rows(sql)
+
 class KraitFastxModel(KraitBaseModel):
 	table = 'fastx'
 	custom_headers = ["ID", "Name"]
@@ -320,7 +353,7 @@ class KraitISSRModel(KraitTableModel):
 
 class KraitPrimerModel(KraitTableModel):
 	table = 'primer'
-	custom_headers = ['id', 'Locus', 'Entry', 'Product size', 'Primer',
+	custom_headers = ['ID', 'Locus', 'Entry', 'Product size', 'Strand',
 					 'Sequence', 'Tm (°C)', 'GC (%)', 'End stability']
 
 	def get_value(self, row, col):
@@ -335,6 +368,7 @@ class KraitPrimerModel(KraitTableModel):
 				self.cache_row[1][col-1],
 				self.cache_row[1][col+3]
 			)
+
 		else:
 			return self.cache_row[1][col]
 
@@ -342,12 +376,9 @@ class KraitPrimerModel(KraitTableModel):
 		if not index.isValid():
 			return Qt.ItemIsSelectable
 
-		flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+		flags = super().flags(index)
 
-		if index.column() == 0:
-			flags |= Qt.ItemIsUserCheckable
-
-		elif index.column() == 5:
+		if index.column() == 5:
 			flags |= Qt.ItemIsEditable
 
 		return flags

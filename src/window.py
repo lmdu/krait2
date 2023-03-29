@@ -9,11 +9,11 @@ from stats import *
 from filter import *
 from config import *
 from tables import *
+from dialog import *
 from seqview import *
 from backend import *
 from workers import *
 from widgets import *
-from preference import *
 
 __all__ = ['KraitMainWindow']
 
@@ -96,47 +96,47 @@ class KraitMainWindow(QMainWindow):
 
 	def create_actions(self):
 		#menu actions
-		self.open_action = QAction("&Open Project...", self,
+		self.open_action = QAction("&Open project...", self,
 			shortcut = QKeySequence.Open,
 			#statusTip = "Open a project file",
 			toolTip = "Open a project file",
 			triggered = self.open_project
 		)
 
-		self.close_action = QAction("&Close Project", self,
+		self.close_action = QAction("&Close project", self,
 			shortcut = QKeySequence.Close,
 			toolTip = "Close the opened project file",
 			triggered = self.close_project
 		)
 
-		self.save_action = QAction("&Save Project", self,
+		self.save_action = QAction("&Save project", self,
 			shortcut = QKeySequence.Save,
 			statusTip = "Save project",
 			triggered = self.save_project
 		)
 
-		self.save_as_action = QAction("&Save Project As...", self,
+		self.save_as_action = QAction("&Save project as...", self,
 			shortcut = QKeySequence.SaveAs,
 			statusTip = "Save project as",
 			triggered = self.save_project_as
 		)
 
-		self.import_action = QAction("&Import Fasta Files...", self,
-			statusTip = "Import fasta files",
+		self.import_action = QAction("&Import sequence files...", self,
+			statusTip = "Import fasta or fastq files",
 			triggered = self.import_fasta_files
 		)
 
-		self.folder_action = QAction("&Import Fasta Files in Folder...", self,
-			statusTip = "Import all fasta files in a folder",
+		self.folder_action = QAction("&Import sequence files from folder...", self,
+			statusTip = "Import all fasta or fastq files in a folder",
 			triggered = self.import_fasta_folder
 		)
 
-		self.annotin_action = QAction("&Import Annotation Files...", self,
+		self.annotin_action = QAction("&Import annotation files...", self,
 			statusTip = "Import GFF or GTF formatted annotation files",
 			triggered = self.import_annot_files
 		)
 
-		self.annotfolder_action = QAction("&Import Annotation Files in Folder...", self,
+		self.annotfolder_action = QAction("&Import annotation files from folder...", self,
 			statusTip = "Import all GFF or GTF formatted annotation files in a folder",
 			triggered = self.import_annot_folder
 		)
@@ -163,27 +163,27 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		#edit actions
-		self.filter_set_action = QAction("&Filter Rows in Current Table", self,
+		self.filter_set_action = QAction("&Do filter for current table", self,
 			toolTip = "Filter rows from the current table",
-			triggered = self.open_filter
+			triggered = self.open_filter_dialog
 		)
-		self.search_param_action = QAction("&Set Search Parameters", self,
+		self.search_param_action = QAction("&Repeat search parameters", self,
 			shortcut = QKeySequence.Preferences,
 			statusTip = "Set search parameters",
 			triggered = self.open_search_param_dialog
 		)
 
-		self.primer_param_action = QAction("&Set Primer Parameters", self,
+		self.primer_param_action = QAction("&Primer design parameters", self,
 			statusTip = "Set primer parameters",
 			triggered = self.open_primer_param_dialog
 		)
 
 		#view actions
 		self.fastx_action = self.fastx_dock.toggleViewAction()
-		self.fastx_action.setText("Show File List")
+		self.fastx_action.setText("Show sequence files")
 
 		self.seqview_action = self.seq_dock.toggleViewAction()
-		self.seqview_action.setText("Show Sequence Viewer")
+		self.seqview_action.setText("Show sequence viewer")
 
 		#run actions
 		#self.search_group_action = QActionGroup(self)
@@ -192,13 +192,13 @@ class KraitMainWindow(QMainWindow):
 		#self.search_sel_action = QAction("Running for Selected Fastas", self, checkable=True)
 		#self.search_group_action.addAction(self.search_all_action)
 		#self.search_group_action.addAction(self.search_sel_action)
-		self.cancel_action = QAction("&Cancel Running Tasks", self,
+		self.cancel_action = QAction("&Cancel the running task", self,
 			triggered = self.cancel_running_tasks
 		)
 
 
 		#help actions
-		self.about_action = QAction("&About Krait", self,
+		self.about_action = QAction("&About krait", self,
 			statusTip = "About",
 			triggered = self.open_about
 		)
@@ -209,12 +209,12 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.open_documentation
 		)
 
-		self.issue_action = QAction("&Report Issue", self,
+		self.issue_action = QAction("&Report issue", self,
 			statusTip = "Report issues",
 			triggered = self.report_issue
 		)
 
-		self.update_action = QAction("&Check for Updates", self,
+		self.update_action = QAction("&Check for updates", self,
 			statusTip = "Check for any updates",
 			triggered = self.check_update
 		)
@@ -247,8 +247,8 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		self.primer_action = QAction(QIcon("icons/primer.svg"), "Primer", self,
-			toolTip = "Design primers for selected repeats",
-			triggered = self.perform_primer_design
+			toolTip = "Design primers for selected tandem repeats",
+			triggered = self.do_primer_design
 		)
 
 		self.stat_action = QAction(QIcon("icons/statistics.svg"), "Statistics", self,
@@ -258,7 +258,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.filter_action = QAction(QIcon("icons/filter.svg"), "Filter", self,
 			toolTip = "Filter rows from the current table",
-			triggered = self.open_filter
+			triggered = self.open_filter_dialog
 		)
 
 	def create_menus(self):
@@ -749,14 +749,14 @@ class KraitMainWindow(QMainWindow):
 
 		return True
 
-	def run_work_thread(self, threader):
+	def run_work_thread(self, threader, *args):
 		if not self.check_input_fastx():
 			return
 
 		if not self.check_work_thread():
 			return
 
-		self.current_worker = threader()
+		self.current_worker = threader(*args)
 		self.current_worker.signals.progress.connect(self.progress_bar.setValue)
 		self.current_worker.signals.failure.connect(self.show_error_message)
 		QThreadPool.globalInstance().start(self.current_worker)
@@ -784,7 +784,19 @@ class KraitMainWindow(QMainWindow):
 
 	def do_issr_search(self):
 		self.run_work_thread(ISSRSearchWorker)
-		
+
+	def do_primer_design(self):
+		try:
+			widget = self.tab_widget.currentWidget()
+			rtype, count, rows = widget.get_selected_rows()
+		except:
+			count = 0
+
+		if not count or rtype not in {'ssr', 'issr', 'cssr', 'vntr'}:
+			QMessageBox.warning(self, "Warning", "Please select some tandem repeats for primer design.")
+			return
+
+		self.run_work_thread(PrimerDesignWorker, self.current_file, count, rows)
 
 	def perform_primer_design(self):
 		worker = PrimerDesignThread(self, self.current_table)
@@ -800,8 +812,8 @@ class KraitMainWindow(QMainWindow):
 		worker.finished.connect(self.show_stats_view)
 		self.perform_new_task(worker)
 
-	def open_filter(self):
-		dialog = FilterDialog(self)
+	def open_filter_dialog(self):
+		dialog = KraitFilterDialog(self)
 		dialog.show()
 
 	def set_filter(self, filters):
@@ -809,12 +821,11 @@ class KraitMainWindow(QMainWindow):
 		table_widget.set_filter(filters)
 
 	def open_search_param_dialog(self):
-		dialog = PreferenceDialog(self)
+		dialog = KraitSearchSettingDialog(self)
 		dialog.show()
 
 	def open_primer_param_dialog(self):
-		dialog = PreferenceDialog(self)
-		dialog.goto_primer_panel()
+		dialog = KraitPrimerSettingDialog(self)
 		dialog.show()
 
 	def open_about(self):

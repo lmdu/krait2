@@ -4,11 +4,12 @@ from PySide6.QtWidgets import *
 
 from backend import *
 
-__all__ = ['FilterDialog']
+__all__ = ['KraitFilterDialog']
 
-class FilterTreeModel(QAbstractItemModel):
+class KraitFilterModel(QAbstractItemModel):
 	def __init__(self, parent=None):
-		super(FilterTreeModel, self).__init__(parent)
+		super().__init__(parent)
+
 		self._parent = parent
 		self._headers = ["And/Or", "Column Name", "Condition", "Value"]
 		self.row_count = 1
@@ -58,9 +59,10 @@ class FilterTreeModel(QAbstractItemModel):
 
 		return flags
 
-class FilterTreeDelegate(QStyledItemDelegate):
+class KraitFilterDelegate(QStyledItemDelegate):
 	def __init__(self, parent=None):
-		super(FilterTreeDelegate, self).__init__(parent)
+		super().__init__(parent)
+
 		self.parent = parent
 		self.logics = ["And", "Or"]
 
@@ -126,10 +128,11 @@ class FilterTreeDelegate(QStyledItemDelegate):
 #	def __init__(self, parent=None):
 #		super(FilterTreeView, self).__init__(parent)
 
-class FilterDialog(QDialog):
+class KraitFilterDialog(QDialog):
 	def __init__(self, parent=None):
-		super(FilterDialog, self).__init__(parent)
-		self.setWindowTitle("Add filters")
+		super().__init__(parent)
+
+		self.setWindowTitle("Filter Rows")
 		self.resize(QSize(500, 300))
 		self.setModal(False)
 		self.parent = parent
@@ -144,8 +147,8 @@ class FilterDialog(QDialog):
 
 		self.tree = QTreeView(self)
 		self.tree.setRootIsDecorated(False)
-		self.model = FilterTreeModel(self)
-		self.delegate = FilterTreeDelegate(self)
+		self.model = KraitFilterModel(self)
+		self.delegate = KraitFilterDelegate(self)
 		self.tree.setModel(self.model)
 		self.tree.setItemDelegate(self.delegate)
 

@@ -111,7 +111,7 @@ def product_size_format(ranges):
 
 def primer_tag_format(tag):
 	try:
-		return PRIMER_PARAMETERS[tag]
+		return KRAIT_PRIMER_TAGS[tag]
 	except:
 		raise Exception("The {} tag is not a primer3 tag".format(tag))
 

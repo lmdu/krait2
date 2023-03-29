@@ -25,7 +25,8 @@ __all__ = [
 	'TRELocatingThread', 'StatisticsThread',
 
 	'SSRSearchWorker', 'CSSRSearchWorker',
-	'ISSRSearchWorker', 'VNTRSearchWorker'
+	'ISSRSearchWorker', 'VNTRSearchWorker',
+	'PrimerDesignWorker'
 ]
 
 #signals can only be emit from QObject
@@ -222,6 +223,62 @@ class VNTRSearchWorker(SearchWorker):
 			params[p] = self.settings.value(k, default, converter)
 
 		return params
+
+class PrimerDesignWorker(BaseWorker):
+	table_name = 'primer'
+	processer = PrimerDesignProcess
+
+	def __init__(self, index, total, generator):
+		super().__init__()
+		self.index = index
+		self.total_count = total
+		self.generator = generator
+		self.concurrent = 1
+		self.progress = 0
+
+	def get_params(self):
+		params = {}
+
+	def start_process(self, fastx, trs):
+		proc = self.processer(fastx, trs, self.params, self.sender)
+		proc.start()
+		self.processes += 1
+
+	def before_run(self):
+		sql = "SELECT * FROM fastx WHERE id=? LIMIT 1"
+		query = DB.query(sql, (self.index,))
+		row = query.fetchone()
+		fields = [name for name, _ in query.getdescription()]
+		self.fastx = dict(zip(fields, row))
+
+		DB.create_table(self.table_name, self.index)
+
+	def submit_process(self):
+		try:
+			trs = next(self.generator)
+		except StopIteration:
+			return
+
+		self.start_process(self.fastx, trs)
+
+	def call_response(self, data):
+
+		if data['type'] == 'finish':
+			self.processes -= 1
+			self.submit_process()
+
+			if self.processes == 0:
+				self.sender.close()
+
+		else:
+			table = "{}_{}".format(data['type'], data['id'])
+			DB.insert_rows(DB.get_sql(table), data['records'])
+			self.update_progress(data)
+
+	def update_progress(self, data):
+		self.progress += data['progress']
+		p = self.progress/self.total_count*100
+		self.signals.progress.emit(p)
 
 class WorkerSignal(QObject):
 	progress = Signal(int)

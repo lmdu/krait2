@@ -4,9 +4,9 @@ from PySide6.QtWidgets import *
 
 from config import *
 
-__all__ = ['PreferenceDialog']
+__all__ = ['KraitPrimerSettingDialog', 'KraitSearchSettingDialog']
 
-class PrimerTagLabel(QLabel):
+class KraitPrimerLabel(QLabel):
 	base_url = "https://primer3.org/manual.html#{}"
 
 	def __init__(self, name, tag, parent=None):
@@ -20,28 +20,37 @@ class PrimerTagLabel(QLabel):
 		url = QUrl(self.base_url.format(self.tag))
 		QDesktopServices.openUrl(url)
 
-class PrimerTagTree(QTreeWidget):
-	def sizeHint(self):
-		return QSize(0, 0)
+#class KraitPrimerTree(QTreeWidget):
+#	def sizeHint(self):
+#		return QSize(0, 0)
 
-class PrimerParameterPanel(QWidget):
+class KraitPrimerParameterPanel(QWidget):
 	def __init__(self, parent=None):
-		super(PrimerParameterPanel, self).__init__(parent)
+		super().__init__(parent)
 		self.settings = QSettings()
 
 		general_group = KraitGroupBox("General settings")
 		general_layout = QVBoxLayout()
 		general_group.setLayout(general_layout)
-		product_layout = QGridLayout()
-		general_layout.addLayout(product_layout)
-		product_layout.setColumnStretch(0, 1)
+
+		self.flank_len = QSpinBox()
+		self.flank_len.setRange(30, 1000)
+
+		flank_layout = QHBoxLayout()
+		general_layout.addLayout(flank_layout)
+		flank_layout.addWidget(QLabel("The length of flanking sequence used to design primers (bp)", self))
+		flank_layout.addWidget(self.flank_len)
+		
 
 		self.product_size = QLineEdit()
 		self.primer_num = QSpinBox()
 		self.primer_num.setRange(1, 100)
-		
-		product_layout.addWidget(PrimerTagLabel("Product size ranges", 'PRIMER_PRODUCT_SIZE_RANGE'), 0, 0)
-		product_layout.addWidget(PrimerTagLabel("# of primers to return", 'PRIMER_NUM_RETURN'), 0, 1)
+
+		product_layout = QGridLayout()
+		general_layout.addLayout(product_layout)
+		product_layout.setColumnStretch(0, 1)
+		product_layout.addWidget(KraitPrimerLabel("Product size ranges", 'PRIMER_PRODUCT_SIZE_RANGE'), 0, 0)
+		product_layout.addWidget(KraitPrimerLabel("# of primers to return", 'PRIMER_NUM_RETURN'), 0, 1)
 		product_layout.addWidget(self.product_size, 1, 0)
 		product_layout.addWidget(self.primer_num, 1, 1)
 		
@@ -71,29 +80,31 @@ class PrimerParameterPanel(QWidget):
 		self.tm_max.setRange(0, 1000)
 
 		size_layout.addWidget(QLabel("Primer size (bp)"), 0, 0)
-		size_layout.addWidget(PrimerTagLabel("Min", 'PRIMER_MIN_SIZE'), 0, 1)
+		size_layout.addWidget(KraitPrimerLabel("Min", 'PRIMER_MIN_SIZE'), 0, 1)
 		size_layout.addWidget(self.size_min, 0, 2)
-		size_layout.addWidget(PrimerTagLabel("Opt", 'PRIMER_OPT_SIZE'), 0, 3)
+		size_layout.addWidget(KraitPrimerLabel("Opt", 'PRIMER_OPT_SIZE'), 0, 3)
 		size_layout.addWidget(self.size_opt, 0, 4)
-		size_layout.addWidget(PrimerTagLabel("Max", 'PRIMER_MAX_SIZE'), 0, 5)
+		size_layout.addWidget(KraitPrimerLabel("Max", 'PRIMER_MAX_SIZE'), 0, 5)
 		size_layout.addWidget(self.size_max, 0, 6)
 		size_layout.addWidget(QLabel("Primer Tm (℃)"), 1, 0)
-		size_layout.addWidget(PrimerTagLabel("Min", 'PRIMER_MIN_TM'), 1, 1)
+		size_layout.addWidget(KraitPrimerLabel("Min", 'PRIMER_MIN_TM'), 1, 1)
 		size_layout.addWidget(self.tm_min,1, 2)
-		size_layout.addWidget(PrimerTagLabel("Opt", 'PRIMER_OPT_TM'), 1, 3)
+		size_layout.addWidget(KraitPrimerLabel("Opt", 'PRIMER_OPT_TM'), 1, 3)
 		size_layout.addWidget(self.tm_opt, 1, 4)
-		size_layout.addWidget(PrimerTagLabel("Max", 'PRIMER_MAX_TM'), 1, 5)
+		size_layout.addWidget(KraitPrimerLabel("Max", 'PRIMER_MAX_TM'), 1, 5)
 		size_layout.addWidget(self.tm_max, 1, 6)
 		size_layout.addWidget(QLabel("Primer GC (%)"), 2, 0)
-		size_layout.addWidget(PrimerTagLabel("Min", 'PRIMER_MIN_GC'), 2, 1)
+		size_layout.addWidget(KraitPrimerLabel("Min", 'PRIMER_MIN_GC'), 2, 1)
 		size_layout.addWidget(self.gc_min, 2, 2)
-		size_layout.addWidget(PrimerTagLabel("Opt", 'PRIMER_OPT_GC_PERCENT'), 2, 3)
+		size_layout.addWidget(KraitPrimerLabel("Opt", 'PRIMER_OPT_GC_PERCENT'), 2, 3)
 		size_layout.addWidget(self.gc_opt, 2, 4)
-		size_layout.addWidget(PrimerTagLabel("Max", 'PRIMER_MAX_GC'), 2, 5)
+		size_layout.addWidget(KraitPrimerLabel("Max", 'PRIMER_MAX_GC'), 2, 5)
 		size_layout.addWidget(self.gc_max, 2, 6)
 
 		advance_group = KraitGroupBox("Advanced settings")
 		advance_layout = QGridLayout()
+		advance_layout.setColumnStretch(1, 1)
+		advance_layout.setColumnStretch(3, 1)
 		advance_group.setLayout(advance_layout)
 
 		self.gc_clamp = QSpinBox()
@@ -105,41 +116,27 @@ class PrimerParameterPanel(QWidget):
 		self.max_diff_tm = QDoubleSpinBox()
 		self.max_diff_tm.setMaximum(1000)
 
-		advance_layout.addWidget(PrimerTagLabel("Max Ns", 'PRIMER_MAX_NS_ACCEPTED'), 0, 0)
-		advance_layout.addWidget(PrimerTagLabel("GC clamp", 'PRIMER_GC_CLAMP'), 1, 0)
+		advance_layout.addWidget(KraitPrimerLabel("Max Ns", 'PRIMER_MAX_NS_ACCEPTED'), 0, 0)
+		advance_layout.addWidget(KraitPrimerLabel("GC clamp", 'PRIMER_GC_CLAMP'), 1, 0)
 		advance_layout.addWidget(self.max_ns, 0, 1)
 		advance_layout.addWidget(self.gc_clamp, 1, 1)
 
-		advance_layout.addWidget(PrimerTagLabel("Max Tm Difference", 'PRIMER_PAIR_MAX_DIFF_TM'), 0, 2)
-		advance_layout.addWidget(PrimerTagLabel("Max end stability", 'PRIMER_MAX_END_STABILITY'), 1, 2)
+		advance_layout.addWidget(KraitPrimerLabel("Max Tm Difference", 'PRIMER_PAIR_MAX_DIFF_TM'), 0, 2)
+		advance_layout.addWidget(KraitPrimerLabel("Max end stability", 'PRIMER_MAX_END_STABILITY'), 1, 2)
 		advance_layout.addWidget(self.max_diff_tm, 0, 3)
 		advance_layout.addWidget(self.max_end_stability, 1, 3)
 
 		other_group = KraitGroupBox("Other settings")
 		other_layout = QVBoxLayout()
 		other_group.setLayout(other_layout)
-		self.add_btn = QPushButton(self)
-		self.add_btn.clicked.connect(self.add_primer_tag)
-		self.add_btn.setIcon(QIcon("icons/plus.svg"))
-		self.add_btn.setToolTip("Add primer3 tag")
-		self.del_btn = QPushButton(self)
-		self.del_btn.clicked.connect(self.del_primer_tag)
-		self.del_btn.setIcon(QIcon("icons/minus.svg"))
-		self.del_btn.setToolTip("Delete the selected primer3 tag")
-		self.clr_btn = QPushButton(self)
-		self.clr_btn.clicked.connect(self.clear_primer_tag)
-		self.clr_btn.setIcon(QIcon("icons/clear.svg"))
-		self.clr_btn.setToolTip("Delete all the primer3 tags")
 
 		btn_layout = QHBoxLayout()
-		btn_layout.addWidget(QLabel("Add other primer3 tag settings"))
-		btn_layout.addWidget(PrimerTagLabel("learn more", ''), 1)
-		btn_layout.addWidget(self.add_btn)
-		btn_layout.addWidget(self.del_btn)
-		btn_layout.addWidget(self.clr_btn)
+		btn_layout.addWidget(QLabel("Change other primer3 tags"))
+		btn_layout.addWidget(KraitPrimerLabel("learn more", ''), 1)
 
-		self.tree = PrimerTagTree()
-		self.tree.setHeaderLabels(["Primer3 tags", "Value"])
+		self.tree = QTreeWidget(self)
+		self.tree.setRootIsDecorated(False)
+		self.tree.setHeaderLabels(["Primer3 Tags", "Type", "Value"])
 		self.tree.header().setStretchLastSection(False)
 		self.tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
 
@@ -147,6 +144,7 @@ class PrimerParameterPanel(QWidget):
 		other_layout.addWidget(self.tree, 1)
 
 		mainLayout = QVBoxLayout()
+		mainLayout.setContentsMargins(1, 0, 1, 5)
 		mainLayout.addWidget(general_group)
 		mainLayout.addWidget(advance_group)
 		mainLayout.addWidget(other_group, 1)
@@ -154,6 +152,7 @@ class PrimerParameterPanel(QWidget):
 		self.setLayout(mainLayout)
 
 		self._mappings = {
+			'PRIMER_FLANK_LENGTH': self.flank_len,
 			'PRIMER_PRODUCT_SIZE_RANGE': self.product_size,
 			'PRIMER_NUM_RETURN': self.primer_num,
 			'PRIMER_MIN_SIZE': self.size_min,
@@ -173,80 +172,107 @@ class PrimerParameterPanel(QWidget):
 
 		self.read_settings()
 
-	def add_primer_tag(self):
-		item = QTreeWidgetItem(self.tree, ["PRIMER_", ''])
-		item.setFlags(item.flags() | Qt.ItemIsEditable)
-		self.tree.addTopLevelItem(item)
-		self.tree.scrollToItem(item)
-		self.tree.editItem(item, 0)
-
-	def del_primer_tag(self):
-		root = self.tree.invisibleRootItem()
-		it = self.tree.currentItem()
-		root.removeChild(it)
-
-	def clear_primer_tag(self):
-		self.tree.clear()
-
 	def read_settings(self):
 		self.settings.beginGroup("PRIMER")
-		for param in self._mappings:
-			box = self._mappings[param]
-			default, func = PRIMER_PARAMETERS[param]
+		for p in self._mappings:
+			box = self._mappings[p]
+			default, convert = KRAIT_PRIMER_TAGS[p]
 
-			if box == self.product_size:
-				box.setText(self.settings.value(param, default))
+			if convert == str:
+				box.setText(self.settings.value(p, default))
 			else:
-				box.setValue(self.settings.value(param, default, func))
+				box.setValue(self.settings.value(p, default, convert))
 
-		for k in self.settings.allKeys():
-			if k not in self._mappings:
-				item = QTreeWidgetItem(self.tree, [k, self.settings.value(k)])
-				item.setFlags(item.flags() | Qt.ItemIsEditable)
-				self.tree.addTopLevelItem(item)
+		for k in KRAIT_PRIMER_TAGS:
+			if k in self._mappings:
+				continue
+
+			default, convert = KRAIT_PRIMER_TAGS[k]
+			v = self.settings.value(k, str(default), str)
+
+			item = QTreeWidgetItem(self.tree, [k, convert.__name__, v])
+			item.setFlags(item.flags() | Qt.ItemIsEditable)
+			self.tree.addTopLevelItem(item)
 
 		self.settings.endGroup()
 
 	def write_settings(self):
 		self.settings.beginGroup("PRIMER")
-		for param in self._mappings:
-			box = self._mappings[param]
+		
+		for p in self._mappings:
+			box = self._mappings[p]
 
 			if box == self.product_size:
-				self.settings.setValue(param, box.text())
+				self.settings.setValue(p, box.text())
 			else:
-				self.settings.setValue(param, box.value())
+				self.settings.setValue(p, box.value())
 
-		params = {}
+		#params = {}
 		for i in range(self.tree.topLevelItemCount()):
 			item = self.tree.topLevelItem(i)
-			tag, val = item.text(0), item.text(1)
-			tag = tag.strip()
-			val = val.strip()
+			t, v = item.text(0), item.text(2)
+			v = v.strip()
 
-			if tag and val:
-				params[tag] = val
+			if not v:
+				v = PRIMER_TAGS[t][0]
 
-		#delete other params
-		for k in self.settings.allKeys():
-			if k not in self._mappings:
-				if k not in params:
-					self.settings.remove(k)
-
-		#set other params
-		for k in params:
-			self.settings.setValue(k, params[k])
+			self.settings.setValue(t, v)
 
 		self.settings.endGroup()
+
+	def restore_settings(self):
+		self.settings.remove('PRIMER')
+		self.tree.clear()
+		self.read_settings()
+		self.write_settings()
+
+class KraitSettingDialog(QDialog):
+	title = None
+	panel = QWidget
+
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.setWindowTitle(self.title)
+
+		self.layout = QVBoxLayout()
+		self.setLayout(self.layout)
+
+		self.create_panel()
+		self.create_buttons()
+
+	def write_settings(self):
+		self.setting_panel.write_settings()
+
+	def restore_settings(self):
+		self.setting_panel.restore_settings()
+
+	def create_panel(self):
+		self.setting_panel = self.panel(self)
+		self.layout.addWidget(self.setting_panel)
+
+	def create_buttons(self):
+		self.button_box = QDialogButtonBox(QDialogButtonBox.RestoreDefaults | QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+		self.button_box.accepted.connect(self.accept)
+		self.button_box.rejected.connect(self.reject)
+		self.button_box.accepted.connect(self.write_settings)
+		self.button_box.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.restore_settings)
+		self.layout.addWidget(self.button_box)
+
+class KraitPrimerSettingDialog(KraitSettingDialog):
+	title = "Primer3 Settings"
+	panel = KraitPrimerParameterPanel
+
+	def sizeHint(self):
+		return QSize(550, 500)
 
 class KraitGroupBox(QGroupBox):
 	def __init__(self, title):
 		super(KraitGroupBox, self).__init__(title)
 		self.setStyleSheet("QGroupBox{font-weight: bold;}")
 
-class SearchParameterPanel(QWidget):
+class KraitSearchParameterPanel(QWidget):
 	def __init__(self, parent=None):
-		super(SearchParameterPanel, self).__init__(parent)
+		super().__init__(parent)
 		self.settings = QSettings()
 		
 		ssr_layout = QGridLayout()
@@ -407,8 +433,8 @@ class SearchParameterPanel(QWidget):
 		stats_layout.addWidget(QLabel("Ns"))
 		stats_layout.addWidget(self.ns_box, 1)
 
-
 		main_layout = QVBoxLayout()
+		main_layout.setContentsMargins(1, 0, 1, 5)
 		main_layout.addWidget(ssr_group)
 		main_layout.addWidget(cssr_group)
 		main_layout.addWidget(itr_group)
@@ -446,63 +472,31 @@ class SearchParameterPanel(QWidget):
 		self.read_settings()
 
 	def read_settings(self):
-		for param in self._mappings:
-			box = self._mappings[param]
-			default, func = KRAIT_PARAMETERS[param]
+		for p in self._mappings:
+			box = self._mappings[p]
+			default, convert = KRAIT_SEARCH_PARAMETERS[p]
 
 			if isinstance(box, QComboBox):
-				box.setCurrentIndex(self.settings.value(param, default, func))
+				box.setCurrentIndex(self.settings.value(p, default, convert))
 			else:
-				box.setValue(self.settings.value(param, default, func))
+				box.setValue(self.settings.value(p, default, convert))
 
 	def write_settings(self):
-		for param in self._mappings:
-			box = self._mappings[param]
+		for p in self._mappings:
+			box = self._mappings[p]
 
 			if isinstance(box, QComboBox):
-				self.settings.setValue(param, box.currentIndex())
+				self.settings.setValue(p, box.currentIndex())
 			else:
-				self.settings.setValue(param, box.value())
-
-class PreferenceDialog(QDialog):
-	def __init__(self, parent=None):
-		super().__init__(parent)
-		self.settings = QSettings()
-		self.setWindowTitle(self.tr("Preferences"))
-		#self.setMinimumWidth(500)
-
-		self.search_panel = SearchParameterPanel(self)
-		self.primer_panel = PrimerParameterPanel(self)
-
-		self.tab_widget = QTabWidget()
-		self.tab_widget.addTab(self.search_panel, 'Search')
-		self.tab_widget.addTab(self.primer_panel, 'Primer')
-
-		btn_box = QDialogButtonBox(QDialogButtonBox.RestoreDefaults | QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-		btn_box.accepted.connect(self.accept)
-		btn_box.rejected.connect(self.reject)
-		btn_box.accepted.connect(self.write_settings)
-		btn_box.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.restore_settings)
-
-		#spacer = QSpacerItem(10, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-		layout = QVBoxLayout()
-		layout.addWidget(self.tab_widget)
-		#layout.addItem(spacer)
-		layout.addWidget(btn_box)
-
-		self.setLayout(layout)
-
-	def write_settings(self):
-		self.search_panel.write_settings()
-		self.primer_panel.write_settings()
+				self.settings.setValue(p, box.value())
 
 	def restore_settings(self):
-		self.settings.clear()
-		self.search_panel.read_settings()
-		self.primer_panel.clear_primer_tag()
-		self.primer_panel.read_settings()
+		for p in self._mappings:
+			self.settings.remove(p)
+
+		self.read_settings()
 		self.write_settings()
 
-	def goto_primer_panel(self):
-		self.tab_widget.setCurrentIndex(1)
+class KraitSearchSettingDialog(KraitSettingDialog):
+	title = "Search Parameter Settings"
+	panel = KraitSearchParameterPanel

@@ -1,5 +1,6 @@
 import os
 import stria
+import primer3
 import pyfastx
 import traceback
 import multiprocessing
@@ -10,7 +11,8 @@ from utils import *
 from motif import *
 
 __all__ = ['SSRSearchProcess', 'CSSRSearchProcess',
-			'ISSRSearchProcess', 'VNTRSearchProcess']
+			'ISSRSearchProcess', 'VNTRSearchProcess',
+			'PrimerDesignProcess']
 
 class SearchProcess(multiprocessing.Process):
 	def __init__(self, fastx, params, sender):
@@ -223,3 +225,31 @@ class VNTRSearchProcess(SearchProcess):
 				'records': records,
 				'progress': progress
 			})
+
+class PrimerDesignProcess(multiprocessing.Process):
+	def __init__(self, fastx, params, sender):
+		super().__init__()
+		self.daemon = True
+		self.fastx = fastx
+		self.params = params
+		self.sender = sender
+		self.progress = 0
+
+	def finish(self):
+		self.sender.send({
+			'id': self.fastx['id'],
+			'type': 'finish'
+		})
+
+	def do(self):
+		pass
+
+	def run(self):
+		try:
+			self.do()
+			self.finish()
+		except:
+			error = traceback.format_exc()
+			print(error)
+		finally:
+			self.sender.close()
