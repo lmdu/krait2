@@ -32,8 +32,9 @@ __all__ = [
 #signals can only be emit from QObject
 class KraitWorkerSignals(QObject):
 	finished = Signal()
-	progress = Signal(int)
 	failure = Signal(str)
+	show_tab = Signal(str)
+	progress = Signal(int)
 
 class KraitBaseWorker(QRunnable):
 	processer = None
@@ -157,6 +158,8 @@ class KraitSearchWorker(KraitBaseWorker):
 
 			if self.processes == 0:
 				self.sender.close()
+
+			self.signals.show_tab.emit(self.table_name)
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])
@@ -288,6 +291,8 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 
 			if self.processes == 0:
 				self.sender.close()
+
+			self.signals.show_tab.emit(self.table_name)
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])

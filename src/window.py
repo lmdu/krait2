@@ -407,9 +407,12 @@ class KraitMainWindow(QMainWindow):
 		tables = ['info', 'ssr', 'cssr', 'issr','vntr', 'primer', 'stats']
 
 		for table in tables:
-			self.show_tab_widgets(table, index)
+			self.show_tab_widgets(table)
 
-	def show_tab_widgets(self, table, index):
+	def show_tab_widgets(self, table):
+		if self.current_file == 0:
+			return
+
 		tab_creators = {
 			'info': (KraitTextBrowser, 'Info'),
 			'ssr': (KraitSSRTable, 'SSRs'),
@@ -423,28 +426,30 @@ class KraitMainWindow(QMainWindow):
 		if table == 'info':
 			has_table = True
 		else:
-			has_table = DB.table_exists("{}_{}".format(table, index))
+			has_table = DB.table_exists("{}_{}".format(table, self.current_file))
 
 		if has_table:
 			if table not in self.table_widgets:
 				creator, title = tab_creators[table]
 				self.table_widgets[table] = creator(self)
 				self.tab_widget.addTab(self.table_widgets[table], title)
-
+				idx = self.tab_widget.indexOf(self.table_widgets[table])
 			else:
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, True)
 
+			self.tab_widget.setCurrentIndex(idx)
+
 			if table == 'stats':
-				report = get_stats_report(index)
+				report = get_stats_report(self.current_file)
 				self.table_widgets[table].set_html(report)
 	
 			elif table == 'info':
-				content = get_fastx_info(index)
+				content = get_fastx_info(self.current_file)
 				self.table_widgets[table].set_html(content)
 
 			else:
-				self.table_widgets[table].set_index(index)
+				self.table_widgets[table].set_index(self.current_file)
 
 		else:
 			if table in self.table_widgets:
@@ -759,6 +764,7 @@ class KraitMainWindow(QMainWindow):
 		self.current_worker = threader(*args)
 		self.current_worker.signals.progress.connect(self.progress_bar.setValue)
 		self.current_worker.signals.failure.connect(self.show_error_message)
+		self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
 		QThreadPool.globalInstance().start(self.current_worker)
 
 	def do_ssr_search(self):
@@ -812,13 +818,32 @@ class KraitMainWindow(QMainWindow):
 		worker.finished.connect(self.show_stats_view)
 		self.perform_new_task(worker)
 
+	def get_current_table(self):
+		try:
+			tab_widget = self.tab_widget.currentWidget()
+			table = tab_widget.table_name
+		except:
+			table = None
+
+		return table
+
 	def open_filter_dialog(self):
-		dialog = KraitFilterDialog(self)
+		table = self.get_current_table()
+
+		if table is None:
+			return QMessageBox.warning(self, "Warning", "There is no table to filter.")
+
+		dialog = KraitFilterDialog(self, table)
 		dialog.show()
 
-	def set_filter(self, filters):
-		table_widget = self.tab_widget.currentWidget()
-		table_widget.set_filter(filters)
+	def set_filter(self, table, filters):
+		try:
+			tab_widget = self.tab_widget.currentWidget()
+
+			if table == tab_widget.table_name:
+				tab_widget.set_filter(filters)
+		except:
+			pass
 
 	def open_search_param_dialog(self):
 		dialog = KraitSearchSettingDialog(self)

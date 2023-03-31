@@ -6,7 +6,7 @@ from backend import *
 
 __all__ = ['KraitFilterDialog']
 
-class KraitFilterModel(QAbstractItemModel):
+class KraitFilterModel(QAbstractTableModel):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 
@@ -14,11 +14,11 @@ class KraitFilterModel(QAbstractItemModel):
 		self._headers = ["And/Or", "Column Name", "Condition", "Value"]
 		self.row_count = 1
 
-	def index(self, row, column, parent=QModelIndex()):
-		return self.createIndex(row, column)
+	#def index(self, row, column, parent=QModelIndex()):
+	#	return self.createIndex(row, column)
 
-	def parent(self, index):
-		return QModelIndex()
+	#def parent(self, index):
+	#	return QModelIndex()
 
 	def rowCount(self, parent=QModelIndex()):
 		return len(self._parent.filters)
@@ -129,13 +129,14 @@ class KraitFilterDelegate(QStyledItemDelegate):
 #		super(FilterTreeView, self).__init__(parent)
 
 class KraitFilterDialog(QDialog):
-	def __init__(self, parent=None):
+	def __init__(self, parent=None, table=None):
 		super().__init__(parent)
 
 		self.setWindowTitle("Filter Rows")
 		self.resize(QSize(500, 300))
 		self.setModal(False)
 		self.parent = parent
+		self.table = table
 
 		self.fields = DB.get_field(self.parent.current_table)
 		self.types = DB.get_field_type(self.parent.current_table)
@@ -231,4 +232,4 @@ class KraitFilterDialog(QDialog):
 		_filters = ' '.join(_filters)
 
 		if _filters:
-			self.parent.set_filter(_filters)
+			self.parent.set_filter(table, _filters)
