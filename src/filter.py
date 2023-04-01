@@ -138,10 +138,10 @@ class KraitFilterDialog(QDialog):
 		self.parent = parent
 		self.table = table
 
-		self.fields = DB.get_field(self.parent.current_table)
-		self.types = DB.get_field_type(self.parent.current_table)
+		self.fields = DB.get_field(self.table)
+		self.types = DB.get_field_type(self.table)
 
-		self.filters = self.parent.current_filter
+		self.filters = self.parent.current_filters.get(self.table, [])
 
 		if not self.filters:
 			self.filters = [['', 'id', '>', 0]]
@@ -228,8 +228,10 @@ class KraitFilterDialog(QDialog):
 				else:
 					_filters.append(col)
 
-		self.parent.current_filter = _filters
-		_filters = ' '.join(_filters)
-
 		if _filters:
-			self.parent.set_filter(table, _filters)
+			self.parent.current_filters = {self.table: _filters}
+		else:
+			self.parent.current_filters = {}
+
+		_filters = ' '.join(_filters)
+		self.parent.set_filter(self.table, _filters)

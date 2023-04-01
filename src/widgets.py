@@ -95,6 +95,10 @@ class KraitTableView(QTableView):
 	def table_name(self):
 		return self._model.table.split('_')[0]
 
+	@property
+	def table_real(self):
+		return self._model.table
+
 	def get_selected_rows(self):
 		count = self._model.get_selected_count()
 		rows = self._model.get_selected_rows()

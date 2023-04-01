@@ -62,7 +62,7 @@ class KraitMainWindow(QMainWindow):
 		self.current_file = 0
 
 		#filters
-		self.current_filter = []
+		self.current_filters = {}
 
 		#search for all or selected
 		self.search_all = True
@@ -123,22 +123,22 @@ class KraitMainWindow(QMainWindow):
 
 		self.import_action = QAction("&Import sequence files...", self,
 			statusTip = "Import fasta or fastq files",
-			triggered = self.import_fasta_files
+			triggered = self.import_fastx_files
 		)
 
 		self.folder_action = QAction("&Import sequence files from folder...", self,
 			statusTip = "Import all fasta or fastq files in a folder",
-			triggered = self.import_fasta_folder
+			triggered = self.import_fastx_folder
 		)
 
 		self.annotin_action = QAction("&Import annotation files...", self,
 			statusTip = "Import GFF or GTF formatted annotation files",
-			triggered = self.import_annot_files
+			triggered = self.import_annotation_files
 		)
 
 		self.annotfolder_action = QAction("&Import annotation files from folder...", self,
 			statusTip = "Import all GFF or GTF formatted annotation files in a folder",
-			triggered = self.import_annot_folder
+			triggered = self.import_annotation_folder
 		)
 
 		self.export_select_action = QAction("&Export Selected Rows...", self,
@@ -395,6 +395,18 @@ class KraitMainWindow(QMainWindow):
 	def on_tab_changed(self, index):
 		widget = self.tab_widget.currentWidget()
 		widget.count_emit()
+		
+		if not self.current_filters:
+			return
+
+		for table in self.current_filters:
+			table = table.split('_')[0]
+			tab_widget = self.table_widgets.get(table, None)
+
+			if tab_widget:
+				tab_widget.set_filter('')
+
+		self.current_filters = {}
 
 	@Slot()
 	def cancel_running_tasks(self):
@@ -402,7 +414,11 @@ class KraitMainWindow(QMainWindow):
 
 	@Slot(int)
 	def on_fastx_changed(self, index):
+		if self.current_file == index:
+			return
+
 		self.current_file = index
+		self.current_filters = {}
 
 		tables = ['info', 'ssr', 'cssr', 'issr','vntr', 'primer', 'stats']
 
@@ -493,7 +509,7 @@ class KraitMainWindow(QMainWindow):
 	@Slot(int)
 	def change_current_table(self, index):
 		widget = self.tab_widget.widget(index)
-		self.current_filter = []
+		self.current_filters = {}
 
 		if not isinstance(widget, QTextEdit):
 			self.current_table = widget.real_table
@@ -592,11 +608,16 @@ class KraitMainWindow(QMainWindow):
 
 		self.show_status_message("Project was successfully closed")
 
-	def import_fasta_files(self):
+	def import_fastx_files(self):
 		files = QFileDialog.getOpenFileNames(self,
-			caption = "Select one or more files to import",
+			caption = "Select fasta/q files to import",
 			dir = "",
-			filter = "Fasta file (*.fa *.fas *.fna *.fasta *.fa.gz *.fas.gz *.fna.gz *.fasta.gz);;All files (*.*)"
+			filter = (
+				"Fastx file (*.fa *.fas *.fna *.fasta "
+				"*.fa.gz *.fas.gz *.fna.gz *.fasta.gz "
+				"*.fq *.fastq *.fq.gz *.fastq.gz);;"
+				"All files (*.*)"
+			)
 		)
 
 		fas = []
@@ -611,7 +632,7 @@ class KraitMainWindow(QMainWindow):
 			DB.insert_rows(sql, fas)
 			self.fastx_tree.update_model()
 
-	def import_fasta_folder(self):
+	def import_fastx_folder(self):
 		folder = QFileDialog.getExistingDirectory(self,
 			caption = "Select a folder",
 			dir = "",
@@ -627,26 +648,24 @@ class KraitMainWindow(QMainWindow):
 			fa = it.next()
 			qf = QFileInfo(fa)
 			name = qf.baseName()
-			size = qf.size()
-
-			if is_gzip_compressed(fa):
-				isize = get_uncompressed_size(fa)
-
-				if isize > size:
-					size = isize
-
-			fas.append((name, size, 'pending', fa))
+			fas.append((name, fa))
 
 		if fas:
-			DB.insert_rows("INSERT INTO fasta_0 VALUES (NULL,?,?,?,?,NULL)", fas)
-			self.file_table.update_table()
+			sql = "INSERT INTO fastx (name, fpath) VALUES (?,?)"
+			DB.insert_rows(sql, fas)
+			self.fastx_tree.update_model()
 
-	def import_annot_files(self):
+	def import_annotation_files(self):
 		files = QFileDialog.getOpenFileNames(self,
-			caption = "Select one or more files to import",
+			caption = "Select GTF/GFF files to import",
 			dir = "",
-			filter = "GFF or GTF (*.gtf *.gff *.gtf.gz *.gff.gz);;All files (*.*)"
+			filter = (
+				"GXF (*.gtf *.gff *.gtf.gz *.gff.gz);;"
+				"All files (*.*)"
+			)
 		)
+
+		print(files)
 
 		annot_files = []
 		for af in files[0]:
@@ -661,7 +680,7 @@ class KraitMainWindow(QMainWindow):
 			DB.insert_rows("UPDATE fasta_0 SET annotation=? WHERE id=?", annot_files)
 			self.file_table.update_table()
 
-	def import_annot_folder(self):
+	def import_annotation_folder(self):
 		folder = QFileDialog.getExistingDirectory(self,
 			caption = "Select a folder",
 			dir = "",
@@ -821,7 +840,7 @@ class KraitMainWindow(QMainWindow):
 	def get_current_table(self):
 		try:
 			tab_widget = self.tab_widget.currentWidget()
-			table = tab_widget.table_name
+			table = tab_widget.table_real
 		except:
 			table = None
 
@@ -840,7 +859,7 @@ class KraitMainWindow(QMainWindow):
 		try:
 			tab_widget = self.tab_widget.currentWidget()
 
-			if table == tab_widget.table_name:
+			if table == tab_widget.table_real:
 				tab_widget.set_filter(filters)
 		except:
 			pass

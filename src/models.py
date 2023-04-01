@@ -154,7 +154,7 @@ class KraitBaseModel(QAbstractTableModel):
 
 	@property
 	def count_sql(self):
-		return "SELECT COUNT(1) FROM {} LIMIT 1".format(self.table)
+		return "SELECT COUNT(1) FROM {} {} LIMIT 1".format(self.table, self._filter_by)
 
 	@property
 	def read_sql(self):
@@ -202,11 +202,11 @@ class KraitBaseModel(QAbstractTableModel):
 		self.total_count = DB.get_one(self.count_sql)
 		self.displayed = DB.get_column(self.read_sql)
 		self._read_count = len(self.displayed)
-		self.endResetModel()
 
 		self.col_count.emit(len(self.custom_headers))
 		self.row_count.emit(self.total_count)
 		self.sel_count.emit(0)
+		self.endResetModel()
 
 	def reset(self):
 		self.beginResetModel()
