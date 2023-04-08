@@ -26,7 +26,8 @@ __all__ = [
 
 	'KraitSSRSearchWorker', 'KraitCSSRSearchWorker',
 	'KraitISSRSearchWorker', 'KraitVNTRSearchWorker',
-	'KraitPrimerDesignWorker'
+	'KraitPrimerDesignWorker', 'KraitMappingWorker',
+	'KraitStatisticsWorker'
 ]
 
 #signals can only be emit from QObject
@@ -303,6 +304,14 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 		self.progress += data['progress']
 		p = self.progress/self.total_count*100
 		self.signals.progress.emit(p)
+
+class KraitMappingWorker(KraitBaseWorker):
+	table_name = 'map'
+	processer = KraitMappingProcess
+
+class KraitStatisticsWorker(KraitBaseWorker):
+	table_name = 'stats'
+	processer = KraitStatisticsProcess
 
 class WorkerSignal(QObject):
 	progress = Signal(int)

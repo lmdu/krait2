@@ -109,14 +109,11 @@ CREATE TABLE IF NOT EXISTS annot_{} (
 )
 """
 
-LOCATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS locate_{} (
+MAPPING_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS map_{} (
 	id INTEGER PRIMARY KEY,
-	str_id INTEGER,
-	str_type INTEGER,
-	parent_id INTEGER,
-	feature_id INTEGER,
-	order_num INTEGER
+	locus INTEGER,
+	feature INTEGER
 )
 """
 
@@ -137,7 +134,7 @@ TABLE_SQL_MAPPING = {
 	'issr': ISSR_TABLE_SQL,
 	'primer': PRIMER_TABLE_SQL,
 	'annot': ANNOT_TABLE_SQL,
-	'locate': LOCATE_TABLE_SQL,
+	'map': MAPPING_TABLE_SQL,
 	'stats': STATS_TABLE_SQL,
 }
 

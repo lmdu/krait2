@@ -12,7 +12,8 @@ from motif import *
 
 __all__ = ['KraitSSRSearchProcess', 'KraitCSSRSearchProcess',
 			'KraitISSRSearchProcess', 'KraitVNTRSearchProcess',
-			'KraitPrimerDesignProcess']
+			'KraitPrimerDesignProcess', 'KraitMappingProcess',
+			'KraitStatisticsProcess']
 
 class KraitSearchProcess(multiprocessing.Process):
 	def __init__(self, fastx, params, sender):
@@ -312,3 +313,9 @@ class KraitPrimerDesignProcess(multiprocessing.Process):
 			print(error)
 		finally:
 			self.sender.close()
+
+class KraitMappingProcess(multiprocessing.Process):
+	pass
+
+class KraitStatisticsProcess(multiprocessing.Process):
+	pass

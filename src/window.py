@@ -646,6 +646,10 @@ class KraitMainWindow(QMainWindow):
 		fas = []
 		while it.hasNext():
 			fa = it.next()
+
+			if fa.endswith('.fxi'):
+				continue
+
 			qf = QFileInfo(fa)
 			name = qf.baseName()
 			fas.append((name, fa))
@@ -665,20 +669,23 @@ class KraitMainWindow(QMainWindow):
 			)
 		)
 
-		print(files)
+		if not files[0]:
+			return
+
+		sql = "SELECT id,name FROM fastx"
+		fastx = {row[1]: row[0] for row in DB.query(sql)}
 
 		annot_files = []
 		for af in files[0]:
 			qf = QFileInfo(af)
 			name = qf.baseName()
-			fa_id = DB.get_one("SELECT id FROM fasta_0 WHERE name=?", (name,))
 
-			if fa_id:
-				annot_files.append((af, fa_id))
+			if name in fastx:
+				annot_files.append((af, fastx[name]))
 
 		if annot_files:
-			DB.insert_rows("UPDATE fasta_0 SET annotation=? WHERE id=?", annot_files)
-			self.file_table.update_table()
+			sql = "UPDATE fastx SET apath=? WHERE id=?"
+			DB.query(sql, annot_files)
 
 	def import_annotation_folder(self):
 		folder = QFileDialog.getExistingDirectory(self,
@@ -690,6 +697,9 @@ class KraitMainWindow(QMainWindow):
 		if not folder:
 			return
 
+		sql = "SELECT id,name FROM fastx"
+		fastx = {row[1]: row[0] for row in DB.query(sql)}
+
 		it = QDirIterator(folder, QDir.Files, QDirIterator.Subdirectories)
 		annot_files = []
 		while it.hasNext():
@@ -697,14 +707,12 @@ class KraitMainWindow(QMainWindow):
 			qf = QFileInfo(af)
 			name = qf.baseName()
 
-			fa_id = DB.get_one("SELECT id FROM fasta_0 WHERE name=?", (name,))
-
-			if fa_id:
-				annot_files.append((af, fa_id))
+			if name in fastx:
+				annot_files.append((af, fastx[name]))
 
 		if annot_files:
-			DB.insert_rows("UPDATE fasta_0 SET annotation=? WHERE id=?", annot_files)
-			self.file_table.update_table()
+			sql = "UPDATE fastx SET apath=? WHERE id=?"
+			DB.query(sql, annot_files)
 
 	def export_selected_rows(self):
 		out_file, _ = QFileDialog.getSaveFileName(self, filter="TSV (*.tsv);;CSV (*.csv)")
