@@ -327,6 +327,29 @@ class KraitFastxModel(KraitBaseModel):
 	table = 'fastx'
 	custom_headers = ["ID", "Name"]
 
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
+
+		row = index.row()
+		col = index.column()
+
+		if role == Qt.DisplayRole:
+			return self.get_value(row, col)
+
+		elif role == Qt.DecorationRole:
+			if self.get_value(row, 6) == 1:
+				return QIcon('icons/run.svg')
+
+			elif self.get_value(row, 10):
+				return QIcon('icons/annot.svg')
+
+			elif self.get_value(row, 8) == 2:
+				return QIcon('icons/fastq.svg')
+
+			else:
+				return QIcon('icons/fasta.svg')
+
 class KraitTableModel(KraitBaseModel):
 	def set_index(self, index):
 		self.table = "{}_{}".format(self.table.split('_')[0], index)

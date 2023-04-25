@@ -113,6 +113,7 @@ MAPPING_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS map_{} (
 	id INTEGER PRIMARY KEY,
 	locus INTEGER,
+	featype INTEGER,
 	feature INTEGER
 )
 """

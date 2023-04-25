@@ -15,7 +15,7 @@ class KraitFastxTree(QTreeView):
 		super().__init__(parent)
 		self.parent = parent
 
-		#self.setRootIsDecorated(False)
+		#self.setRootIsDecorated(True)
 
 		self._model = KraitFastxModel(parent)
 		self.setModel(self._model)

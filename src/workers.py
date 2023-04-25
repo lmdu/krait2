@@ -305,9 +305,11 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 		p = self.progress/self.total_count*100
 		self.signals.progress.emit(p)
 
-class KraitMappingWorker(KraitBaseWorker):
+class KraitMappingWorker(KraitSearchWorker):
 	table_name = 'map'
 	processer = KraitMappingProcess
+
+	
 
 class KraitStatisticsWorker(KraitBaseWorker):
 	table_name = 'stats'
