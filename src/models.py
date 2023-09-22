@@ -5,7 +5,7 @@ from PySide6.QtWidgets import *
 from backend import *
 
 __all__ = ['KraitFastxModel', 'KraitSSRModel', 'KraitCSSRModel',
-			'KraitISSRModel', 'KraitVNTRModel', 'KraitPrimerModel']
+			'KraitISSRModel', 'KraitGTRModel', 'KraitPrimerModel']
 
 class KraitBaseModel(QAbstractTableModel):
 	table = None
@@ -101,6 +101,8 @@ class KraitBaseModel(QAbstractTableModel):
 
 		row = index.row()
 		row_id = self.displayed[row]
+
+		value = Qt.CheckState(value)
 
 		if role == Qt.CheckStateRole:
 			if value == Qt.Checked:
@@ -338,17 +340,17 @@ class KraitFastxModel(KraitBaseModel):
 			return self.get_value(row, col)
 
 		elif role == Qt.DecorationRole:
-			if self.get_value(row, 6) == 1:
+			if self.get_value(row, 3) == 1:
 				return QIcon('icons/run.svg')
 
-			elif self.get_value(row, 10):
+			elif self.get_value(row, 5):
 				return QIcon('icons/annot.svg')
 
-			elif self.get_value(row, 8) == 2:
-				return QIcon('icons/fastq.svg')
+			#elif self.get_value(row, 8) == 2:
+			#	return QIcon('icons/fastq.svg')
 
-			else:
-				return QIcon('icons/fasta.svg')
+			#else:
+			#	return QIcon('icons/fasta.svg')
 
 class KraitTableModel(KraitBaseModel):
 	def set_index(self, index):
@@ -360,8 +362,8 @@ class KraitSSRModel(KraitTableModel):
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif',
 					 'Smotif', 'Type', 'Repeats', 'Length']
 
-class KraitVNTRModel(KraitTableModel):
-	table = 'vntr'
+class KraitGTRModel(KraitTableModel):
+	table = 'gtr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif',
 						'Type', 'Repeats', 'Length']
 

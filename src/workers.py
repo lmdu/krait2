@@ -1,7 +1,7 @@
 import os
 import csv
 import time
-import stria
+import pytrf
 import pyfastx
 import primer3
 import traceback
@@ -18,14 +18,13 @@ from process import *
 from annotate import *
 
 __all__ = [
-	'SSRSearchThread', 'VNTRSearchThread',
+	'SSRSearchThread', 'GTRSearchThread',
 	'ISSRSearchThread', 'PrimerDesignThread',
 	'SaveProjectThread', 'ExportSelectedRowsThread',
 	'ExportWholeTableThread', 'ExportAllTablesThread',
 	'TRELocatingThread', 'StatisticsThread',
-
 	'KraitSSRSearchWorker', 'KraitCSSRSearchWorker',
-	'KraitISSRSearchWorker', 'KraitVNTRSearchWorker',
+	'KraitISSRSearchWorker', 'KraitGTRSearchWorker',
 	'KraitPrimerDesignWorker', 'KraitMappingWorker',
 	'KraitStatisticsWorker'
 ]
@@ -213,15 +212,15 @@ class KraitISSRSearchWorker(KraitSearchWorker):
 
 		return params
 
-class KraitVNTRSearchWorker(KraitSearchWorker):
-	table_name = 'vntr'
-	processer = KraitVNTRSearchProcess
+class KraitGTRSearchWorker(KraitSearchWorker):
+	table_name = 'gtr'
+	processer = KraitGTRSearchProcess
 
 	def get_params(self):
 		params = {}
 
 		for k in KRAIT_SEARCH_PARAMETERS:
-			if not k.startswith('VNTR'):
+			if not k.startswith('GTR'):
 				continue
 
 			default, convert = KRAIT_SEARCH_PARAMETERS[k]
@@ -460,26 +459,22 @@ class SSRSearchThread(SearchThread):
 
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.settings.beginGroup("SSR")
-		self.min_repeats = [
-			self.settings.value('mono', 12, int),
-			self.settings.value('di', 7, int),
-			self.settings.value('tri', 5, int),
-			self.settings.value('tetra', 4, int),
-			self.settings.value('penta', 4, int),
-			self.settings.value('hexa', 4, int)
-		]
-		self.settings.endGroup()
+		params = ['SSR/mono', 'SSR/di', 'SSR/tri', 'SSR/tetra', 'SSR/penta', 'SSR/hexa']
+		self.min_repeats = []
+		for param in params:
+			default, func = KRAIT_SEARCH_PARAMETERS[param]
+			self.min_repeats.append(self.settings.value(param, default, func))
 
-		standard_level = self.settings.value('STR/level', 3, type=int)
+		default, func = KRAIT_SEARCH_PARAMETERS['STR/level']
+		standard_level = self.settings.value('STR/level', default, type=func)
 		self.motifs = StandardMotif(standard_level)
 
 	def args(self, name, seq):
-		return (name, seq, self.min_repeats)
+		return (name, seq, *self.min_repeats)
 
 	@staticmethod
 	def search(*args):
-		return stria.SSRMiner(*args).as_list()
+		return pytrf.STRFinder(*args).as_list()
 
 	def rows(self, ssrs):
 		for ssr in ssrs:
@@ -506,7 +501,7 @@ class CSSRSearchThread(SearchThread):
 
 	@staticmethod
 	def search(*args):
-		return stria.SSRMiner(*args).as_list()
+		return pytrf.STRFinder(*args).as_list()
 	'''
 	def rows(self, ssrs):
 		cssrs = [next(ssrs)]
@@ -533,14 +528,14 @@ class CSSRSearchThread(SearchThread):
 		)
 	'''
 
-class VNTRSearchThread(SearchThread):
-	_table = 'vntr'
+class GTRSearchThread(SearchThread):
+	_table = 'gtr'
 
 	def __init__(self, parent):
 		super().__init__(parent)
 		self.params = []
 
-		params = ['VNTR/minmotif', 'VNTR/maxmotif', 'VNTR/minrep']
+		params = ['GTR/minmotif', 'GTR/maxmotif', 'GTR/minrep']
 		for param in params:
 			default, func = KRAIT_SEARCH_PARAMETERS[param]
 			self.params.append(self.settings.value(param, default, func))
@@ -550,7 +545,7 @@ class VNTRSearchThread(SearchThread):
 
 	@staticmethod
 	def search(*args):
-		return stria.VNTRMiner(*args).as_list()
+		return pytrf.GTRFinder(*args).as_list()
 
 	def rows(self, vntrs):
 		for vntr in vntrs:
@@ -579,7 +574,7 @@ class ISSRSearchThread(SearchThread):
 
 	@staticmethod
 	def search(*args):
-		return stria.ITRMiner(*args).as_list()
+		return pytrf.ITRFinder(*args).as_list()
 
 	def rows(self, issrs):
 		for issr in issrs:

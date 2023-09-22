@@ -1,5 +1,6 @@
 apsw==3.41.2.0
-stria==0.1.0
-pyfastx==1.0.1
-PySide6==6.3.2
-primer3-py==1.2.0
+pytrf==1.1.0
+pygros==0.1.2
+pyfastx==2.0.1
+PySide6==6.4.3
+primer3-py==2.0.1

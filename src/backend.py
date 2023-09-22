@@ -6,15 +6,18 @@ FASTX_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS fastx (
 	id INTEGER PRIMARY KEY,
 	name TEXT,
+	fpath TEXT,
+	status INTEGER,
+	message TEXT,
+	apath TEXT,
+	format TEXT,
 	size INTEGER,
 	count INTEGER,
 	gc REAL,
 	ns INTEGER,
-	status INTEGER,
-	message TEXT,
-	format TEXT,
-	fpath TEXT,
-	apath TEXT
+	avglen REAL,
+	minlen INTEGER,
+	maxlen INTEGER
 )
 """
 
@@ -32,8 +35,8 @@ CREATE TABLE IF NOT EXISTS ssr_{} (
 )
 """
 
-VNTR_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS vntr_{} (
+GTR_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS gtr_{} (
 	id INTEGER PRIMARY KEY,
 	chrom TEXT,
 	start INTEGER,
@@ -130,7 +133,7 @@ CREATE TABLE IF NOT EXISTS stats_{} (
 TABLE_SQL_MAPPING = {
 	'fastx': FASTX_TABLE_SQL,
 	'ssr': SSR_TABLE_SQL,
-	'vntr': VNTR_TABLE_SQL,
+	'gtr': GTR_TABLE_SQL,
 	'cssr': CSSR_TABLE_SQL,
 	'issr': ISSR_TABLE_SQL,
 	'primer': PRIMER_TABLE_SQL,
@@ -207,7 +210,7 @@ class DataBackend:
 		self.query(sql, (status, rowid))
 
 	def update_fastx(self, row):
-		sql = "UPDATE fastx SET size=?,count=?,gc=?,ns=?,format=? WHERE id=?"
+		sql = "UPDATE fastx SET format=?,size=?,count=?,gc=?,ns=?,avglen=?,minlen=?,maxlen=? WHERE id=?"
 		self.query(sql, row)
 
 	def has_fastx(self):

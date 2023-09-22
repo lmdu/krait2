@@ -1,6 +1,7 @@
 import sys
 import apsw
-import stria
+import pytrf
+import pygros
 import primer3
 import pyfastx
 import PySide6
@@ -46,11 +47,11 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 		<td>
 	</tr>
 	<tr>
-		<td>stria</td>
-		<td>v{stria}</td>
+		<td>pytrf</td>
+		<td>v{pytrf}</td>
 		<td>
-			<a href="https://github.com/lmdu/stria">
-				https://github.com/lmdu/stria
+			<a href="https://github.com/lmdu/pytrf">
+				https://github.com/lmdu/pytrf
 			</a>
 		<td>
 	</tr>
@@ -78,6 +79,15 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 		<td>
 			<a href="https://github.com/libnano/primer3-py">
 				https://github.com/libnano/primer3-py
+			</a>
+		<td>
+	</tr>
+	<tr>
+		<td>pygros</td>
+		<td>v{pygros}</td>
+		<td>
+			<a href="https://github.com/lmdu/pygros">
+				https://github.com/lmdu/pygros
 			</a>
 		<td>
 	</tr>
@@ -114,8 +124,9 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	build = KRAIT_BUILD,
 	python = sys.version.split()[0],
 	pyside = PySide6.__version__,
-	stria = stria.version(),
-	pyfastx = pyfastx.version(),
+	pytrf = pytrf.__version__,
+	pyfastx = pyfastx.__version__,
+	pygros = pygros.__version__,
 	apsw = apsw.apswversion(),
 	sqlite = apsw.sqlitelibversion(),
 	primer3 = '2.6.1',
@@ -131,18 +142,15 @@ KRAIT_SEARCH_PARAMETERS = {
 	'SSR/penta': (4, int),
 	'SSR/hexa': (4, int),
 	'CSSR/dmax': (10, int),
-	'VNTR/minmotif': (7, int),
-	'VNTR/maxmotif': (30, int),
-	'VNTR/minrep': (3, int),
+	'GTR/maxmotif': (30, int),
+	'GTR/minrep': (3, int),
+	'GTR/minlen': (10, int),
 	#'ITR/minmsize': (1, int),
 	#'ITR/maxmsize': (6, int),
 	'ISSR/minsrep': (3, int),
 	'ISSR/minslen': (10, int),
-	'ISSR/maxerr': (2, int),
-	'ISSR/subpena': (0.5, float),
-	'ISSR/inspena': (1.0, float),
-	'ISSR/delpena': (1.0, float),
-	'ISSR/matratio': (0.7, float),
+	'ISSR/maxerr': (3, int),
+	'ISSR/identity': (70, float),
 	'ISSR/maxextend': (2000, int),
 	'STR/level': (3, int),
 	'STR/flank': (50, int),

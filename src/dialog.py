@@ -321,23 +321,24 @@ class KraitSearchParameterPanel(QWidget):
 		cssr_layout.addWidget(self.dmax_box, 1)
 		
 
-		vntr_group = KraitGroupBox("Minisatellites (VNTRs)")
+		vntr_group = KraitGroupBox("Generic tandem repeats (GTRs)")
 		vntr_layout = QGridLayout()
 		vntr_group.setLayout(vntr_layout)
 
-		self.minmotif_box = QSpinBox()
-		self.minmotif_box.setRange(1, 1000)
+		self.minlen_box = QSpinBox()
+		self.minlen_box.setRange(1, 1000)
 		self.maxmotif_box = QSpinBox()
 		self.maxmotif_box.setRange(1, 1000)
 		self.minrep_box = QSpinBox()
 		self.minrep_box.setRange(2, 1000)
 
-		vntr_layout.addWidget(QLabel("Min motif size"), 0, 0)
-		vntr_layout.addWidget(self.minmotif_box, 0, 1)
-		vntr_layout.addWidget(QLabel("Max motif size"), 0, 2)
-		vntr_layout.addWidget(self.maxmotif_box, 0, 3)
-		vntr_layout.addWidget(QLabel("Min repeats"), 0, 4)
-		vntr_layout.addWidget(self.minrep_box, 0, 5)
+		
+		vntr_layout.addWidget(QLabel("Max motif size"), 0, 0)
+		vntr_layout.addWidget(self.maxmotif_box, 0, 1)
+		vntr_layout.addWidget(QLabel("Min repeats"), 0, 2)
+		vntr_layout.addWidget(self.minrep_box, 0, 3)
+		vntr_layout.addWidget(QLabel("Min length"), 0, 4)
+		vntr_layout.addWidget(self.minlen_box, 0, 5)
 
 		itr_group = KraitGroupBox("Imperfect microsatellites (iSSRs)")
 		itr_layout = QGridLayout()
@@ -353,44 +354,23 @@ class KraitSearchParameterPanel(QWidget):
 		self.minslen_box.setRange(1, 1000)
 		self.maxerr_box = QSpinBox()
 		self.maxerr_box.setRange(0, 1000)
-		self.subpena_box = QDoubleSpinBox()
-		self.subpena_box.setRange(0, 100)
-		self.subpena_box.setSingleStep(0.1)
-		self.inspena_box = QDoubleSpinBox()
-		self.inspena_box.setRange(0, 100)
-		self.inspena_box.setSingleStep(0.1)
-		self.delpena_box = QDoubleSpinBox()
-		self.delpena_box.setRange(0, 100)
-		self.delpena_box.setSingleStep(0.1)
-		self.matratio_box = QDoubleSpinBox()
-		self.matratio_box.setSingleStep(0.05)
-		self.matratio_box.setRange(0, 1)
+		self.identity_box = QDoubleSpinBox()
+		self.identity_box.setSingleStep(0.05)
+		self.identity_box.setRange(0, 100)
 		self.maxextend_box = QSpinBox()
 		self.maxextend_box.setMaximum(1000000)
 		self.maxextend_box.setSingleStep(50)
 
-		#itr_layout.addWidget(QLabel("Min motif size"), 0, 0)
-		#itr_layout.addWidget(QLabel("Max motif size"), 1, 0)
-		itr_layout.addWidget(QLabel("Min seed repeats"),0, 0)
-		itr_layout.addWidget(QLabel("Min seed length"), 1, 0)
-		itr_layout.addWidget(QLabel("Max continuous errors"), 2, 0)
-		itr_layout.addWidget(QLabel("Max extend length"), 3, 0)
-		#itr_layout.addWidget(self.minmsize_box, 0, 1)
-		#itr_layout.addWidget(self.maxmsize_box, 1, 1)
+		itr_layout.addWidget(QLabel("Min seed repeats"), 0, 0)
 		itr_layout.addWidget(self.minsrep_box, 0, 1)
-		itr_layout.addWidget(self.minslen_box, 1, 1)
+		itr_layout.addWidget(QLabel("Min seed length"), 0, 2)
+		itr_layout.addWidget(self.minslen_box, 0, 3)
+		itr_layout.addWidget(QLabel("Min identity"), 1, 0)
+		itr_layout.addWidget(self.identity_box, 1, 1)
+		itr_layout.addWidget(QLabel("Max extend length"), 1, 2)
+		itr_layout.addWidget(self.maxextend_box, 1, 3)
+		itr_layout.addWidget(QLabel("Max continuous errors"), 2, 0)
 		itr_layout.addWidget(self.maxerr_box, 2, 1)
-		itr_layout.addWidget(self.maxextend_box, 3, 1)
-
-		itr_layout.addWidget(QLabel("Substitution penalty"), 0, 2)
-		itr_layout.addWidget(QLabel("Insertion penalty"), 1, 2)
-		itr_layout.addWidget(QLabel("Deletion penalty"), 2, 2)
-		itr_layout.addWidget(QLabel("Min match ratio"), 3, 2)
-		itr_layout.addWidget(self.subpena_box, 0, 3)
-		itr_layout.addWidget(self.inspena_box, 1, 3)
-		itr_layout.addWidget(self.delpena_box, 2, 3)
-		itr_layout.addWidget(self.matratio_box, 3, 3)
-		
 
 		other_layout = QHBoxLayout()
 		level_group = KraitGroupBox("Motif standardization")
@@ -450,18 +430,15 @@ class KraitSearchParameterPanel(QWidget):
 			'SSR/penta': self.penta_box,
 			'SSR/hexa': self.hexa_box,
 			'CSSR/dmax': self.dmax_box,
-			'VNTR/minmotif': self.minmotif_box,
-			'VNTR/maxmotif': self.maxmotif_box,
-			'VNTR/minrep': self.minrep_box,
+			'GTR/maxmotif': self.maxmotif_box,
+			'GTR/minrep': self.minrep_box,
+			'GTR/minlen': self.minlen_box,
 			#'ITR/minmsize': self.minmsize_box,
 			#'ITR/maxmsize': self.maxmsize_box,
 			'ISSR/minsrep': self.minsrep_box,
 			'ISSR/minslen': self.minslen_box,
 			'ISSR/maxerr': self.maxerr_box,
-			'ISSR/subpena': self.subpena_box,
-			'ISSR/inspena': self.inspena_box,
-			'ISSR/delpena': self.delpena_box,
-			'ISSR/matratio': self.matratio_box,
+			'ISSR/identity': self.identity_box,
 			'ISSR/maxextend': self.maxextend_box,
 			'STR/level': self.level_box,
 			'STR/flank': self.flank_box,

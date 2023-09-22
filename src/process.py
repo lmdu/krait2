@@ -1,5 +1,5 @@
 import os
-import stria
+import pytrf
 import primer3
 import pyfastx
 import traceback
@@ -11,7 +11,7 @@ from utils import *
 from motif import *
 
 __all__ = ['KraitSSRSearchProcess', 'KraitCSSRSearchProcess',
-			'KraitISSRSearchProcess', 'KraitVNTRSearchProcess',
+			'KraitISSRSearchProcess', 'KraitGTRSearchProcess',
 			'KraitPrimerDesignProcess', 'KraitMappingProcess',
 			'KraitStatisticsProcess']
 
@@ -32,19 +32,31 @@ class KraitSearchProcess(multiprocessing.Process):
 
 		if fastx_format == 'fasta':
 			fx = pyfastx.Fasta(self.fastx['fpath'], full_index=True)
+			avg_len = round(fx.mean)
+			min_len = len(fx.shortest)
+			max_len = len(fx.longest)
 
 		elif fastx_format == 'fastq':
 			fx = pyfastx.Fastq(self.fastx['fpath'], full_index=True)
+			avg_len = round(fx.avglen)
+			min_len = fx.minlen
+			max_len = fx.maxlen
 
 		else:
 			raise Exception("the file format is not fasta or fastq")
 
 		self.fastx['size'] = fx.size
 
+		unknown_base = 0
+		base_comp = fx.composition
+		for b in base_comp:
+			if b.upper() not in ['A', 'T', 'G', 'C']:
+				unknown_base += base_comp[b]
+
 		self.sender.send({
 			'type': 'fastx',
-			'records': [fx.size, len(fx), round(fx.gc_content, 2),
-				fx.composition.get('N', 0), fastx_format, self.fastx['id']
+			'records': [fastx_format, fx.size, len(fx), round(fx.gc_content, 2),
+				unknown_base, avg_len, min_len, max_len, self.fastx['id']
 			]
 		})
 
@@ -76,7 +88,7 @@ class KraitSSRSearchProcess(KraitSearchProcess):
 		for item in fx:
 			name, seq = item[0:2]
 
-			miner = stria.SSRMiner(name, seq, self.params['min_repeats'])
+			miner = pytrf.STRFinder(name, seq, *self.params['min_repeats'])
 			ssrs = miner.as_list()
 
 			records = []
@@ -165,16 +177,12 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 		for item in fx:
 			name, seq = item[0:2]
 
-			miner = stria.ITRMiner(name, seq,
-				min_motif_size = 1,
+			miner = pytrf.ATRFinder(name, seq,
 				max_motif_size = 6,
-				seed_min_repeat = self.params['minsrep'],
-				seed_min_length = self.params['minslen'],
-				max_continuous_errors = self.params['maxerr'],
-				substitution_penalty = self.params['subpena'],
-				insertion_penalty = self.params['inspena'],
-				deletion_penalty = self.params['delpena'],
-				min_match_ratio = self.params['matratio'],
+				min_seed_repeat = self.params['minsrep'],
+				min_seed_length = self.params['minslen'],
+				max_consecutive_error = self.params['maxerr'],
+				min_identity = self.params['identity'],
 				max_extend_length = self.params['maxextend']
 			)
 			issrs = miner.as_list()
@@ -197,32 +205,32 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 				'progress': progress
 			})
 
-class KraitVNTRSearchProcess(KraitSearchProcess):
+class KraitGTRSearchProcess(KraitSearchProcess):
 	def do(self):
 		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
 
 		for item in fx:
 			name, seq = item[0:2]
 
-			miner = stria.VNTRMiner(name, seq,
-				min_motif_size = self.params['minmotif'],
-				max_motif_size = self.params['maxmotif'],
-				min_repeat = self.params['minrep']
+			finder = pytrf.GTRFinder(name, seq,
+				max_motif = self.params['maxmotif'],
+				min_repeat = self.params['minrep'],
+				min_length = self.params['minlen']
 			)
-			vntrs = miner.as_list()
+			gtrs = finder.as_list()
 
 			records = []
-			for vntr in vntrs:
-				vntr_type = iupac_numerical_multiplier(vntr[4])
-				records.append((None, name, vntr[1], vntr[2], vntr[3],
-					vntr_type, vntr[5], vntr[6]))
+			for gtr in gtrs:
+				gtr_type = iupac_numerical_multiplier(gtr[4])
+				records.append((None, name, gtr[1], gtr[2], gtr[3],
+					gtr_type, gtr[5], gtr[6]))
 
 			self.progress += len(seq)
 			progress = self.progress/self.fastx['size']
 
 			self.sender.send({
 				'id': self.fastx['id'],
-				'type': 'vntr',
+				'type': 'gtr',
 				'records': records,
 				'progress': progress
 			})

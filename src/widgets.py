@@ -5,8 +5,8 @@ from PySide6.QtWidgets import *
 from models import *
 
 __all__ = ['KraitFastxTree', 'KraitSSRTable', 'KraitCSSRTable',
-			'KraitISSRTable', 'KraitVNTRTable', 'KraitVNTRTable',
-			'KraitPrimerTable', 'KraitTextBrowser']
+			'KraitISSRTable', 'KraitGTRTable', 'KraitPrimerTable',
+			'KraitTextBrowser']
 
 class KraitFastxTree(QTreeView):
 	row_clicked = Signal(int)
@@ -106,7 +106,7 @@ class KraitTableView(QTableView):
 
 	@Slot()
 	def on_row_clicked(self, index):
-		types = {'ssr', 'cssr', 'issr', 'vntr', 'primer'}
+		types = {'ssr', 'cssr', 'issr', 'gtr', 'primer'}
 
 		if self.table_name not in types:
 			return
@@ -145,8 +145,8 @@ class KraitCSSRTable(KraitTableView):
 class KraitISSRTable(KraitTableView):
 	modeler = KraitISSRModel
 
-class KraitVNTRTable(KraitTableView):
-	modeler = KraitVNTRModel
+class KraitGTRTable(KraitTableView):
+	modeler = KraitGTRModel
 
 class KraitPrimerDelegate(QStyledItemDelegate):
 	def __init__(self, parent=None):

@@ -231,9 +231,9 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.do_cssr_search
 		)
 
-		self.search_vntr_action = QAction(QIcon("icons/vntr.svg"), "VNTRs", self,
-			toolTip = "Search for VNTRs",
-			triggered = self.do_vntr_search
+		self.search_gtr_action = QAction(QIcon("icons/gtr.svg"), "GTRs", self,
+			toolTip = "Search for GTRs",
+			triggered = self.do_gtr_search
 		)
 
 		self.search_issr_action = QAction(QIcon("icons/issr.svg"), "iSSRs", self,
@@ -314,7 +314,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.tool_bar.addAction(self.search_ssr_action)
 		self.tool_bar.addAction(self.search_cssr_action)
-		self.tool_bar.addAction(self.search_vntr_action)
+		self.tool_bar.addAction(self.search_gtr_action)
 		self.tool_bar.addAction(self.search_issr_action)
 		self.tool_bar.addAction(self.locating_action)
 		self.tool_bar.addAction(self.primer_action)
@@ -420,7 +420,7 @@ class KraitMainWindow(QMainWindow):
 		self.current_file = index
 		self.current_filters = {}
 
-		tables = ['info', 'ssr', 'cssr', 'issr','vntr', 'primer', 'stats']
+		tables = ['info', 'ssr', 'cssr', 'issr','gtr', 'primer', 'stats']
 
 		for table in tables:
 			self.show_tab_widgets(table)
@@ -434,7 +434,7 @@ class KraitMainWindow(QMainWindow):
 			'ssr': (KraitSSRTable, 'SSRs'),
 			'cssr': (KraitCSSRTable, 'cSSRs'),
 			'issr': (KraitISSRTable, 'iSSRs'),
-			'vntr': (KraitVNTRTable, 'VNTRs'),
+			'gtr': (KraitGTRTable, 'GTRs'),
 			'primer': (KraitPrimerTable, 'Primers'),
 			'stats': (KraitTextBrowser, 'Statistics')
 		}
@@ -534,7 +534,7 @@ class KraitMainWindow(QMainWindow):
 			if ret == QMessageBox.No:
 				return
 
-		if DB.has_fasta():
+		if DB.has_fastx():
 			ret = QMessageBox.question(self, "Confirmation",
 				"Would you like to save previous results before opening new project file?"
 			)
@@ -545,7 +545,7 @@ class KraitMainWindow(QMainWindow):
 				#wait for save task finish
 				self.wait_task_finish()
 
-		open_file, _ = QFileDialog.getOpenFileName(self, filter="Krait Database (*.kdb)")
+		open_file, _ = QFileDialog.getOpenFileName(self, filter="Krait Project File (*.kpf)")
 
 		if not open_file:
 			return
@@ -558,7 +558,7 @@ class KraitMainWindow(QMainWindow):
 
 	def save_project(self):
 		if self.project_file is None:
-			save_file, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
+			save_file, _ = QFileDialog.getSaveFileName(self, filter="Krait Project File (*.kpf)")
 
 			if not save_file:
 				return
@@ -577,7 +577,7 @@ class KraitMainWindow(QMainWindow):
 			self.progress_bar.setValue(100)			
 
 	def save_project_as(self):
-		save_file, _ = QFileDialog.getSaveFileName(self, filter="Krait Database (*.kdb)")
+		save_file, _ = QFileDialog.getSaveFileName(self, filter="Krait Project File (*.kpf)")
 
 		if not save_file:
 			return
@@ -676,16 +676,27 @@ class KraitMainWindow(QMainWindow):
 		fastx = {row[1]: row[0] for row in DB.query(sql)}
 
 		annot_files = []
+		error_files = []
 		for af in files[0]:
 			qf = QFileInfo(af)
 			name = qf.baseName()
 
 			if name in fastx:
 				annot_files.append((af, fastx[name]))
+			else:
+				error_files.append(af)
 
 		if annot_files:
 			sql = "UPDATE fastx SET apath=? WHERE id=?"
 			DB.query(sql, annot_files)
+
+		if error_files:
+			msg = (
+				"Could not find corresponding sequence files for:<br> {}"
+				"<br>Make sure annotation and sequence files have the same name"
+			).format("<br>".join(error_files))
+
+			QMessageBox.warning(self, "Warning", msg)
 
 	def import_annotation_folder(self):
 		folder = QFileDialog.getExistingDirectory(self,
@@ -701,7 +712,10 @@ class KraitMainWindow(QMainWindow):
 		fastx = {row[1]: row[0] for row in DB.query(sql)}
 
 		it = QDirIterator(folder, QDir.Files, QDirIterator.Subdirectories)
+		
 		annot_files = []
+		error_files = []
+		
 		while it.hasNext():
 			af = it.next()
 			qf = QFileInfo(af)
@@ -709,10 +723,20 @@ class KraitMainWindow(QMainWindow):
 
 			if name in fastx:
 				annot_files.append((af, fastx[name]))
+			else:
+				error_files.append(af)
 
 		if annot_files:
 			sql = "UPDATE fastx SET apath=? WHERE id=?"
 			DB.query(sql, annot_files)
+
+		if error_files:
+			msg = (
+				"Could not find corresponding sequence files for:<br> {}"
+				"<br>Make sure annotation and sequence files have the same name"
+			).format("<br>".join(error_files))
+
+			QMessageBox.warning(self, "Warning", msg)
 
 	def export_selected_rows(self):
 		out_file, _ = QFileDialog.getSaveFileName(self, filter="TSV (*.tsv);;CSV (*.csv)")
@@ -812,8 +836,8 @@ class KraitMainWindow(QMainWindow):
 
 		self.run_work_thread(KraitCSSRSearchWorker)
 
-	def do_vntr_search(self):
-		self.run_work_thread(KraitVNTRSearchWorker)
+	def do_gtr_search(self):
+		self.run_work_thread(KraitGTRSearchWorker)
 
 	def do_issr_search(self):
 		self.run_work_thread(KraitISSRSearchWorker)
@@ -825,7 +849,7 @@ class KraitMainWindow(QMainWindow):
 		except:
 			count = 0
 
-		if not count or rtype not in {'ssr', 'issr', 'cssr', 'vntr'}:
+		if not count or rtype not in {'ssr', 'issr', 'cssr', 'gtr'}:
 			QMessageBox.warning(self, "Warning", "Please select some tandem repeats for primer design.")
 			return
 
