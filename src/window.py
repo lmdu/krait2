@@ -770,7 +770,7 @@ class KraitMainWindow(QMainWindow):
 			self.threader.wait()
 
 	def perform_new_task(self, worker):
-		if not DB.has_fasta():
+		if not DB.has_fastx():
 			return QMessageBox.critical(self, "Error",
 				"There are no input fasta files to process. Please import fasta files!"
 			)
@@ -792,15 +792,17 @@ class KraitMainWindow(QMainWindow):
 	def check_work_thread(self):
 		pool = QThreadPool.globalInstance()
 
+		print(pool.activeThreadCount())
+
 		if pool.activeThreadCount() > 0:
-			QMessageBox.warning(self, "Warning", "A task is already running.")
+			QMessageBox.warning(self, "Warning", "A task is already running")
 			return False
 
 		return True
 
 	def check_input_fastx(self):
 		if not DB.has_fastx():
-			QMessageBox.critical(self, "Error", "There are no input fasta or fastq files.")
+			QMessageBox.critical(self, "Error", "There are no input fasta or fastq files")
 			return False
 
 		return True
@@ -815,7 +817,7 @@ class KraitMainWindow(QMainWindow):
 		self.current_worker = threader(*args)
 		self.current_worker.signals.progress.connect(self.progress_bar.setValue)
 		self.current_worker.signals.failure.connect(self.show_error_message)
-		self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
+		#self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
 		QThreadPool.globalInstance().start(self.current_worker)
 
 	def do_ssr_search(self):

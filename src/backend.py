@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS ssr_{} (
 	end INTEGER,
 	motif TEXT,
 	smotif TEXT,
-	type TEXT,
-	repeats INTEGER,
+	type INTEGER,
+	repeat INTEGER,
 	length INTEGER
 )
 """
@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS gtr_{} (
 	start INTEGER,
 	end INTEGER,
 	motif TEXT,
-	type TEXT,
-	repeats INTEGER,
+	type INTEGER,
+	repeat INTEGER,
 	length INTEGER
 )
 """
@@ -68,13 +68,17 @@ CREATE TABLE IF NOT EXISTS issr_{} (
 	end INTEGER,
 	motif TEXT,
 	smotif TEXT,
-	type TEXT,
+	type INTEGER,
+	repeat INTEGER,
 	length INTEGER,
 	match INTEGER,
 	subsitution INTEGER,
 	insertion INTEGER,
 	deletion INTEGER,
-	identity REAL
+	identity REAL,
+	sstart INTEGER,
+	send INTEGER,
+	srepeat INTEGER
 )
 """
 

@@ -327,18 +327,21 @@ class KraitSearchParameterPanel(QWidget):
 
 		self.minlen_box = QSpinBox()
 		self.minlen_box.setRange(1, 1000)
+		self.minmotif_box = QSpinBox()
+		self.minmotif_box.setRange(1, 1000)
 		self.maxmotif_box = QSpinBox()
 		self.maxmotif_box.setRange(1, 1000)
 		self.minrep_box = QSpinBox()
 		self.minrep_box.setRange(2, 1000)
 
-		
-		vntr_layout.addWidget(QLabel("Max motif size"), 0, 0)
-		vntr_layout.addWidget(self.maxmotif_box, 0, 1)
-		vntr_layout.addWidget(QLabel("Min repeats"), 0, 2)
+		vntr_layout.addWidget(QLabel("Min motif size"), 0, 0)
+		vntr_layout.addWidget(self.minmotif_box, 0, 1)
+		vntr_layout.addWidget(QLabel("Max motif size"), 1, 0)
+		vntr_layout.addWidget(self.maxmotif_box, 1, 1)
+		vntr_layout.addWidget(QLabel("Min repeat"), 0, 2)
 		vntr_layout.addWidget(self.minrep_box, 0, 3)
-		vntr_layout.addWidget(QLabel("Min length"), 0, 4)
-		vntr_layout.addWidget(self.minlen_box, 0, 5)
+		vntr_layout.addWidget(QLabel("Min length"), 1, 2)
+		vntr_layout.addWidget(self.minlen_box, 1, 3)
 
 		itr_group = KraitGroupBox("Imperfect microsatellites (iSSRs)")
 		itr_layout = QGridLayout()
@@ -361,7 +364,7 @@ class KraitSearchParameterPanel(QWidget):
 		self.maxextend_box.setMaximum(1000000)
 		self.maxextend_box.setSingleStep(50)
 
-		itr_layout.addWidget(QLabel("Min seed repeats"), 0, 0)
+		itr_layout.addWidget(QLabel("Min seed repeat"), 0, 0)
 		itr_layout.addWidget(self.minsrep_box, 0, 1)
 		itr_layout.addWidget(QLabel("Min seed length"), 0, 2)
 		itr_layout.addWidget(self.minslen_box, 0, 3)
@@ -369,7 +372,7 @@ class KraitSearchParameterPanel(QWidget):
 		itr_layout.addWidget(self.identity_box, 1, 1)
 		itr_layout.addWidget(QLabel("Max extend length"), 1, 2)
 		itr_layout.addWidget(self.maxextend_box, 1, 3)
-		itr_layout.addWidget(QLabel("Max continuous errors"), 2, 0)
+		itr_layout.addWidget(QLabel("Max consecutive errors"), 2, 0)
 		itr_layout.addWidget(self.maxerr_box, 2, 1)
 
 		other_layout = QHBoxLayout()
@@ -430,6 +433,7 @@ class KraitSearchParameterPanel(QWidget):
 			'SSR/penta': self.penta_box,
 			'SSR/hexa': self.hexa_box,
 			'CSSR/dmax': self.dmax_box,
+			'GTR/minmotif': self.minmotif_box,
 			'GTR/maxmotif': self.maxmotif_box,
 			'GTR/minrep': self.minrep_box,
 			'GTR/minlen': self.minlen_box,

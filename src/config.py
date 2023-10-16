@@ -142,6 +142,7 @@ KRAIT_SEARCH_PARAMETERS = {
 	'SSR/penta': (4, int),
 	'SSR/hexa': (4, int),
 	'CSSR/dmax': (10, int),
+	'GTR/minmotif': (7, int),
 	'GTR/maxmotif': (30, int),
 	'GTR/minrep': (3, int),
 	'GTR/minlen': (10, int),

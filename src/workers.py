@@ -44,21 +44,19 @@ class KraitBaseWorker(QRunnable):
 		self.setAutoDelete(True)
 		self.fastx = None
 		self.processes = 0
-		self.receiver, self.sender = multiprocessing.Pipe(duplex=False)
+		self.manager = multiprocessing.Manager()
+		self.queue = self.manager.Queue()
 		self.signals = KraitWorkerSignals()
 		self.settings = QSettings()
 		self.params = self.get_params()
 
-	def __exit__(self):
-		self.sender.close()
-
 	def exit(self):
-		self.sender.close()
+		self.queue.close()
+		self.manager.shutdown()
 
 	def start_process(self):
-		proc = self.processer(self.fastx, self.params, self.sender)
+		proc = self.processer(self.params, self.queue, self.fastx)
 		proc.start()
-		self.processes += 1
 
 	def get_params(self):
 		pass
@@ -67,7 +65,8 @@ class KraitBaseWorker(QRunnable):
 		pass
 
 	def submit_process(self):
-		pass
+		self.start_process()
+		self.processes += 1
 
 	def call_response(self, data):
 		pass
@@ -83,10 +82,10 @@ class KraitBaseWorker(QRunnable):
 
 			while True:
 				try:
-					data = self.receiver.recv()
+					data = self.queue.get()
 					self.call_response(data)
 
-				except EOFError:
+				except (EOFError, OSError):
 					break
 
 		except:
@@ -96,6 +95,7 @@ class KraitBaseWorker(QRunnable):
 
 		finally:
 			self.signals.progress.emit(100)
+			self.signals.finished.emit()
 
 class KraitSearchWorker(KraitBaseWorker):
 	table_name = None
@@ -122,9 +122,8 @@ class KraitSearchWorker(KraitBaseWorker):
 
 	def start_process(self, fastx):
 		DB.create_table(self.table_name, fastx['id'])
-		proc = self.processer(fastx, self.params, self.sender)
+		proc = self.processer(self.params, self.queue, fastx)
 		proc.start()
-		self.processes += 1
 
 	def get_fastx(self):
 		row = self.fastx_query.fetchone()
@@ -144,6 +143,7 @@ class KraitSearchWorker(KraitBaseWorker):
 
 		if fastx:
 			self.start_process(fastx)
+			self.processes += 1
 
 	def before_run(self):
 		self.query_fastx()
@@ -157,9 +157,10 @@ class KraitSearchWorker(KraitBaseWorker):
 			self.submit_process()
 
 			if self.processes == 0:
-				self.sender.close()
+				self.exit()
 
-			self.signals.show_tab.emit(self.table_name)
+		elif data['type'] == 'error':
+			raise Exception(data['message'])
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])
@@ -186,7 +187,6 @@ class KraitCSSRSearchWorker(KraitSearchWorker):
 		self.params['ssrs'] = DB.get_rows(sql)
 		proc = self.processer(fastx, self.params, self.sender)
 		proc.start()
-		self.processes += 1
 
 	def get_params(self):
 		return {
@@ -263,9 +263,8 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 		return params
 
 	def start_process(self, trs):
-		proc = self.processer(self.fastx, trs, self.params, self.sender)
+		proc = self.processer(trs, self.params, self.queue, self.fastx)
 		proc.start()
-		self.processes += 1
 
 	def before_run(self):
 		sql = "SELECT * FROM fastx WHERE id=? LIMIT 1"
@@ -283,6 +282,7 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 			return
 
 		self.start_process(trs)
+		self.processes += 1
 
 	def call_response(self, data):
 		if data['type'] == 'finish':
@@ -290,9 +290,7 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 			self.submit_process()
 
 			if self.processes == 0:
-				self.sender.close()
-
-			self.signals.show_tab.emit(self.table_name)
+				self.queue.close()
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])

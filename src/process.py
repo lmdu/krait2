@@ -1,4 +1,5 @@
 import os
+import sys
 import pytrf
 import primer3
 import pyfastx
@@ -15,16 +16,46 @@ __all__ = ['KraitSSRSearchProcess', 'KraitCSSRSearchProcess',
 			'KraitPrimerDesignProcess', 'KraitMappingProcess',
 			'KraitStatisticsProcess']
 
-class KraitSearchProcess(multiprocessing.Process):
-	def __init__(self, fastx, params, sender):
-		super().__init__()
-		self.daemon = True
+class KraitBaseProcess(multiprocessing.Process):
+	def __init__(self, params, queue, fastx={}):
+		super().__init__(daemon=True)
 		self.fastx = fastx
 		self.params = params
-		self.sender = sender
+		self.queue = queue
 		self.progress = 0
 
-	def build_index(self):
+	def send(self, **kwargs):
+		kwargs['id'] = self.fastx.get('id', -1)
+		print(self.queue.empty())
+		self.queue.put(kwargs)
+
+	def finish(self):
+		self.send(type='finish')
+
+	def error(self, msg):
+		print(msg)
+		self.send(type='error', message=msg)
+
+	def prepare(self):
+		pass
+
+	def do(self):
+		pass
+
+	def run(self):
+		try:
+			self.prepare()
+			self.do()
+		except:
+			errmsg = traceback.format_exc()
+			self.error(errmsg)
+
+		finally:
+			self.finish()
+
+
+class KraitSearchProcess(KraitBaseProcess):
+	def prepare(self):
 		if self.fastx['size']:
 			return
 
@@ -53,32 +84,11 @@ class KraitSearchProcess(multiprocessing.Process):
 			if b.upper() not in ['A', 'T', 'G', 'C']:
 				unknown_base += base_comp[b]
 
-		self.sender.send({
-			'type': 'fastx',
-			'records': [fastx_format, fx.size, len(fx), round(fx.gc_content, 2),
+		self.send(type = 'fastx',
+			records = [fastx_format, fx.size, len(fx), round(fx.gc_content, 2),
 				unknown_base, avg_len, min_len, max_len, self.fastx['id']
 			]
-		})
-
-	def finish(self):
-		self.sender.send({
-			'id': self.fastx['id'],
-			'type': 'finish'
-		})
-
-	def do(self):
-		pass
-
-	def run(self):
-		try:
-			self.build_index()
-			self.do()
-			self.finish()
-		except:
-			error = traceback.format_exc()
-			print(error)
-		finally:
-			self.sender.close()
+		)
 
 class KraitSSRSearchProcess(KraitSearchProcess):
 	def do(self):
@@ -88,25 +98,21 @@ class KraitSSRSearchProcess(KraitSearchProcess):
 		for item in fx:
 			name, seq = item[0:2]
 
-			miner = pytrf.STRFinder(name, seq, *self.params['min_repeats'])
-			ssrs = miner.as_list()
+			finder = pytrf.STRFinder(name, seq, *self.params['min_repeats'])
+			ssrs = finder.as_list()
 
-			records = []
+			rows = []
 			for ssr in ssrs:
-				standard_motif = SM.standard(ssr[3])
-				ssr_type = iupac_numerical_multiplier(ssr[4])
-				records.append((None, name, ssr[1], ssr[2], ssr[3],
-					standard_motif, ssr_type, ssr[5], ssr[6]))
+				smotif = SM.standard(ssr[3])
+				#ssr_type = iupac_numerical_multiplier(ssr[4])
+				rows.append((None, name, ssr[1], ssr[2], ssr[3],
+					smotif, ssr[4], ssr[5], ssr[6]))
 
 			self.progress += len(seq)
-			progress = self.progress/self.fastx['size']
+			p = self.progress/self.fastx['size']
 
-			self.sender.send({
-				'id': self.fastx['id'],
-				'type': 'ssr',
-				'records': records,
-				'progress': progress
-			})
+			self.send(type='ssr', records=rows, progress=p)
+
 
 class KraitCSSRSearchProcess(KraitSearchProcess):
 	def do(self):
@@ -136,12 +142,7 @@ class KraitCSSRSearchProcess(KraitSearchProcess):
 			else:
 				if records:
 					progress = self.progress/self.total_ssrs
-					self.sender.send({
-						'id': self.fastx['id'],
-						'type': 'cssr',
-						'records': records,
-						'progress': progress
-					})
+					self.send(type='cssr', records=records, progress=progress)
 					records = []
 				
 				cssrs = [ssr]
@@ -153,12 +154,7 @@ class KraitCSSRSearchProcess(KraitSearchProcess):
 
 		if records:
 			progress = self.progress/self.total_ssrs
-			self.sender.send({
-				'id': self.fastx['id'],
-				'type': 'cssr',
-				'records': records,
-				'progress': progress
-			})
+			self.send(type='cssr', records=records, progress=progress)
 
 	def join_ssrs(self, cssrs):
 		chrom = cssrs[0][1]
@@ -177,7 +173,8 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 		for item in fx:
 			name, seq = item[0:2]
 
-			miner = pytrf.ATRFinder(name, seq,
+			finder = pytrf.ATRFinder(name, seq,
+				min_motif_size = 1,
 				max_motif_size = 6,
 				min_seed_repeat = self.params['minsrep'],
 				min_seed_length = self.params['minslen'],
@@ -185,25 +182,21 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 				min_identity = self.params['identity'],
 				max_extend_length = self.params['maxextend']
 			)
-			issrs = miner.as_list()
+
+			issrs = finder.as_list()
 
 			records = []
 			for issr in issrs:
-				standard_motif = SM.standard(issr[3])
-				issr_type = iupac_numerical_multiplier(issr[4])
-				records.append((None, name, issr[1], issr[2], issr[3],
-					standard_motif, issr_type, issr[5], issr[6], issr[7],
-					issr[8], issr[9], issr[10]))
+				smotif = SM.standard(issr[3])
+				#issr_type = iupac_numerical_multiplier(issr[4])
+				records.append((None, name, issr[6], issr[7], issr[3],
+					smotif, issr[4], issr[8], issr[9], issr[10], issr[11],
+					issr[12], issr[13], issr[14], issr[1], issr[2], issr[5]))
 
 			self.progress += len(seq)
 			progress = self.progress/self.fastx['size']
 
-			self.sender.send({
-				'id': self.fastx['id'],
-				'type': 'issr',
-				'records': records,
-				'progress': progress
-			})
+			self.send(type='issr', records=records, progress=progress)
 
 class KraitGTRSearchProcess(KraitSearchProcess):
 	def do(self):
@@ -213,6 +206,7 @@ class KraitGTRSearchProcess(KraitSearchProcess):
 			name, seq = item[0:2]
 
 			finder = pytrf.GTRFinder(name, seq,
+				min_motif = self.params['minmotif'],
 				max_motif = self.params['maxmotif'],
 				min_repeat = self.params['minrep'],
 				min_length = self.params['minlen']
@@ -221,35 +215,19 @@ class KraitGTRSearchProcess(KraitSearchProcess):
 
 			records = []
 			for gtr in gtrs:
-				gtr_type = iupac_numerical_multiplier(gtr[4])
+				#gtr_type = iupac_numerical_multiplier(gtr[4])
 				records.append((None, name, gtr[1], gtr[2], gtr[3],
-					gtr_type, gtr[5], gtr[6]))
+					gtr[4], gtr[5], gtr[6]))
 
 			self.progress += len(seq)
 			progress = self.progress/self.fastx['size']
 
-			self.sender.send({
-				'id': self.fastx['id'],
-				'type': 'gtr',
-				'records': records,
-				'progress': progress
-			})
+			self.send(type='gtr', records=records, progress=progress)
 
 class KraitPrimerDesignProcess(multiprocessing.Process):
-	def __init__(self, fastx, repeats, params, sender):
-		super().__init__()
-		self.daemon = True
-		self.fastx = fastx
+	def __init__(self, repeats, params, queue, fastx):
+		super().__init__(params, queue, fastx)
 		self.repeats = repeats
-		self.params = params
-		self.sender = sender
-		self.progress = 0
-
-	def finish(self):
-		self.sender.send({
-			'id': self.fastx['id'],
-			'type': 'finish'
-		})
 
 	def do(self):
 		seq_name = None
@@ -305,22 +283,7 @@ class KraitPrimerDesignProcess(multiprocessing.Process):
 
 				records.append(primer)
 
-		self.sender.send({
-			'id': self.fastx['id'],
-			'type': 'primer',
-			'records': records,
-			'progress': len(self.repeats)
-		})
-
-	def run(self):
-		try:
-			self.do()
-			self.finish()
-		except:
-			error = traceback.format_exc()
-			print(error)
-		finally:
-			self.sender.close()
+		self.send(type='primer', records=records, progress=len(self.repeats))
 
 class KraitMappingProcess(multiprocessing.Process):
 	pass

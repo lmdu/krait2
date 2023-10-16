@@ -22,3 +22,8 @@ src/__pycache__/process.cpython-38.pyc
 src/__pycache__/seqview.cpython-38.pyc
 src/GCA_001039765.2.fa.gz.fxi
 src/__pycache__/dialog.cpython-38.pyc
+src/__pycache__/config.cpython-310.pyc
+src/__pycache__/utils.cpython-310.pyc
+src/__pycache__/window.cpython-310.pyc
+data/chr2.fa.gz
+data/chr2.fa.gz.fxi
