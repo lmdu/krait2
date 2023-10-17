@@ -111,8 +111,8 @@ class KraitTableView(QTableView):
 		if self.table_name not in types:
 			return
 
-		trs = self._model.get_row(index)
-		self.parent.show_dna_sequence(self.table_name, trs)
+		repeat = self._model.get_row(index)
+		self.parent.show_dna_sequence(self.table_name, repeat)
 
 	@Slot()
 	def change_select_all_state(self, select):
@@ -163,7 +163,7 @@ class KraitPrimerTable(KraitTableView):
 		super().__init__(parent)
 
 		width = self.verticalHeader().defaultSectionSize()
-		self.verticalHeader().setDefaultSectionSize(int(width*1.25))
+		self.verticalHeader().setDefaultSectionSize(int(width*1.5))
 
 	def create_model(self):
 		super().create_model()

@@ -141,7 +141,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 			if self.flank_length < 100:
 				self.flank_length = 100
 
-		self.update_sequence()
+		self.update_mark_sequence()
 
 	def sizeHint(self):
 		return QSize(100, 150)
@@ -341,23 +341,69 @@ class KraitSequenceViewer(QPlainTextEdit):
 
 		self.setExtraSelections(extra_selections)
 
-	def get_slice(self):
-		start = self.tandem_repeat.start - self.flank_length - 1
+	def update_sequence(self):
+		start = self.target.start - self.flank_length - 1
+
 		if start < 0:
 			start = 0
 
-		self.locus_start = start + 1
-		self.target_start = self.tandem_repeat.start - self.locus_start
+		end = self.target.end + self.flank_length
 
-		end = self.tandem_repeat.end + self.flank_length + 1
-		seq = self.fastx_file[self.tandem_repeat.chrom][start:end].seq
+		seq = self.fastx_file[self.target.chrom][start:end].seq
 
-		self.locus_length = len(seq)
-		self.target_end = self.target_start + self.tandem_repeat.length
+		self.setPlainText(seq)
 
-		return seq
+		self.seq_start = start + 1
+		self.seq_end = start + len(seq)
 
-	def set_sequence(self, index, cat, trs):
+	def update_marks(self):
+		sels = []
+
+		for mark in self.marks:
+			start = mark.start - self.seq_start
+			end = start + mark.end - mark.start + 1
+
+			if mark.style == 'tandem':
+				mlen = mark.type
+				
+				for pos in range(start, end, mlen):
+					sel = QTextEdit.ExtraSelection()
+					sel.format.setProperty(QTextFormat.BackgroundBrush, QBrush(Qt.lightGray))
+					sel.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.black))
+					sel.cursor = self.textCursor()
+					sel.cursor.setPosition(pos)
+					sel.cursor.setPosition(pos + mlen, QTextCursor.KeepAnchor)
+					sels.append(sel)
+
+				
+
+			elif mark.style == 'box':
+				sel = QTextEdit.ExtraSelection()
+				sel.format.setProperty(QTextFormat.BackgroundBrush, QBrush(Qt.transparent))
+				sel.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.black))
+				sel.cursor = self.textCursor()
+				sel.cursor.setPosition(start)
+				sel.cursor.setPosition(end, QTextCursor.KeepAnchor)
+				sels.append(sel)
+
+
+				"""
+				fmt = QTextCharFormat()
+				fmt.setUnderlineColor(QColor(0,0,0))
+				fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
+				cursor = self.textCursor()
+				cursor.setPosition(start)
+				cursor.setPosition(end, QTextCursor.KeepAnchor)
+				cursor.mergeCharFormat(fmt)
+				"""
+		self.setExtraSelections(sels)
+
+	def update_mark_sequence(self):
+		self.update_sequence()
+		self.update_marks()
+		self.update_line_number_area_width(0)
+
+	def mark_sequence(self, index, target, marks):
 		if self.fastx_index != index:
 			self.fastx_index = index
 			fastx = DB.get_dict("SELECT * FROM fastx WHERE id=? LIMIT 1", (index,))
@@ -367,16 +413,10 @@ class KraitSequenceViewer(QPlainTextEdit):
 			else:
 				self.fastx_file = pyfastx.Fastq(fastx.fpath)
 
-		self.repeat_type = cat
-		self.tandem_repeat = trs
+		self.target = target
+		self.marks = marks
 
-		self.update_sequence()
-
-	def update_sequence(self):
-		seq = self.get_slice()
-		self.setPlainText(seq)
-		self.format_tandem_repeat()
-		self.update_line_number_area_width(0)
+		self.update_mark_sequence()
 
 class SequenceDialog(QMainWindow):
 	def __init__(self, parent=None):

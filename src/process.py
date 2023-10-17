@@ -18,7 +18,8 @@ __all__ = ['KraitSSRSearchProcess', 'KraitCSSRSearchProcess',
 
 class KraitBaseProcess(multiprocessing.Process):
 	def __init__(self, params, queue, fastx={}):
-		super().__init__(daemon=True)
+		super().__init__()
+		self.daemon = True
 		self.fastx = fastx
 		self.params = params
 		self.queue = queue
@@ -26,7 +27,6 @@ class KraitBaseProcess(multiprocessing.Process):
 
 	def send(self, **kwargs):
 		kwargs['id'] = self.fastx.get('id', -1)
-		print(self.queue.empty())
 		self.queue.put(kwargs)
 
 	def finish(self):
@@ -104,7 +104,6 @@ class KraitSSRSearchProcess(KraitSearchProcess):
 			rows = []
 			for ssr in ssrs:
 				smotif = SM.standard(ssr[3])
-				#ssr_type = iupac_numerical_multiplier(ssr[4])
 				rows.append((None, name, ssr[1], ssr[2], ssr[3],
 					smotif, ssr[4], ssr[5], ssr[6]))
 
@@ -112,7 +111,6 @@ class KraitSSRSearchProcess(KraitSearchProcess):
 			p = self.progress/self.fastx['size']
 
 			self.send(type='ssr', records=rows, progress=p)
-
 
 class KraitCSSRSearchProcess(KraitSearchProcess):
 	def do(self):
@@ -179,7 +177,7 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 				min_seed_repeat = self.params['minsrep'],
 				min_seed_length = self.params['minslen'],
 				max_consecutive_error = self.params['maxerr'],
-				min_identity = self.params['identity'],
+				min_extend_identity = self.params['identity'],
 				max_extend_length = self.params['maxextend']
 			)
 
@@ -188,10 +186,9 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 			records = []
 			for issr in issrs:
 				smotif = SM.standard(issr[3])
-				#issr_type = iupac_numerical_multiplier(issr[4])
-				records.append((None, name, issr[6], issr[7], issr[3],
-					smotif, issr[4], issr[8], issr[9], issr[10], issr[11],
-					issr[12], issr[13], issr[14], issr[1], issr[2], issr[5]))
+				records.append((None, name, issr[6], issr[7], issr[3], smotif,
+					issr[4], issr[8], issr[9], issr[1], issr[2], issr[5],
+					issr[10], issr[11], issr[12], issr[13], round(issr[14], 2)))
 
 			self.progress += len(seq)
 			progress = self.progress/self.fastx['size']
@@ -215,16 +212,15 @@ class KraitGTRSearchProcess(KraitSearchProcess):
 
 			records = []
 			for gtr in gtrs:
-				#gtr_type = iupac_numerical_multiplier(gtr[4])
-				records.append((None, name, gtr[1], gtr[2], gtr[3],
-					gtr[4], gtr[5], gtr[6]))
+				records.append((None, name, gtr[1], gtr[2], gtr[4],
+					gtr[5], gtr[6], gtr[3]))
 
 			self.progress += len(seq)
 			progress = self.progress/self.fastx['size']
 
 			self.send(type='gtr', records=records, progress=progress)
 
-class KraitPrimerDesignProcess(multiprocessing.Process):
+class KraitPrimerDesignProcess(KraitBaseProcess):
 	def __init__(self, repeats, params, queue, fastx):
 		super().__init__(params, queue, fastx)
 		self.repeats = repeats

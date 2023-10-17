@@ -33,7 +33,7 @@ __all__ = [
 class KraitWorkerSignals(QObject):
 	finished = Signal()
 	failure = Signal(str)
-	show_tab = Signal(str)
+	show_tab = Signal(str, int)
 	progress = Signal(int)
 
 class KraitBaseWorker(QRunnable):
@@ -44,15 +44,13 @@ class KraitBaseWorker(QRunnable):
 		self.setAutoDelete(True)
 		self.fastx = None
 		self.processes = 0
-		self.manager = multiprocessing.Manager()
-		self.queue = self.manager.Queue()
+		self.queue = multiprocessing.SimpleQueue()
 		self.signals = KraitWorkerSignals()
 		self.settings = QSettings()
 		self.params = self.get_params()
 
 	def exit(self):
 		self.queue.close()
-		self.manager.shutdown()
 
 	def start_process(self):
 		proc = self.processer(self.params, self.queue, self.fastx)
@@ -158,6 +156,7 @@ class KraitSearchWorker(KraitBaseWorker):
 
 			if self.processes == 0:
 				self.exit()
+				self.signals.show_tab.emit(self.table_name, data['id'])
 
 		elif data['type'] == 'error':
 			raise Exception(data['message'])
@@ -165,7 +164,9 @@ class KraitSearchWorker(KraitBaseWorker):
 		else:
 			table = "{}_{}".format(data['type'], data['id'])
 			DB.insert_rows(DB.get_sql(table), data['records'])
-			self.update_progress(data)
+
+			if data['progress']:
+				self.update_progress(data)
 
 class KraitSSRSearchWorker(KraitSearchWorker):
 	table_name = 'ssr'
@@ -185,7 +186,7 @@ class KraitCSSRSearchWorker(KraitSearchWorker):
 		DB.create_table(self.table_name, fastx['id'])
 		sql = "SELECT * FROM ssr_{}".format(fastx['id'])
 		self.params['ssrs'] = DB.get_rows(sql)
-		proc = self.processer(fastx, self.params, self.sender)
+		proc = self.processer(self.params, self.queue, fastx)
 		proc.start()
 
 	def get_params(self):
@@ -291,6 +292,8 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 
 			if self.processes == 0:
 				self.queue.close()
+
+			self.signals.show_tab.emit(self.table_name, data['id'])
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])

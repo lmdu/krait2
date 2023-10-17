@@ -71,14 +71,14 @@ CREATE TABLE IF NOT EXISTS issr_{} (
 	type INTEGER,
 	repeat INTEGER,
 	length INTEGER,
+	sstart INTEGER,
+	send INTEGER,
+	srepeat INTEGER,
 	match INTEGER,
 	subsitution INTEGER,
 	insertion INTEGER,
 	deletion INTEGER,
-	identity REAL,
-	sstart INTEGER,
-	send INTEGER,
-	srepeat INTEGER
+	identity REAL
 )
 """
 

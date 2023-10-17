@@ -94,6 +94,10 @@ class KraitMainWindow(QMainWindow):
 		if self.current_worker:
 			self.current_worker.exit()
 
+			#print('closed!')
+
+		#event.ignore()
+
 	def create_actions(self):
 		#menu actions
 		self.open_action = QAction("&Open project...", self,
@@ -420,12 +424,18 @@ class KraitMainWindow(QMainWindow):
 		self.current_file = index
 		self.current_filters = {}
 
+		print(index)
+
 		tables = ['info', 'ssr', 'cssr', 'issr','gtr', 'primer', 'stats']
 
 		for table in tables:
 			self.show_tab_widgets(table)
 
-	def show_tab_widgets(self, table):
+	@Slot(str, int)
+	def show_tab_widgets(self, table, idx=None):
+		if idx is not None and self.current_file != idx:
+			return
+
 		if self.current_file == 0:
 			return
 
@@ -472,11 +482,45 @@ class KraitMainWindow(QMainWindow):
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, False)
 
-	def show_dna_sequence(self, cat, trs):
+	def show_dna_sequence(self, cat, repeat):
 		if not self.seqview_action.isChecked():
 			return
 
-		self.seq_view.set_sequence(self.current_file, cat, trs)
+		if cat == 'ssr' or cat == 'gtr':
+			target = repeat
+			repeat['style'] = 'tandem'
+			marks = [repeat]
+
+		elif cat == 'issr':
+			target = AttrDict(
+				chrom = repeat.chrom,
+				start = repeat.start,
+				end = repeat.end
+			)
+
+			marks = [AttrDict(
+				style = 'tandem',
+				start = repeat.sstart,
+				end = repeat.send,
+				type = repeat.type
+			)]
+
+			if repeat.sstart > repeat.start:
+				marks.append(AttrDict(
+					style = 'box',
+					start = repeat.start,
+					end = repeat.sstart - 1
+				))
+
+			if repeat.send < repeat.end:
+				marks.append(AttrDict(
+					style = 'box',
+					start = repeat.send + 1,
+					end = repeat.end
+				))
+
+		self.seq_view.mark_sequence(self.current_file, target, marks)
+		#self.seq_view.set_sequence(self.current_file, cat, trs)
 
 	@Slot()
 	def show_primer_table(self):
@@ -792,8 +836,6 @@ class KraitMainWindow(QMainWindow):
 	def check_work_thread(self):
 		pool = QThreadPool.globalInstance()
 
-		print(pool.activeThreadCount())
-
 		if pool.activeThreadCount() > 0:
 			QMessageBox.warning(self, "Warning", "A task is already running")
 			return False
@@ -817,7 +859,7 @@ class KraitMainWindow(QMainWindow):
 		self.current_worker = threader(*args)
 		self.current_worker.signals.progress.connect(self.progress_bar.setValue)
 		self.current_worker.signals.failure.connect(self.show_error_message)
-		#self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
+		self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
 		QThreadPool.globalInstance().start(self.current_worker)
 
 	def do_ssr_search(self):

@@ -364,8 +364,8 @@ class KraitSSRModel(KraitTableModel):
 
 class KraitGTRModel(KraitTableModel):
 	table = 'gtr'
-	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif',
-						'Type', 'Repeats', 'Length']
+	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Type',
+						'Repeats', 'Length', 'Motif']
 
 class KraitCSSRModel(KraitTableModel):
 	table = 'cssr'
@@ -375,13 +375,15 @@ class KraitCSSRModel(KraitTableModel):
 class KraitISSRModel(KraitTableModel):
 	table = 'issr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif', 'Smotif',
-						'Type', 'Length', 'Match', 'Subsitution', 'Insertion',
-						'Deletion', 'Identity']
+						'Type', 'Repeats', 'Length', 'Seed start', 'Seed end',
+						'Seed repeat', 'Extend match', 'Extend subsitution',
+						'Extend insertion', 'Extend deletion', 'Extend identity']
+
 
 class KraitPrimerModel(KraitTableModel):
 	table = 'primer'
 	custom_headers = ['ID', 'Locus', 'Entry', 'Product size', 'Strand',
-					  'Tm (°C)', 'GC content (%)', 'End stability', 'Sequence']
+					  'Tm (°C)', 'GC content (%)', 'End stability', 'Primer sequences']
 
 	def get_value(self, row, col):
 		if row != self.cache_row[0]:
@@ -405,7 +407,7 @@ class KraitPrimerModel(KraitTableModel):
 
 		flags = super().flags(index)
 
-		if index.column() == 5:
+		if index.column() == 8:
 			flags |= Qt.ItemIsEditable
 
 		return flags
