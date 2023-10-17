@@ -234,11 +234,12 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 	table_name = 'primer'
 	processer = KraitPrimerDesignProcess
 
-	def __init__(self, index, total, repeats):
+	def __init__(self, index, total, repeats, category):
 		super().__init__()
 		self.index = index
 		self.total_count = total
 		self.repeats = repeats
+		self.category = category
 		self.concurrent = 1
 		self.progress = 0
 
@@ -264,7 +265,7 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 		return params
 
 	def start_process(self, trs):
-		proc = self.processer(trs, self.params, self.queue, self.fastx)
+		proc = self.processer(trs, self.index, self.category, self.params, self.queue, self.fastx)
 		proc.start()
 
 	def before_run(self):

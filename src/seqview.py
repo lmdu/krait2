@@ -112,11 +112,8 @@ class KraitSequenceViewer(QPlainTextEdit):
 		self.fastx_file = None
 		self.fastx_index = None
 
-		self.tandem_repeat = None
-		self.repeat_type = None
 		self.flank_length = 100
-		self.target_start = 0
-		self.target_end = 0
+		self.flank_step = 50
 
 		#self.set_sequence()
 
@@ -127,7 +124,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 			if self.flank_length == 10000:
 				return
 
-			self.flank_length += 100
+			self.flank_length += self.flank_step
 
 			if self.flank_length > 10000:
 				self.flank_length = 10000
@@ -136,7 +133,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 			if self.flank_length == 100:
 				return
 
-			self.flank_length -= 100
+			self.flank_length -= self.flank_step
 
 			if self.flank_length < 100:
 				self.flank_length = 100
@@ -297,6 +294,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 
 		#self.parent.select_count.setText(str(count))
 
+	"""
 	def add_format(self):
 		fmt = QTextCharFormat()
 		fmt.setUnderlineColor(QColor(0,0,0))
@@ -324,7 +322,9 @@ class KraitSequenceViewer(QPlainTextEdit):
 		extra_selections.append(selection)
 
 		self.setExtraSelections(extra_selections)
+	"""
 
+	"""
 	def format_tandem_repeat(self):
 		extra_selections = []
 		motif_length = len(self.tandem_repeat.motif)
@@ -340,6 +340,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 			extra_selections.append(selection)
 
 		self.setExtraSelections(extra_selections)
+	"""
 
 	def update_sequence(self):
 		start = self.target.start - self.flank_length - 1
@@ -351,6 +352,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 
 		seq = self.fastx_file[self.target.chrom][start:end].seq
 
+		self.set_locus_position(start, len(seq))
 		self.setPlainText(seq)
 
 		self.seq_start = start + 1
@@ -375,9 +377,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 					sel.cursor.setPosition(pos + mlen, QTextCursor.KeepAnchor)
 					sels.append(sel)
 
-				
-
-			elif mark.style == 'box':
+			elif mark.style == 'align':
 				sel = QTextEdit.ExtraSelection()
 				sel.format.setProperty(QTextFormat.BackgroundBrush, QBrush(Qt.transparent))
 				sel.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.black))
@@ -386,6 +386,14 @@ class KraitSequenceViewer(QPlainTextEdit):
 				sel.cursor.setPosition(end, QTextCursor.KeepAnchor)
 				sels.append(sel)
 
+			elif mark.style == 'primer':
+				sel = QTextEdit.ExtraSelection()
+				sel.format.setProperty(QTextFormat.BackgroundBrush, QBrush(Qt.transparent))
+				sel.format.setProperty(QTextFormat.OutlinePen, QPen(Qt.black, 1, Qt.DashLine))
+				sel.cursor = self.textCursor()
+				sel.cursor.setPosition(start)
+				sel.cursor.setPosition(end, QTextCursor.KeepAnchor)
+				sels.append(sel)
 
 				"""
 				fmt = QTextCharFormat()

@@ -8,6 +8,7 @@ from backend import *
 __all__ = ["check_fastx_format", "AttrDict", "get_fastx_info",
 			"iupac_numerical_multiplier", "primer_tag_format",
 			"product_size_format", "get_annotation_format",
+			'generate_tandem_marks', 'generate_primer_marks'
 			]
 
 class AttrDict(dict):
@@ -193,6 +194,103 @@ def get_fastx_info(index):
 	contents.append('</table>')
 
 	return ''.join(contents)
+
+def generate_etr_marks(etr):
+	marks = [AttrDict(
+		style = 'tandem',
+		start = etr.start,
+		end = etr.end,
+		type = etr.type
+	)]
+
+	return marks
+
+def generate_cssr_marks(index, cssr):
+	sql = "SELECT * FROM ssr_{} WHERE id IN ({})".format(index, cssr.component)
+	marks = [AttrDict(style='tandem', start=ssr[2], end=ssr[3], type=ssr[6]) for ssr in DB.query(sql)]
+	
+	return marks
+
+def generate_issr_marks(issr):
+	marks = [AttrDict(
+		style = 'tandem',
+		start = issr.sstart,
+		end = issr.send,
+		type = issr.type
+	)]
+
+	if issr.sstart > issr.start:
+		marks.append(AttrDict(
+			style = 'align',
+			start = issr.start,
+			end = issr.sstart - 1
+		))
+
+	if issr.send < issr.end:
+		marks.append(AttrDict(
+			style = 'align',
+			start = issr.send + 1,
+			end = issr.end
+		))
+
+	return marks
+
+def generate_tandem_marks(index, category, repeat):
+	target = AttrDict(
+		chrom = repeat.chrom,
+		start = repeat.start,
+		end = repeat.end
+	)
+
+	if category == 'ssr' or category == 'gtr':
+		marks = generate_etr_marks(repeat)
+
+	elif category == 'cssr':
+		marks = generate_cssr_marks(index, repeat)
+
+	elif category == 'issr':
+		marks = generate_issr_marks(repeat)
+
+	else:
+		marks = []
+
+	return target, marks
+
+def generate_primer_marks(index, primer, flank=100):
+	category, _, locus = primer.locus.split('-')
+
+	sql = "SELECT * FROM {}_{} WHERE id=?".format(category, index)
+	repeat = DB.get_dict(sql, (int(locus),))
+
+	start = repeat.start - flank
+	if start < 1: start = 1
+
+	end = repeat.end + flank
+
+	target = AttrDict(
+		chrom = repeat.chrom,
+		start = start,
+		end = end
+	)
+
+	_, marks = generate_tandem_marks(index, category, repeat)
+
+	marks.append(AttrDict(
+		style = 'primer',
+		start = start + primer.forward_start,
+		end = start + primer.forward_start + primer.forward_length - 1
+	))
+
+	print(primer)
+
+	marks.append(AttrDict(
+		style = 'primer',
+		start = end - primer.reverse_start,
+		end = end - primer.reverse_start + primer.reverse_length
+	))
+
+	return target, marks
+
 
 if __name__ == '__main__':
 	affix = iupac_numerical_multiplier(int(sys.argv[1]))

@@ -41,10 +41,10 @@ CREATE TABLE IF NOT EXISTS gtr_{} (
 	chrom TEXT,
 	start INTEGER,
 	end INTEGER,
-	motif TEXT,
 	type INTEGER,
 	repeat INTEGER,
-	length INTEGER
+	length INTEGER,
+	motif TEXT
 )
 """
 
@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS cssr_{} (
 	end INTEGER,
 	complexity INTEGER,
 	length INTEGER,
-	structure TEXT
+	structure TEXT,
+	component TEXT
 )
 """
 

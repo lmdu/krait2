@@ -424,8 +424,6 @@ class KraitMainWindow(QMainWindow):
 		self.current_file = index
 		self.current_filters = {}
 
-		print(index)
-
 		tables = ['info', 'ssr', 'cssr', 'issr','gtr', 'primer', 'stats']
 
 		for table in tables:
@@ -482,42 +480,18 @@ class KraitMainWindow(QMainWindow):
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, False)
 
-	def show_dna_sequence(self, cat, repeat):
+	def show_dna_sequence(self, category, repeat):
 		if not self.seqview_action.isChecked():
 			return
 
-		if cat == 'ssr' or cat == 'gtr':
-			target = repeat
-			repeat['style'] = 'tandem'
-			marks = [repeat]
+		if category == 'primer':
+			settings = QSettings()
+			default, convert = KRAIT_PRIMER_TAGS['PRIMER_FLANK_LENGTH']
+			flank_len = settings.value('PRIMER/PRIMER_FLANK_LENGTH', default, convert)
+			target, marks = generate_primer_marks(self.current_file, repeat, flank_len)
 
-		elif cat == 'issr':
-			target = AttrDict(
-				chrom = repeat.chrom,
-				start = repeat.start,
-				end = repeat.end
-			)
-
-			marks = [AttrDict(
-				style = 'tandem',
-				start = repeat.sstart,
-				end = repeat.send,
-				type = repeat.type
-			)]
-
-			if repeat.sstart > repeat.start:
-				marks.append(AttrDict(
-					style = 'box',
-					start = repeat.start,
-					end = repeat.sstart - 1
-				))
-
-			if repeat.send < repeat.end:
-				marks.append(AttrDict(
-					style = 'box',
-					start = repeat.send + 1,
-					end = repeat.end
-				))
+		else:
+			target, marks = generate_tandem_marks(self.current_file, category, repeat)
 
 		self.seq_view.mark_sequence(self.current_file, target, marks)
 		#self.seq_view.set_sequence(self.current_file, cat, trs)
@@ -894,10 +868,10 @@ class KraitMainWindow(QMainWindow):
 			count = 0
 
 		if not count or rtype not in {'ssr', 'issr', 'cssr', 'gtr'}:
-			QMessageBox.warning(self, "Warning", "Please select some tandem repeats for primer design.")
+			QMessageBox.warning(self, "Warning", "Please select some tandem repeats for primer design")
 			return
 
-		self.run_work_thread(KraitPrimerDesignWorker, self.current_file, count, rows)
+		self.run_work_thread(KraitPrimerDesignWorker, self.current_file, count, rows, rtype)
 
 	def perform_primer_design(self):
 		worker = PrimerDesignThread(self, self.current_table)

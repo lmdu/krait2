@@ -161,7 +161,8 @@ class KraitCSSRSearchProcess(KraitSearchProcess):
 		complexity = len(cssrs)
 		length = sum(cssr[8] for cssr in cssrs)
 		structure = '-'.join("({}){}".format(cssr[4], cssr[7]) for cssr in cssrs)
-		return (None, chrom, start, end, complexity, length, structure)
+		component = ','.join(str(cssr[0]) for cssr in cssrs)
+		return (None, chrom, start, end, complexity, length, structure, component)
 
 class KraitISSRSearchProcess(KraitSearchProcess):
 	def do(self):
@@ -221,9 +222,11 @@ class KraitGTRSearchProcess(KraitSearchProcess):
 			self.send(type='gtr', records=records, progress=progress)
 
 class KraitPrimerDesignProcess(KraitBaseProcess):
-	def __init__(self, repeats, params, queue, fastx):
+	def __init__(self, repeats, index, category, params, queue, fastx):
 		super().__init__(params, queue, fastx)
 		self.repeats = repeats
+		self.index = index
+		self.category = category
 
 	def do(self):
 		seq_name = None
@@ -231,7 +234,7 @@ class KraitPrimerDesignProcess(KraitBaseProcess):
 		flank_len = self.params.pop('PRIMER_FLANK_LENGTH')
 
 		if self.fastx['format'] == 'fasta':
-			fx = pyfastx.Fasta(self.fastx['fpath'])
+			fx = pyfastx.Fasta(self.fastx['fpath'], uppercase=True)
 		else:
 			fx = pyfastx.Fastq(self.fastx['fpath'])
 
@@ -251,9 +254,11 @@ class KraitPrimerDesignProcess(KraitBaseProcess):
 			target_start = trs[2] - start
 			target_len = trs[3] - trs[2] + 1
 
+			locus = "{}-{}-{}".format(self.category, self.index, trs[0])
+
 			results = primer3.design_primers(
 				seq_args = {
-					'SEQUENCE_ID': "{}-tr-{}".format(trs[1], trs[0]),
+					'SEQUENCE_ID': locus,
 					'SEQUENCE_TEMPLATE': seq_cache[start-1:end],
 					'SEQUENCE_TARGET': [target_start, target_len],
 					'SEQUENCE_INTERNAL_EXCLUDED_REGION': [target_start, target_len]
@@ -264,7 +269,7 @@ class KraitPrimerDesignProcess(KraitBaseProcess):
 			primer_count = results['PRIMER_PAIR_NUM_RETURNED']
 
 			for i in range(primer_count):
-				primer = [None, trs[0], i+1]
+				primer = [None, locus, i+1]
 				primer.append(results['PRIMER_PAIR_{}_PRODUCT_SIZE'.format(i)])
 				primer.append(round(results['PRIMER_LEFT_{}_TM'.format(i)], 2))
 				primer.append(round(results['PRIMER_LEFT_{}_GC_PERCENT'.format(i)], 2))
