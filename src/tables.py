@@ -490,7 +490,7 @@ class PrimerTableView(KraitTableView):
 	def __init__(self, parent=None):
 		super().__init__(parent, "primer")
 		width = self.verticalHeader().defaultSectionSize()
-		self.verticalHeader().setDefaultSectionSize(int(width*1.25))
+		self.verticalHeader().setDefaultSectionSize(int(width*1.5))
 
 	def create_model(self):
 		self.model = PrimerTableModel(self)

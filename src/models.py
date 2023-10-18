@@ -383,7 +383,7 @@ class KraitISSRModel(KraitTableModel):
 class KraitPrimerModel(KraitTableModel):
 	table = 'primer'
 	custom_headers = ['ID', 'Locus', 'Entry', 'Product size', 'Strand',
-					  'Tm (°C)', 'GC content (%)', 'End stability', 'Primer sequences']
+					  'Tm (°C)', 'GC content (%)', "3' End stability", 'Primer sequences']
 
 	def get_value(self, row, col):
 		if row != self.cache_row[0]:

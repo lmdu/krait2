@@ -286,8 +286,17 @@ class KraitPrimerDesignProcess(KraitBaseProcess):
 
 		self.send(type='primer', records=records, progress=len(self.repeats))
 
-class KraitMappingProcess(multiprocessing.Process):
-	pass
+class KraitMappingProcess(KraitBaseProcess):
+	def __init__(repeats, queue, fastx):
+		super().__init__(None, queue, fastx)
+		self.repeats = repeats
+
+	def do(self):
+		if not self.fastx['apath']:
+			return
+
+		mapper = get_annotation_mapper(self.fastx['apath'])
+		
 
 class KraitStatisticsProcess(multiprocessing.Process):
 	pass

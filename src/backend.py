@@ -120,9 +120,10 @@ CREATE TABLE IF NOT EXISTS annot_{} (
 MAPPING_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS map_{} (
 	id INTEGER PRIMARY KEY,
+	type INTEGER,
 	locus INTEGER,
-	featype INTEGER,
-	feature INTEGER
+	feature INTEGER,
+	parents TEXT
 )
 """
 
@@ -208,6 +209,9 @@ class DataBackend:
 		self.query("DELETE FROM {}_{}".format(table, idx))
 
 	def insert_rows(self, sql, rows):
+		self.cursor.executemany(sql, rows)
+
+	def update_rows(self, sql, rows):
 		self.cursor.executemany(sql, rows)
 
 	def update_status(self, rowid, status):

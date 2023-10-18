@@ -106,20 +106,24 @@ def iupac_numerical_multiplier(num):
 
 def product_size_format(ranges):
 	size_ranges = []
+
 	for r in ranges.split():
 		size_ranges.append([int(n) for n in r.split('-')])
+
 	return size_ranges
 
 def primer_tag_format(tag):
 	try:
 		return KRAIT_PRIMER_TAGS[tag]
+
 	except:
 		raise Exception("The {} tag is not a primer3 tag".format(tag))
 
 #gff or gtf file validation
 def get_annotation_format(annot_file):
-	if is_gzip_compressed(annot_file):
+	if pyfastx.gzip_check(annot_file):
 		handler = gzip.open(annot_file, 'rt')
+	
 	else:
 		handler = open(annot_file)
 
@@ -137,8 +141,10 @@ def get_annotation_format(annot_file):
 
 			if '=' in attr:
 				return 'gff'
+			
 			elif ' ' in attr and '"' in attr:
 				return 'gtf'
+			
 			else:
 				raise Exception("the annotation file is not GFF or GTF formatted file")
 
@@ -281,12 +287,10 @@ def generate_primer_marks(index, primer, flank=100):
 		end = start + primer.forward_start + primer.forward_length - 1
 	))
 
-	print(primer)
-
 	marks.append(AttrDict(
 		style = 'primer',
-		start = end - primer.reverse_start,
-		end = end - primer.reverse_start + primer.reverse_length
+		start = start + primer.reverse_start - primer.reverse_length + 1,
+		end = start + primer.reverse_start
 	))
 
 	return target, marks

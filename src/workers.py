@@ -270,11 +270,7 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 
 	def before_run(self):
 		sql = "SELECT * FROM fastx WHERE id=? LIMIT 1"
-		query = DB.query(sql, (self.index,))
-		row = query.fetchone()
-		fields = [name for name, _ in query.getdescription()]
-		self.fastx = dict(zip(fields, row))
-
+		self.fastx = DB.get_dict(sql, (self.index,))
 		DB.create_table(self.table_name, self.index)
 
 	def submit_process(self):
@@ -309,6 +305,65 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 class KraitMappingWorker(KraitSearchWorker):
 	table_name = 'map'
 	processer = KraitMappingProcess
+
+	def start_process(self, repeats, fastx):
+		DB.create_table(self.table_name, fastx['id'])
+		proc = self.processer(repeats, self.queue, fastx)
+		proc.start()
+
+	def get_repeats(self, index):
+		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
+
+		repeats = []
+		for k, v in types.items():
+			table = "{}_{}".format(k, index)
+			if DB.table_exists(table):
+				sql = "SELECT id,chrom,start,end FROM {}".format(table)
+				for row in DB.query(sql):
+					row = list(row)
+					row.append(v)
+					repeats.append(row)
+
+		return repeats
+
+	def submit_process(self):
+		if self.fastx_query is None:
+			return
+
+		if self.processes >= self.concurrent:
+			return
+
+		fastx = self.get_fastx()
+
+		if fastx:
+			repeats = self.get_repeats(fastx['id'])
+			self.start_process(repeats, fastx)
+			self.processes += 1
+
+	def call_response(self, data):
+		if data['type'] == 'annot':
+			DB.update_fastx(data['records'])
+
+		elif data['type'] == 'finish':
+			self.processes -= 1
+			self.submit_process()
+
+			if self.processes == 0:
+				self.exit()
+
+		elif data['type'] == 'error':
+			raise Exception(data['message'])
+
+		else:
+			table = "{}_{}".format(data['type'], data['id'])
+			DB.insert_rows(DB.get_sql(table), data['records'])
+
+			if data['progress']:
+				self.update_progress(data)
+
+
+
+
 
 	
 

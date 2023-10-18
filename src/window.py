@@ -418,8 +418,8 @@ class KraitMainWindow(QMainWindow):
 
 	@Slot(int)
 	def on_fastx_changed(self, index):
-		if self.current_file == index:
-			return
+		#if self.current_file == index:
+		#	return
 
 		self.current_file = index
 		self.current_filters = {}
@@ -706,12 +706,12 @@ class KraitMainWindow(QMainWindow):
 
 		if annot_files:
 			sql = "UPDATE fastx SET apath=? WHERE id=?"
-			DB.query(sql, annot_files)
+			DB.update_rows(sql, annot_files)
 
 		if error_files:
 			msg = (
-				"Could not find corresponding sequence files for:<br> {}"
-				"<br>Make sure annotation and sequence files have the same name"
+				"Could not find corresponding sequence files for:<br> {}<br>"
+				"Make sure annotation and sequence files have the same name"
 			).format("<br>".join(error_files))
 
 			QMessageBox.warning(self, "Warning", msg)
@@ -746,7 +746,7 @@ class KraitMainWindow(QMainWindow):
 
 		if annot_files:
 			sql = "UPDATE fastx SET apath=? WHERE id=?"
-			DB.query(sql, annot_files)
+			DB.update_rows(sql, annot_files)
 
 		if error_files:
 			msg = (
