@@ -123,7 +123,7 @@ def primer_tag_format(tag):
 def get_annotation_format(annot_file):
 	if pyfastx.gzip_check(annot_file):
 		handler = gzip.open(annot_file, 'rt')
-	
+
 	else:
 		handler = open(annot_file)
 
@@ -137,14 +137,14 @@ def get_annotation_format(annot_file):
 			if len(cols) != 9:
 				raise Exception("the annotation file is not GFF or GTF formatted file")
 
-			attr = cols[-1].split(';')[0]
+			#attr = cols[8].split(';')[0]
 
-			if '=' in attr:
-				return 'gff'
-			
-			elif ' ' in attr and '"' in attr:
+			if 'gene_id "' in cols[8] or 'transcript_id "' in cols[8]:
 				return 'gtf'
-			
+
+			elif '=' in cols[8].split(';')[0]:
+				return 'gff'
+
 			else:
 				raise Exception("the annotation file is not GFF or GTF formatted file")
 

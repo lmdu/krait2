@@ -1,4 +1,3 @@
-import csv
 import json
 import gzip
 import pygros
@@ -11,17 +10,17 @@ __all__ = ['get_annotation_mapper']
 class GXFReader:
 	def __init__(self, annot_file):
 		if pyfastx.gzip_check(annot_file):
-			self.handler = gzip.open(annot_file, 'rt')
+			self.reader = gzip.open(annot_file, 'rt')
 		else:
-			self.handler = open(annot_file)
-
-		self.reader = csv.reader(self.handler, delimiter='\t')
+			self.reader = open(annot_file)
 
 	def __del__(self):
-		self.handler.close()
+		self.reader.close()
 
 	def __iter__(self):
-		for row in self.reader:
+		for line in self.reader:
+			row = line.strip('\n').split('\t')
+
 			if row[0][0] == '#':
 				continue
 
@@ -40,24 +39,32 @@ class GXFReader:
 	def split_value(self, item):
 		pass
 
+	def split_attrs(self, item):
+		pass
+
 	def parse_attrs(self, attr_str):
 		attrs = AttrDict()
-		items = attr_str.strip().split(';')
-		if not items[-1].strip():
-			items.pop()
+		items = self.split_attrs(attr_str)
 
 		for item in items:
+			if not item: continue
 			attr, val = self.split_value(item)
 			attrs[attr.lower()] = val
 
 		return attrs
 
 class GFFReader(GXFReader):
+	def split_attrs(self, item):
+		return item.strip().split(';')
+
 	def split_value(self, item):
 		cols = item.strip().split('=')
 		return (cols[0].strip(), cols[1].strip())
 
 class GTFReader(GXFReader):
+	def split_attrs(self, item):
+		return item.strip().split('";')
+
 	def split_value(self, item):
 		cols = item.strip().split('"')
 		return (cols[0].strip(), cols[1].strip())
@@ -80,6 +87,14 @@ class GXFMapper:
 	def parse(self):
 		pass
 
+	def contain(self, chrom, start, end):
+		rs = self.ranges.contain(chrom, start, end)
+		return [(r[2], self.feature_mapping[r[2]]) for r in rs]
+
+class GFFMapper(GXFMapper):
+	def create_reader(self):
+		self.reader = GFFReader(self.annot_file)
+
 	def generate_introns(self, exons):
 		if exons:
 			chrom = exons[0].chrom
@@ -96,14 +111,6 @@ class GXFMapper:
 				self.feature_records.append([self.feature_id, pid, chrom, 'intron', start, end, strand, ''])
 				self.feature_mapping[self.feature_id] = 4
 				self.ranges.add(chrom, start, end, self.feature_id)
-
-	def contain(self, chrom, start, end):
-		rs = self.ranges.contain(chrom, start, end)
-		return [(r[2], self.feature_mapping[r[2]]) for r in rs]
-
-class GFFMapper(GXFMapper):
-	def create_reader(self):
-		self.reader = GFFReader(self.annot_file)
 
 	def parse(self):
 		cds = []
@@ -145,6 +152,27 @@ class GFFMapper(GXFMapper):
 class GTFMapper(GXFMapper):
 	def create_reader(self):
 		self.reader = GTFReader(self.annot_file)
+
+	def generate_introns(self, exons):
+		if exons:
+			chrom = exons[0].chrom
+			strand = exons[0].strand
+
+			if 'transcript_id' in exons[0].attrs:
+				pid = self.parent_mapping[exons[0].attrs.transcript_id]
+			else:
+				pid = self.parent_mapping[exons[0].attrs.gene_id]
+
+			for i in range(len(exons)-1):
+				self.feature_id += 1
+
+				#intron position
+				start = exons[i].end + 1
+				end = exons[i+1].start - 1
+
+				self.feature_records.append([self.feature_id, pid, chrom, 'intron', start, end, strand, ''])
+				self.feature_mapping[self.feature_id] = 4
+				self.ranges.add(chrom, start, end, self.feature_id)
 
 	def parse(self):
 		cds = []
@@ -191,7 +219,7 @@ class GTFMapper(GXFMapper):
 def get_annotation_mapper(annot_file):
 	annot_format = get_annotation_format(annot_file)
 
-	if format == 'gtf':
+	if annot_format == 'gtf':
 		return GTFMapper(annot_file)
 	else:
 		return GFFMapper(annot_file)

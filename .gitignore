@@ -27,3 +27,7 @@ src/__pycache__/utils.cpython-310.pyc
 src/__pycache__/window.cpython-310.pyc
 data/chr2.fa.gz
 data/chr2.fa.gz.fxi
+data/GCF_000001735.4_TAIR10.1_genomic.fna.gz
+data/GCF_000001735.4_TAIR10.1_genomic.gff.gz
+data/GCF_000001735.4_TAIR10.1_genomic.fna.gz.fxi
+data/GCF_000001735.4_TAIR10.1_genomic.gtf.gz

@@ -247,7 +247,7 @@ class KraitMainWindow(QMainWindow):
 
 		self.locating_action = QAction(QIcon("icons/locating.svg"), "Mapping", self,
 			toolTip = "Mapping tandem repeat sequences to gene features",
-			triggered = self.perform_tre_locating
+			triggered = self.do_str_mapping
 		)
 
 		self.primer_action = QAction(QIcon("icons/primer.svg"), "Primer", self,
@@ -600,10 +600,8 @@ class KraitMainWindow(QMainWindow):
 		if not save_file:
 			return
 
-		worker = SaveProjectThread(self, save_file)
-		self.perform_new_task(worker)
-
-		self.show_status_message("Successfully saved to {}".format(save_file))
+		self.run_work_thread(KraitSaveWorker, save_file)
+		
 
 	def close_project(self):
 		if DB.has_fasta():
@@ -834,6 +832,7 @@ class KraitMainWindow(QMainWindow):
 		self.current_worker.signals.progress.connect(self.progress_bar.setValue)
 		self.current_worker.signals.failure.connect(self.show_error_message)
 		self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
+		self.current_worker.signals.messages.connect(self.show_status_message)
 		QThreadPool.globalInstance().start(self.current_worker)
 
 	def do_ssr_search(self):
@@ -859,6 +858,9 @@ class KraitMainWindow(QMainWindow):
 
 	def do_issr_search(self):
 		self.run_work_thread(KraitISSRSearchWorker)
+
+	def do_str_mapping(self):
+		self.run_work_thread(KraitMappingWorker)
 
 	def do_primer_design(self):
 		try:

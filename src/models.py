@@ -357,22 +357,59 @@ class KraitTableModel(KraitBaseModel):
 		self.table = "{}_{}".format(self.table.split('_')[0], index)
 		self.select()
 
-class KraitSSRModel(KraitTableModel):
+class KraitRepeatModel(KraitTableModel):
+	def color_row(self, index):
+		colors = {
+			1: QColor(245, 183, 177), 
+			2: QColor(250, 215, 160), 
+			3: QColor(169, 223, 191),
+			4: QColor(174, 214, 241)
+		}
+
+		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
+		item = self.table.split('_')
+		rid = self.displayed[index.row()]
+		sql = "SELECT feature FROM map_{} WHERE type=? AND locus=? LIMIT 1".format(item[1])
+		fid = DB.get_one(sql, (types[item[0]], rid))
+		return colors.get(fid, QColor(255, 255, 255))
+
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
+
+		row = index.row()
+		col = index.column()
+
+		if role == Qt.DisplayRole:
+			return self.get_value(row, col)
+
+		elif role == Qt.CheckStateRole:
+			if col == 0:
+				if self.displayed[row] in self.selected:
+					return Qt.Checked
+
+				else:
+					return Qt.Unchecked
+
+		elif role == Qt.BackgroundRole:
+			return self.color_row(index)
+
+class KraitSSRModel(KraitRepeatModel):
 	table = 'ssr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif',
 					 'Smotif', 'Type', 'Repeats', 'Length']
 
-class KraitGTRModel(KraitTableModel):
+class KraitGTRModel(KraitRepeatModel):
 	table = 'gtr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Type',
 						'Repeats', 'Length', 'Motif']
 
-class KraitCSSRModel(KraitTableModel):
+class KraitCSSRModel(KraitRepeatModel):
 	table = 'cssr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Complexity',
 						'Length', 'Structure']
 
-class KraitISSRModel(KraitTableModel):
+class KraitISSRModel(KraitRepeatModel):
 	table = 'issr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif', 'Smotif',
 						'Type', 'Repeats', 'Length', 'Seed start', 'Seed end',

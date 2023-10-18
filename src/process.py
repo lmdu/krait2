@@ -1,15 +1,16 @@
 import os
 import sys
-import pytrf
-import primer3
-import pyfastx
 import traceback
 import multiprocessing
 
+import pytrf
+import primer3
+import pyfastx
 from PySide6.QtCore import *
 
 from utils import *
 from motif import *
+from annotate import *
 
 __all__ = ['KraitSSRSearchProcess', 'KraitCSSRSearchProcess',
 			'KraitISSRSearchProcess', 'KraitGTRSearchProcess',
@@ -287,16 +288,41 @@ class KraitPrimerDesignProcess(KraitBaseProcess):
 		self.send(type='primer', records=records, progress=len(self.repeats))
 
 class KraitMappingProcess(KraitBaseProcess):
-	def __init__(repeats, queue, fastx):
+	def __init__(self, repeats, queue, fastx):
 		super().__init__(None, queue, fastx)
 		self.repeats = repeats
+		self.total = len(repeats)
 
 	def do(self):
 		if not self.fastx['apath']:
 			return
 
 		mapper = get_annotation_mapper(self.fastx['apath'])
-		
+		features = mapper.feature_records
+
+		for i in range(0, len(features), 200):
+			chunk = features[i:i+200]
+			self.send(type='annot', records=chunk)
+
+		rows = []
+		for r in self.repeats:
+			fs = mapper.contain(r[1], r[2], r[3])
+
+			if fs:
+				ft = min(f[1] for f in fs)
+				ps = ','.join(str(f[0]) for f in set(fs))
+				rows.append((None, r[4], r[0], ft, ps))
+
+				if len(rows) == 200:
+					self.progress += 200
+					p = self.progress/self.total
+					self.send(type='map', records=rows, progress=p)
+					rows = []
+
+		if rows:
+			self.progress += len(rows)
+			p = self.progress/self.total
+			self.send(type='map', records=rows, progress=p)
 
 class KraitStatisticsProcess(multiprocessing.Process):
 	pass

@@ -26,7 +26,7 @@ __all__ = [
 	'KraitSSRSearchWorker', 'KraitCSSRSearchWorker',
 	'KraitISSRSearchWorker', 'KraitGTRSearchWorker',
 	'KraitPrimerDesignWorker', 'KraitMappingWorker',
-	'KraitStatisticsWorker'
+	'KraitStatisticsWorker', 'KraitSaveWorker'
 ]
 
 #signals can only be emit from QObject
@@ -35,6 +35,7 @@ class KraitWorkerSignals(QObject):
 	failure = Signal(str)
 	show_tab = Signal(str, int)
 	progress = Signal(int)
+	messages = Signal(str)
 
 class KraitBaseWorker(QRunnable):
 	processer = None
@@ -307,7 +308,8 @@ class KraitMappingWorker(KraitSearchWorker):
 	processer = KraitMappingProcess
 
 	def start_process(self, repeats, fastx):
-		DB.create_table(self.table_name, fastx['id'])
+		DB.create_table('map', fastx['id'])
+		DB.create_table('annot', fastx['id'])
 		proc = self.processer(repeats, self.queue, fastx)
 		proc.start()
 
@@ -342,7 +344,8 @@ class KraitMappingWorker(KraitSearchWorker):
 
 	def call_response(self, data):
 		if data['type'] == 'annot':
-			DB.update_fastx(data['records'])
+			table = "{}_{}".format(data['type'], data['id'])
+			DB.insert_rows(DB.get_sql(table), data['records'])
 
 		elif data['type'] == 'finish':
 			self.processes -= 1
@@ -361,15 +364,44 @@ class KraitMappingWorker(KraitSearchWorker):
 			if data['progress']:
 				self.update_progress(data)
 
-
-
-
-
-	
-
 class KraitStatisticsWorker(KraitBaseWorker):
 	table_name = 'stats'
 	processer = KraitStatisticsProcess
+
+class KraitSaveWorker(QRunnable):
+	def __init__(self, save_file=None):
+		super().__init__()
+		self.save_file = save_file
+		self.signals = KraitWorkerSignals()
+
+	def run(self):
+		self.signals.messages.emit("Saving to {}".format(self.save_file))
+		progress = 0
+
+		#close transaction
+		DB.commit()
+
+		with DB.save_to_file(self.save_file) as backup:
+			while not backup.done:
+				backup.step(10)
+				p = int((backup.pagecount - backup.remaining)/backup.pagecount*100)
+				if p > progress:
+					self.signals.progress.emit(p)
+					progress = p
+
+		self.signals.messages.emit("Successfully saved to {}".format(self.save_file))
+
+
+
+
+
+
+
+
+
+
+
+
 
 class WorkerSignal(QObject):
 	progress = Signal(int)
