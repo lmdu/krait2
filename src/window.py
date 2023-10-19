@@ -42,6 +42,7 @@ class KraitMainWindow(QMainWindow):
 		#self.file_table = FastaTableView(self)
 		self.create_fastx_tree()
 		self.create_seq_view()
+		self.create_annot_view()
 
 		self.create_actions()
 		self.create_menus()
@@ -87,12 +88,29 @@ class KraitMainWindow(QMainWindow):
 		self.seq_dock.setWidget(self.seq_view)
 		self.addDockWidget(Qt.BottomDockWidgetArea, self.seq_dock)
 
+	def create_annot_view(self):
+		self.annot_view = QTreeWidget(self)
+		self.annot_view.setHeaderLabels(["Feature", "Position", "Strand", "ID", "Name"])
+		self.annot_dock = QDockWidget("Annotaion", self)
+		self.annot_dock.setAllowedAreas(Qt.RightDockWidgetArea)
+		self.annot_dock.setWidget(self.annot_view)
+		self.addDockWidget(Qt.RightDockWidgetArea, self.annot_dock)
+
 	def closeEvent(self, event):
+		if DB.has_fastx() and DB.changed:
+			ret = QMessageBox.question(self, "Confirmation",
+				"Would you like to save the results before closing window?"
+			)
+
+			if ret == QMessageBox.Yes:
+				self.save_project()
+				self.wait_task_finish()
+
 		self.write_settings()
 
 		#stop the running worker
-		if self.current_worker:
-			self.current_worker.exit()
+		#if self.current_worker:
+		#	self.current_worker.exit()
 
 			#print('closed!')
 
@@ -496,6 +514,63 @@ class KraitMainWindow(QMainWindow):
 		self.seq_view.mark_sequence(self.current_file, target, marks)
 		#self.seq_view.set_sequence(self.current_file, cat, trs)
 
+	def show_repeat_annotation(self, category, repeat):
+		map_table = "map_{}".format(self.current_file)
+		annot_table = "annot_{}".format(self.current_file)
+		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
+		cat = types.get(category, 0)
+
+		if not cat or not DB.table_exists(map_table) or not DB.table_exists(annot_table):
+			self.annot_view.clear()
+			return
+
+		sql = "SELECT * FROM {} WHERE type=? AND locus=? LIMIT 1".format(map_table)
+		feat = DB.get_dict(sql, (cat, repeat.id))
+
+		if not feat:
+			self.annot_view.clear()
+			return
+
+		sql = "SELECT * FROM {} WHERE id IN ({})".format(annot_table, feat.parents)
+
+		items = {}
+		added = {}
+		children = {}
+		for parent in DB.get_dicts(sql):
+			ancestors = get_feature_parents(parent, self.current_file)
+			ancestors.reverse()
+			ancestors.append(parent)
+
+			for a in ancestors:
+				item = QTreeWidgetItem((a.type,
+					"{}:{}-{}".format(a.chrom, a.start, a.end),
+					a.strand, a.fid, a.name
+				))
+
+				if a.parent == 0:
+					if a.id not in items:
+						items[a.id] = item
+
+					father = items[a.id]
+					father_id = a.id
+
+				else:
+					if father_id not in added:
+						added[father_id] = set()
+
+					if a.id not in added[father_id]:
+						added[father_id].add(a.id)
+						father.addChild(item)
+						children[a.id] = item
+
+					father = children[a.id]
+					father_id = a.id
+
+		self.annot_view.clear()
+		self.annot_view.addTopLevelItems(list(items.values()))
+		self.annot_view.expandAll()
+		self.annot_view.header().setSectionResizeMode(QHeaderView.ResizeToContents)
+
 	@Slot()
 	def show_primer_table(self):
 		self.show_table('primer')
@@ -559,8 +634,6 @@ class KraitMainWindow(QMainWindow):
 
 			if ret == QMessageBox.Yes:
 				self.save_project()
-
-				#wait for save task finish
 				self.wait_task_finish()
 
 		open_file, _ = QFileDialog.getOpenFileName(self, filter="Krait Project File (*.kpf)")
@@ -570,9 +643,11 @@ class KraitMainWindow(QMainWindow):
 
 		self.project_file = open_file
 		DB.change_db(self.project_file)
-		self.file_table.update_table()
+		self.fastx_tree.update_model()
 
 		self.show_status_message("Open new project file {}".format(self.project_file))
+
+		self.setWindowTitle("{} - Krait v{}".format(self.project_file, KRAIT_VERSION))
 
 	def save_project(self):
 		if self.project_file is None:
@@ -582,17 +657,20 @@ class KraitMainWindow(QMainWindow):
 				return
 
 			self.project_file = save_file
-
-			worker = SaveProjectThread(self, self.project_file)
-			worker.finished.connect(lambda : DB.change_db(self.project_file))
-			self.perform_new_task(worker)
+			self.run_work_thread(KraitSaveWorker, save_file)
+			self.wait_task_finish()
+			DB.change_db(save_file)
+			self.setWindowTitle("{} - Krait v{}".format(save_file, KRAIT_VERSION))
+			self.fastx_tree.update_model()
+			
 		else:
 			if DB.changed:
 				DB.commit()
 				DB.begin()
 
-			self.show_status_message("Successfully saved to {}".format(self.project_file))
-			self.progress_bar.setValue(100)			
+			self.progress_bar.setValue(100)
+
+		self.show_status_message("Successfully saved to {}".format(self.project_file))
 
 	def save_project_as(self):
 		save_file, _ = QFileDialog.getSaveFileName(self, filter="Krait Project File (*.kpf)")
@@ -601,10 +679,9 @@ class KraitMainWindow(QMainWindow):
 			return
 
 		self.run_work_thread(KraitSaveWorker, save_file)
-		
 
 	def close_project(self):
-		if DB.has_fasta():
+		if DB.has_fastx():
 			if not self.project_file or (self.project_file and DB.changed):
 				ret = QMessageBox.question(self, "Confirmation",
 					"Would you like to save results before closing project",
@@ -620,9 +697,9 @@ class KraitMainWindow(QMainWindow):
 
 		self.project_file = None
 		DB.change_db(':memory:')
-		self.file_table.update_table()
+		self.fastx_tree.update_model()
 
-		self.show_status_message("Project was successfully closed")
+		self.setWindowTitle("Krait v{}".format(KRAIT_VERSION))
 
 	def import_fastx_files(self):
 		files = QFileDialog.getOpenFileNames(self,
@@ -782,8 +859,8 @@ class KraitMainWindow(QMainWindow):
 		self.perform_new_task(worker)
 
 	def wait_task_finish(self):
-		if self.threader:
-			self.threader.wait()
+		pool = QThreadPool.globalInstance()
+		pool.waitForDone()
 
 	def perform_new_task(self, worker):
 		if not DB.has_fastx():
@@ -902,7 +979,7 @@ class KraitMainWindow(QMainWindow):
 		table = self.get_current_table()
 
 		if table is None:
-			return QMessageBox.warning(self, "Warning", "There is no table to filter.")
+			return QMessageBox.warning(self, "Warning", "There is no table to filter")
 
 		dialog = KraitFilterDialog(self, table)
 		dialog.show()

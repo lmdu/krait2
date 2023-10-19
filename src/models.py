@@ -359,6 +359,12 @@ class KraitTableModel(KraitBaseModel):
 
 class KraitRepeatModel(KraitTableModel):
 	def color_row(self, index):
+		item = self.table.split('_')
+		map_table = 'map_{}'.format(item[1])
+
+		if not DB.table_exists(map_table):
+			return
+
 		colors = {
 			1: QColor(245, 183, 177), 
 			2: QColor(250, 215, 160), 
@@ -367,9 +373,9 @@ class KraitRepeatModel(KraitTableModel):
 		}
 
 		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
-		item = self.table.split('_')
+		
 		rid = self.displayed[index.row()]
-		sql = "SELECT feature FROM map_{} WHERE type=? AND locus=? LIMIT 1".format(item[1])
+		sql = "SELECT feature FROM {} WHERE type=? AND locus=? LIMIT 1".format(map_table)
 		fid = DB.get_one(sql, (types[item[0]], rid))
 		return colors.get(fid, QColor(255, 255, 255))
 

@@ -91,6 +91,11 @@ class GXFMapper:
 		rs = self.ranges.contain(chrom, start, end)
 		return [(r[2], self.feature_mapping[r[2]]) for r in rs]
 
+	def get_attr(self, keys, attrs):
+		for k in keys:
+			if k in attrs:
+				return attrs.get(k)
+
 class GFFMapper(GXFMapper):
 	def create_reader(self):
 		self.reader = GFFReader(self.annot_file)
@@ -108,7 +113,7 @@ class GFFMapper(GXFMapper):
 				start = exons[i].end + 1
 				end = exons[i+1].start - 1
 
-				self.feature_records.append([self.feature_id, pid, chrom, 'intron', start, end, strand, ''])
+				self.feature_records.append([self.feature_id, pid, chrom, 'intron', start, end, strand, '', ''])
 				self.feature_mapping[self.feature_id] = 4
 				self.ranges.add(chrom, start, end, self.feature_id)
 
@@ -118,14 +123,18 @@ class GFFMapper(GXFMapper):
 
 		for r in self.reader:
 			self.feature_id += 1
-			self.parent_mapping[r.id] = self.feature_id
+			self.parent_mapping[r.attrs.id] = self.feature_id
 
 			if 'parent' in r.attrs:
 				pid = self.parent_mapping[r.attrs.parent]
 			else:
 				pid = 0
 
-			self.feature_records.append([self.feature_id, pid, r.chrom, r.type, r.start, r.end, r.strand, json.dumps(r.attrs)])
+			fid = r.attrs.id
+			name_keys = ['name', 'gene', 'gene_name', 'exon_name', 'cds_name', 'utr_name', 'id']
+			fname = self.get_attr(name_keys, r.attrs)
+
+			self.feature_records.append([self.feature_id, pid, r.chrom, r.type, r.start, r.end, r.strand, fid, fname])
 
 			if r.type == 'cds':
 				self.ranges.add(r.chrom, r.start, r.end, self.feature_id)
@@ -139,7 +148,15 @@ class GFFMapper(GXFMapper):
 
 			elif 'utr' in r.type:
 				self.ranges.add(r.chrom, r.start, r.end, self.feature_id)
-				self.feature_mapping[self.feature_id] = 3
+
+				if '3' in r.type or 'three' in r.type:
+					self.feature_mapping[self.feature_id] = 3
+
+				elif '5' in r.type or 'five' in r.type:
+					self.feature_mapping[self.feature_id] = 5
+
+				else:
+					self.feature_mapping[self.feature_id] = 4
 
 			else:
 				self.generate_introns(exons or cds)
@@ -170,8 +187,8 @@ class GTFMapper(GXFMapper):
 				start = exons[i].end + 1
 				end = exons[i+1].start - 1
 
-				self.feature_records.append([self.feature_id, pid, chrom, 'intron', start, end, strand, ''])
-				self.feature_mapping[self.feature_id] = 4
+				self.feature_records.append([self.feature_id, pid, chrom, 'intron', start, end, strand, '', ''])
+				self.feature_mapping[self.feature_id] = 6
 				self.ranges.add(chrom, start, end, self.feature_id)
 
 	def parse(self):
@@ -184,15 +201,37 @@ class GTFMapper(GXFMapper):
 			if r.attrs.gene_id not in self.parent_mapping:
 				self.parent_mapping[r.attrs.gene_id] = self.feature_id
 				pid = 0
+				fid = r.attrs.gene_id
+
+				name_keys = ['gene', 'gene_name', 'name', 'locus_tag', 'product', 'protein_id', 'gene_id']
+				fname = self.get_attr(name_keys, r.attrs)
 
 			elif r.attrs.transcript_id not in self.parent_mapping:
 				self.parent_mapping[r.attrs.transcript_id] = self.feature_id
 				pid = self.parent_mapping[r.attrs.gene_id]
+				fid = r.attrs.transcript_id
+
+				name_keys = ['transcript_name', 'name', 'transcript_id']
+				fname = self.get_attr(name_keys, r.attrs)
 
 			else:
+				id_keys = ['exon_id', 'cds_id', 'utr_id', 'id', 'exon_number', 'cds_number']
+				fid = ''
+				for k in id_keys:
+					if k in r.attrs:
+						fid = r.attrs.get(k)
+
+						if 'number' in k:
+							fid = "{}{}".format(r.type, fid)
+
+						break
+
+				name_keys = ['name', 'exon_name', 'cds_name', 'utr_name']
+				fname = self.get_attr(name_keys, r.attrs)
+
 				pid = self.parent_mapping.get(r.attrs.transcript_id, self.parent_mapping[r.attrs.gene_id])
 
-			self.feature_records.append([self.feature_id, pid, r.chrom, r.type, r.start, r.end, r.strand, json.dumps(r.attrs)])
+			self.feature_records.append([self.feature_id, pid, r.chrom, r.type, r.start, r.end, r.strand, fid, fname])
 
 			if r.type == 'cds':
 				self.ranges.add(r.chrom, r.start, r.end, self.feature_id)

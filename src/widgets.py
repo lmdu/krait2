@@ -113,6 +113,7 @@ class KraitTableView(QTableView):
 
 		repeat = self._model.get_row(index)
 		self.parent.show_dna_sequence(self.table_name, repeat)
+		self.parent.show_repeat_annotation(self.table_name, repeat)
 
 	@Slot()
 	def change_select_all_state(self, select):

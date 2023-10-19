@@ -8,7 +8,8 @@ from backend import *
 __all__ = ["check_fastx_format", "AttrDict", "get_fastx_info",
 			"iupac_numerical_multiplier", "primer_tag_format",
 			"product_size_format", "get_annotation_format",
-			'generate_tandem_marks', 'generate_primer_marks'
+			'generate_tandem_marks', 'generate_primer_marks',
+			'get_feature_parents'
 			]
 
 class AttrDict(dict):
@@ -294,6 +295,21 @@ def generate_primer_marks(index, primer, flank=100):
 	))
 
 	return target, marks
+
+
+def get_feature_parents(feature, index):
+	parents = []
+
+	if feature.parent == 0:
+		return parents
+
+	sql = "SELECT * FROM annot_{} WHERE id=?".format(index)
+	parent = DB.get_dict(sql, (feature.parent,))
+	parents.append(parent)
+
+	tmp = get_feature_parents(parent, index)
+	parents.extend(tmp)
+	return parents
 
 
 if __name__ == '__main__':

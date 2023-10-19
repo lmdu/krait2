@@ -113,7 +113,8 @@ CREATE TABLE IF NOT EXISTS annot_{} (
 	start INTEGER,
 	end INTEGER,
 	strand TEXT,
-	attributes TEXT
+	fid TEXT,
+	name TEXT
 )
 """
 
@@ -234,11 +235,7 @@ class DataBackend:
 			return self.cursor.execute(sql, paras)
 
 	def table_exists(self, table):
-		try:
-			self.query("SELECT 1 FROM {}".format(table))
-			return True
-		except:
-			return False
+		return self.conn.table_exists(None, table)
 
 	def get_one(self, sql, paras=None):
 		for row in self.query(sql, paras):
@@ -269,6 +266,13 @@ class DataBackend:
 		for row in cur:
 			fields = [col[0] for col in cur.getdescription()]
 			return DataRow(zip(fields, row))
+
+	def get_dicts(self, sql, paras=None):
+		cur = self.query(sql, paras)
+
+		for row in cur:
+			fields = [col[0] for col in cur.getdescription()]
+			yield DataRow(zip(fields, row))
 
 	def get_field(self, table):
 		return [row[1] for row in self.query("PRAGMA table_info({})".format(table))]
