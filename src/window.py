@@ -94,6 +94,7 @@ class KraitMainWindow(QMainWindow):
 		self.annot_dock = QDockWidget("Annotaion", self)
 		self.annot_dock.setAllowedAreas(Qt.RightDockWidgetArea)
 		self.annot_dock.setWidget(self.annot_view)
+		self.annot_dock.setVisible(False)
 		self.addDockWidget(Qt.RightDockWidgetArea, self.annot_dock)
 
 	def closeEvent(self, event):
@@ -202,10 +203,14 @@ class KraitMainWindow(QMainWindow):
 
 		#view actions
 		self.fastx_action = self.fastx_dock.toggleViewAction()
-		self.fastx_action.setText("Show sequence files")
+		self.fastx_action.setText("Show file list")
 
 		self.seqview_action = self.seq_dock.toggleViewAction()
 		self.seqview_action.setText("Show sequence viewer")
+
+		self.annotview_action = self.annot_dock.toggleViewAction()
+		self.annotview_action.setText("Show annotation viewer")
+		self.annotview_action.setChecked(False)
 
 		#run actions
 		#self.search_group_action = QActionGroup(self)
@@ -311,6 +316,7 @@ class KraitMainWindow(QMainWindow):
 		self.view_menu = self.menuBar().addMenu("&View")
 		self.view_menu.addAction(self.fastx_action)
 		self.view_menu.addAction(self.seqview_action)
+		self.view_menu.addAction(self.annotview_action)
 
 		self.run_menu = self.menuBar().addMenu("&Run")
 		#self.run_menu.addAction(self.search_all_action)
@@ -417,7 +423,7 @@ class KraitMainWindow(QMainWindow):
 	def on_tab_changed(self, index):
 		widget = self.tab_widget.currentWidget()
 		widget.count_emit()
-		
+
 		if not self.current_filters:
 			return
 
@@ -515,6 +521,9 @@ class KraitMainWindow(QMainWindow):
 		#self.seq_view.set_sequence(self.current_file, cat, trs)
 
 	def show_repeat_annotation(self, category, repeat):
+		if not self.annotview_action.isChecked() or self.current_table.startswith('primer'):
+			return
+
 		map_table = "map_{}".format(self.current_file)
 		annot_table = "annot_{}".format(self.current_file)
 		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
@@ -634,7 +643,6 @@ class KraitMainWindow(QMainWindow):
 
 			if ret == QMessageBox.Yes:
 				self.save_project()
-				self.wait_task_finish()
 
 		open_file, _ = QFileDialog.getOpenFileName(self, filter="Krait Project File (*.kpf)")
 
@@ -693,7 +701,6 @@ class KraitMainWindow(QMainWindow):
 
 				if ret == QMessageBox.Yes:
 					self.save_project()
-					self.wait_task_finish()
 
 		self.project_file = None
 		DB.change_db(':memory:')

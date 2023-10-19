@@ -163,11 +163,14 @@ def get_fastx_info(index):
 		('ns', 'Unknown bases'),
 		('count', 'Sequence count'),
 		('gc', 'GC content'),
+		('avglen', 'Average sequence length'),
+		('minlen', 'minimum sequence length'),
+		('maxlen', 'maximum sequence length'),
 		['hr', False],
 		('message', 'Message')
 	]
 
-	if any((fastx.size, fastx.ns, fastx.count, fastx.gc)):
+	if fastx.size:
 		fields[5][1] = True
 
 	if fastx.message:

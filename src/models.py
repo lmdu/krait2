@@ -339,6 +339,16 @@ class KraitFastxModel(KraitBaseModel):
 		if role == Qt.DisplayRole:
 			return self.get_value(row, col)
 
+		elif role == Qt.FontRole:
+			if self.get_value(row, 5):
+				font = QFont()
+				font.setBold(True)
+				return font
+
+		#elif role == Qt.ForegroundRole:
+		#	if self.get_value(row, 5):
+		#		return QColor(0, 109, 44)
+
 		elif role == Qt.DecorationRole:
 			if self.get_value(row, 3) == 1:
 				return QIcon('icons/run.svg')

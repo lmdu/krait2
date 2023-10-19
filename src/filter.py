@@ -132,7 +132,7 @@ class KraitFilterDialog(QDialog):
 	def __init__(self, parent=None, table=None):
 		super().__init__(parent)
 
-		self.setWindowTitle("Filter Rows")
+		self.setWindowTitle("Filters")
 		self.resize(QSize(500, 300))
 		self.setModal(False)
 		self.parent = parent
@@ -142,7 +142,7 @@ class KraitFilterDialog(QDialog):
 		self.types = DB.get_field_type(self.table)
 
 		self.filters = self.parent.current_filters.get(self.table, [])
-		self.features = self.parent.current_filters.get('feature', set())
+		self.features = self.parent.current_filters.get('feature', [])
 
 		if not self.filters:
 			self.filters = [['', 'id', '>', 0]]
@@ -171,19 +171,24 @@ class KraitFilterDialog(QDialog):
 		filter_box.addButton(del_btn, QDialogButtonBox.ActionRole)
 		filter_box.addButton(clr_btn, QDialogButtonBox.ActionRole)
 
-		cds_check = QCheckBox('CDS', self)
-		exon_check = QCheckBox('exon', self)
-		utr3_check = QCheckBox("3'UTR", self)
-		utr5_check = QCheckBox("5'UTR", self)
-		intron_check = QCheckBox('intron', self)
+		self.cds_check = QCheckBox('CDS', self)
+		self.cds_check.setChecked(1 in self.features)
+		self.exon_check = QCheckBox('exon', self)
+		self.exon_check.setChecked(2 in self.features)
+		self.utr3_check = QCheckBox("3'UTR", self)
+		self.utr3_check.setChecked(3 in self.features)
+		self.utr5_check = QCheckBox("5'UTR", self)
+		self.utr3_check.setChecked(5 in self.features)
+		self.intron_check = QCheckBox('intron', self)
+		self.intron_check.setChecked(4 in self.features)
 
 		check_layout = QHBoxLayout()
 		check_layout.addWidget(QLabel("Only display repeats on: "))
-		check_layout.addWidget(cds_check)
-		check_layout.addWidget(exon_check)
-		check_layout.addWidget(utr3_check)
-		check_layout.addWidget(utr5_check)
-		check_layout.addWidget(intron_check)
+		check_layout.addWidget(self.cds_check)
+		check_layout.addWidget(self.exon_check)
+		check_layout.addWidget(self.utr3_check)
+		check_layout.addWidget(self.utr5_check)
+		check_layout.addWidget(self.intron_check)
 		check_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
 		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
@@ -227,6 +232,16 @@ class KraitFilterDialog(QDialog):
 
 	def update_filter(self):
 		_filters = []
+		_features = []
+
+		_type, _index = self.table.split('_')
+
+		if self.cds_check.isChecked(): _features.append(1)
+		if self.exon_check.isChecked(): _features.append(2)
+		if self.utr3_check.isChecked(): _features.append(3)
+		if self.utr5_check.isChecked(): _features.append(5)
+		if self.intron_check.isChecked(): _features.append(4)
+
 		for row in self.filters:
 			for idx, col in enumerate(row):
 				if idx == 2:
@@ -245,10 +260,27 @@ class KraitFilterDialog(QDialog):
 				else:
 					_filters.append(col)
 
-		if _filters:
-			self.parent.current_filters = {self.table: _filters}
-		else:
-			self.parent.current_filters = {}
+		self.parent.current_filters = {}
+
+		if self.filters:
+			self.parent.current_filters[self.table] = self.filters
+
+		if _features and _type != 'primer':
+			self.parent.current_filters['feature'] = _features
+			types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
+
+			if len(_features) > 1:
+				_filters.append("AND id IN (SELECT locus FROM map_{} WHERE type={} AND feature IN ({}))".format(
+					_index,
+					types[_type],
+					','.join(map(str, _features))
+				))
+			else:
+				_filters.append("AND id IN (SELECT locus FROM map_{} WHERE type={} AND feature={})".format(
+					_index,
+					types[_type],
+					_features[0]
+				))
 
 		_filters = ' '.join(_filters)
 		self.parent.set_filter(self.table, _filters)
