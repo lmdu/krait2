@@ -32,6 +32,7 @@ __all__ = [
 #signals can only be emit from QObject
 class KraitWorkerSignals(QObject):
 	finished = Signal()
+	status = Signal()
 	failure = Signal(str)
 	show_tab = Signal(str, int)
 	progress = Signal(int)
@@ -103,6 +104,7 @@ class KraitSearchWorker(KraitBaseWorker):
 		super().__init__()
 
 		self.total_fastx = 0
+		self.total_size = 0
 		self.fastx_query = None
 		self.progresses = {}
 		self.concurrent = self.settings.value('Run/concurrent', 1, int)
@@ -111,15 +113,17 @@ class KraitSearchWorker(KraitBaseWorker):
 		pass
 
 	def query_fastx(self):
+		self.total_size = DB.get_one("SELECT SUM(bytes) FROM fastx")
 		self.total_fastx = DB.get_count('fastx')
 		self.fastx_query = DB.query("SELECT * FROM fastx")
 
 	def update_progress(self, data):
 		self.progresses[data['id']] = data['progress']
-		p = sum(self.progresses.values())/self.total_fastx*100
+		p = sum(self.progresses.values())*100
 		self.signals.progress.emit(p)
 
 	def start_process(self, fastx):
+		DB.drop_table(self.table_name, fastx['id'])
 		DB.create_table(self.table_name, fastx['id'])
 		proc = self.processer(self.params, self.queue, fastx)
 		proc.start()
@@ -131,6 +135,22 @@ class KraitSearchWorker(KraitBaseWorker):
 			fields = [name for name, _ in self.fastx_query.getdescription()]
 			return dict(zip(fields, row))
 
+	def update_status(self, fid=None, status=None):
+		if fid is None:
+			DB.query("UPDATE fastx SET status=3")
+		else:
+			DB.update_status(fid, status)
+
+		self.signals.status.emit()
+
+	def update_success(self, fid):
+		self.update_status(fid, 1)
+
+	def update_error(self, fid, err):
+		DB.query("UPDATE fastx SET message=? WHERE id=?", (err, fid))
+		self.update_status(fid, 0)
+		self.signals.status.emit()
+
 	def submit_process(self):
 		if self.fastx_query is None:
 			return
@@ -141,15 +161,21 @@ class KraitSearchWorker(KraitBaseWorker):
 		fastx = self.get_fastx()
 
 		if fastx:
+			fastx['weight'] = fastx['bytes']/self.total_size
 			self.start_process(fastx)
 			self.processes += 1
+			self.update_status(fastx['id'], 2)
 
 	def before_run(self):
+		self.update_status()
 		self.query_fastx()
 
 	def call_response(self, data):
 		if data['type'] == 'fastx':
 			DB.update_fastx(data['records'])
+
+		elif data['type'] == 'success':
+			self.update_success(data['id'])
 
 		elif data['type'] == 'finish':
 			self.processes -= 1
@@ -160,7 +186,7 @@ class KraitSearchWorker(KraitBaseWorker):
 				self.signals.show_tab.emit(self.table_name, data['id'])
 
 		elif data['type'] == 'error':
-			raise Exception(data['message'])
+			self.update_error(data['id'], data['message'])
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])
@@ -272,6 +298,7 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 	def before_run(self):
 		sql = "SELECT * FROM fastx WHERE id=? LIMIT 1"
 		self.fastx = DB.get_dict(sql, (self.index,))
+		DB.drop_table(self.table_name, self.index)
 		DB.create_table(self.table_name, self.index)
 
 	def submit_process(self):
@@ -284,10 +311,11 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 		self.processes += 1
 
 	def call_response(self, data):
-		if data['type'] == 'finish':
+		if data['type'] == 'success':
 			self.processes -= 1
 			self.submit_process()
 
+		elif data['type'] == 'finish':
 			if self.processes == 0:
 				self.queue.close()
 
@@ -347,15 +375,17 @@ class KraitMappingWorker(KraitSearchWorker):
 			table = "{}_{}".format(data['type'], data['id'])
 			DB.insert_rows(DB.get_sql(table), data['records'])
 
+		elif data['type'] == 'success':
+			self.update_success(data['id'])
+
 		elif data['type'] == 'finish':
 			self.processes -= 1
 			self.submit_process()
-
 			if self.processes == 0:
 				self.exit()
 
 		elif data['type'] == 'error':
-			raise Exception(data['message'])
+			self.update_error(data['id'], data['message'])
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])

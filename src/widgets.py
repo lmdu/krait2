@@ -22,6 +22,7 @@ class KraitFastxTree(QTreeView):
 		self._model.row_count.connect(self.parent.file_counter.setNum)
 
 		self.setColumnHidden(0, True)
+		self.header().hide()
 
 		self.clicked.connect(self.on_fastx_file_clicked)
 

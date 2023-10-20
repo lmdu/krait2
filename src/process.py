@@ -33,6 +33,9 @@ class KraitBaseProcess(multiprocessing.Process):
 	def finish(self):
 		self.send(type='finish')
 
+	def success(self):
+		self.send(type='success')
+
 	def error(self, msg):
 		print(msg)
 		self.send(type='error', message=msg)
@@ -47,6 +50,8 @@ class KraitBaseProcess(multiprocessing.Process):
 		try:
 			self.prepare()
 			self.do()
+			self.success()
+
 		except:
 			errmsg = traceback.format_exc()
 			self.error(errmsg)
@@ -109,7 +114,7 @@ class KraitSSRSearchProcess(KraitSearchProcess):
 					smotif, ssr[4], ssr[5], ssr[6]))
 
 			self.progress += len(seq)
-			p = self.progress/self.fastx['size']
+			p = self.progress/self.fastx['size']*self.fastx['weight']
 
 			self.send(type='ssr', records=rows, progress=p)
 
@@ -152,8 +157,8 @@ class KraitCSSRSearchProcess(KraitSearchProcess):
 			records.append(self.join_ssrs(cssrs))
 
 		if records:
-			progress = self.progress/self.total_ssrs
-			self.send(type='cssr', records=records, progress=progress)
+			p = self.progress/self.total_ssrs*self.fastx['weight']
+			self.send(type='cssr', records=records, progress=p)
 
 	def join_ssrs(self, cssrs):
 		chrom = cssrs[0][1]
@@ -193,9 +198,9 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 					issr[10], issr[11], issr[12], issr[13], round(issr[14], 2)))
 
 			self.progress += len(seq)
-			progress = self.progress/self.fastx['size']
+			p = self.progress/self.fastx['size']*self.fastx['weight']
 
-			self.send(type='issr', records=records, progress=progress)
+			self.send(type='issr', records=records, progress=p)
 
 class KraitGTRSearchProcess(KraitSearchProcess):
 	def do(self):
@@ -218,9 +223,9 @@ class KraitGTRSearchProcess(KraitSearchProcess):
 					gtr[5], gtr[6], gtr[3]))
 
 			self.progress += len(seq)
-			progress = self.progress/self.fastx['size']
+			p = self.progress/self.fastx['size']*self.fastx['weight']
 
-			self.send(type='gtr', records=records, progress=progress)
+			self.send(type='gtr', records=records, progress=p)
 
 class KraitPrimerDesignProcess(KraitBaseProcess):
 	def __init__(self, repeats, index, category, params, queue, fastx):
@@ -315,13 +320,13 @@ class KraitMappingProcess(KraitBaseProcess):
 
 				if len(rows) == 200:
 					self.progress += 200
-					p = self.progress/self.total
+					p = self.progress/self.total*self.fastx['weight']
 					self.send(type='map', records=rows, progress=p)
 					rows = []
 
 		if rows:
 			self.progress += len(rows)
-			p = self.progress/self.total
+			p = self.progress/self.total*self.fastx['weight']
 			self.send(type='map', records=rows, progress=p)
 
 class KraitStatisticsProcess(multiprocessing.Process):

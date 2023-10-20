@@ -1,4 +1,5 @@
 import apsw
+import threading
 
 __all__ = ['DB']
 
@@ -17,7 +18,8 @@ CREATE TABLE IF NOT EXISTS fastx (
 	ns INTEGER,
 	avglen REAL,
 	minlen INTEGER,
-	maxlen INTEGER
+	maxlen INTEGER,
+	bytes INTEGER
 )
 """
 
@@ -161,6 +163,7 @@ class DataBackend:
 	conn = None
 
 	def __init__(self):
+		self.lock = threading.Lock()
 		self._connect_to_db()
 
 	def __del__(self):
@@ -175,7 +178,11 @@ class DataBackend:
 
 	@property
 	def cursor(self):
-		return self.conn.cursor()
+		cur = self.conn.cursor()
+		cur.execute("SELECT 1")
+		print(id(cur))
+
+		return cur
 
 	def _optimize(self):
 		self.query("PRAGMA synchronous=OFF")
@@ -205,6 +212,10 @@ class DataBackend:
 	def create_table(self, table, idx):
 		sql = TABLE_SQL_MAPPING[table].format(idx)
 		self.cursor.execute(sql)
+
+	def drop_table(self, table, idx):
+		if self.table_exists("{}_{}".format(table, idx)):
+			self.cursor.execute("DELETE FROM {}_{}".format(table, idx))
 
 	def clear_table(self, table, idx):
 		self.query("DELETE FROM {}_{}".format(table, idx))
@@ -265,9 +276,23 @@ class DataBackend:
 
 		for row in cur:
 			fields = [col[0] for col in cur.getdescription()]
-			return DataRow(zip(fields, row))
+			return dict(zip(fields, row))
 
 	def get_dicts(self, sql, paras=None):
+		cur = self.query(sql, paras)
+
+		for row in cur:
+			fields = [col[0] for col in cur.getdescription()]
+			yield dict(zip(fields, row))
+
+	def get_object(self, sql, paras=None):
+		cur = self.query(sql, paras)
+
+		for row in cur:
+			fields = [col[0] for col in cur.getdescription()]
+			return DataRow(zip(fields, row))
+
+	def get_objects(self, sql, paras=None):
 		cur = self.query(sql, paras)
 
 		for row in cur:

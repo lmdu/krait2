@@ -288,7 +288,7 @@ class KraitBaseModel(QAbstractTableModel):
 	def get_row(self, index):
 		row_id = index.siblingAtColumn(0).data()
 		sql = "SELECT * FROM {} WHERE id=? LIMIT 1".format(self.table)
-		return DB.get_dict(sql, (row_id,))
+		return DB.get_object(sql, (row_id,))
 
 	def get_selected_count(self):
 		return len(self.selected)
@@ -350,17 +350,17 @@ class KraitFastxModel(KraitBaseModel):
 		#		return QColor(0, 109, 44)
 
 		elif role == Qt.DecorationRole:
-			if self.get_value(row, 3) == 1:
-				return QIcon('icons/run.svg')
+			val = self.get_value(row, 3)
 
-			elif self.get_value(row, 5):
-				return QIcon('icons/annot.svg')
+			status_icons = {
+				0: QIcon('icons/error.svg'),
+				1: QIcon('icons/success.svg'),
+				2: QIcon('icons/run.svg'),
+				3: QIcon('icons/pend.svg'),
+				4: QIcon('icons/queue.svg')
+			}
 
-			#elif self.get_value(row, 8) == 2:
-			#	return QIcon('icons/fastq.svg')
-
-			#else:
-			#	return QIcon('icons/fasta.svg')
+			return status_icons[val]
 
 class KraitTableModel(KraitBaseModel):
 	def set_index(self, index):

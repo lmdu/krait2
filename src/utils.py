@@ -1,5 +1,7 @@
+import os
 import sys
 import gzip
+import struct
 import pyfastx
 
 from config import *
@@ -9,12 +11,35 @@ __all__ = ["check_fastx_format", "AttrDict", "get_fastx_info",
 			"iupac_numerical_multiplier", "primer_tag_format",
 			"product_size_format", "get_annotation_format",
 			'generate_tandem_marks', 'generate_primer_marks',
-			'get_feature_parents'
+			'get_feature_parents', 'get_file_size'
 			]
 
 class AttrDict(dict):
 	def __getattr__(self, attr):
 		return self[attr]
+
+def get_file_size(fastx):
+	_size = os.path.getsize(fastx)
+
+	if pyfastx.gzip_check(fastx):
+		#estimate gzip uncompressed size
+		#from https://github.com/turicas/rows
+		with open(fastx, 'rb') as fh:
+			fh.seek(-4, 2)
+			usize = struct.unpack("<I", fh.read())[0]
+
+		if _size > usize:
+			i, v = 32, usize
+
+			while v <= 2**32 and v < _size:
+				v = (1 << i) ^ usize
+				i += 1
+
+			usize = v
+
+		_size = usize
+
+	return _size
 
 def check_fastx_format(fastx):
 	if pyfastx.gzip_check(fastx):
@@ -150,7 +175,7 @@ def get_annotation_format(annot_file):
 				raise Exception("the annotation file is not GFF or GTF formatted file")
 
 def get_fastx_info(index):
-	fastx = DB.get_dict("SELECT * FROM fastx WHERE id=?", (index,))
+	fastx = DB.get_object("SELECT * FROM fastx WHERE id=?", (index,))
 
 	fields = [
 		('id', 'File ID'),
@@ -174,7 +199,7 @@ def get_fastx_info(index):
 		fields[5][1] = True
 
 	if fastx.message:
-		fields[10][1] = True
+		fields[13][1] = True
 
 	contents = ['<table width="100%">']
 
@@ -270,7 +295,9 @@ def generate_primer_marks(index, primer, flank=100):
 	category, _, locus = primer.locus.split('-')
 
 	sql = "SELECT * FROM {}_{} WHERE id=?".format(category, index)
-	repeat = DB.get_dict(sql, (int(locus),))
+	repeat = DB.get_object(sql, (int(locus),))
+
+	print(repeat)
 
 	start = repeat.start - flank
 	if start < 1: start = 1
@@ -307,7 +334,7 @@ def get_feature_parents(feature, index):
 		return parents
 
 	sql = "SELECT * FROM annot_{} WHERE id=?".format(index)
-	parent = DB.get_dict(sql, (feature.parent,))
+	parent = DB.get_object(sql, (feature.parent,))
 	parents.append(parent)
 
 	tmp = get_feature_parents(parent, index)

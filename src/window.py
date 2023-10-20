@@ -109,14 +109,6 @@ class KraitMainWindow(QMainWindow):
 
 		self.write_settings()
 
-		#stop the running worker
-		#if self.current_worker:
-		#	self.current_worker.exit()
-
-			#print('closed!')
-
-		#event.ignore()
-
 	def create_actions(self):
 		#menu actions
 		self.open_action = QAction("&Open project...", self,
@@ -186,18 +178,18 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		#edit actions
-		self.filter_set_action = QAction("&Do filter for current table", self,
-			toolTip = "Filter rows from the current table",
+		self.filter_set_action = QAction("&Filter rows", self,
+			toolTip = "Filter rows for the current table",
 			triggered = self.open_filter_dialog
 		)
-		self.search_param_action = QAction("&Repeat search parameters", self,
+		self.search_param_action = QAction("&Repeat search settings", self,
 			shortcut = QKeySequence.Preferences,
-			statusTip = "Set search parameters",
+			statusTip = "Set repeat search parameters",
 			triggered = self.open_search_param_dialog
 		)
 
-		self.primer_param_action = QAction("&Primer design parameters", self,
-			statusTip = "Set primer parameters",
+		self.primer_param_action = QAction("&Primer design settings", self,
+			statusTip = "Set primer design parameters",
 			triggered = self.open_primer_param_dialog
 		)
 
@@ -422,6 +414,10 @@ class KraitMainWindow(QMainWindow):
 	@Slot()
 	def on_tab_changed(self, index):
 		widget = self.tab_widget.currentWidget()
+
+		if widget is None:
+			return
+
 		widget.count_emit()
 
 		if not self.current_filters:
@@ -452,6 +448,8 @@ class KraitMainWindow(QMainWindow):
 
 		for table in tables:
 			self.show_tab_widgets(table)
+
+		self.tab_widget.setCurrentIndex(0)
 
 	@Slot(str, int)
 	def show_tab_widgets(self, table, idx=None):
@@ -534,7 +532,7 @@ class KraitMainWindow(QMainWindow):
 			return
 
 		sql = "SELECT * FROM {} WHERE type=? AND locus=? LIMIT 1".format(map_table)
-		feat = DB.get_dict(sql, (cat, repeat.id))
+		feat = DB.get_object(sql, (cat, repeat.id))
 
 		if not feat:
 			self.annot_view.clear()
@@ -545,7 +543,7 @@ class KraitMainWindow(QMainWindow):
 		items = {}
 		added = {}
 		children = {}
-		for parent in DB.get_dicts(sql):
+		for parent in DB.get_objects(sql):
 			ancestors = get_feature_parents(parent, self.current_file)
 			ancestors.reverse()
 			ancestors.append(parent)
@@ -595,18 +593,6 @@ class KraitMainWindow(QMainWindow):
 	@Slot(int)
 	def change_task_status(self, fasta_id):
 		self.file_table.update_status(fasta_id)
-
-	@Slot(int)
-	def change_row_count(self, count):
-		self.row_label.setText(str(count))
-
-	@Slot(int)
-	def change_column_count(self, count):
-		self.col_label.setText(str(count))
-
-	@Slot(int)
-	def change_select_count(self, count):
-		self.sel_label.setText(str(count))
 
 	@Slot(int)
 	def change_current_table(self, index):
@@ -702,6 +688,11 @@ class KraitMainWindow(QMainWindow):
 				if ret == QMessageBox.Yes:
 					self.save_project()
 
+		self.tab_widget.clear()
+		self.row_counter.setText(str(0))
+		self.column_counter.setText(str(0))
+		self.select_counter.setText(str(0))
+
 		self.project_file = None
 		DB.change_db(':memory:')
 		self.fastx_tree.update_model()
@@ -724,11 +715,11 @@ class KraitMainWindow(QMainWindow):
 		for fa in files[0]:
 			qf = QFileInfo(fa)
 			name = qf.baseName()
-
-			fas.append((name, fa))
+			size = get_file_size(fa)
+			fas.append((name, fa, 4, size))
 
 		if fas:
-			sql = "INSERT INTO fastx (name, fpath) VALUES (?,?)"
+			sql = "INSERT INTO fastx (name, fpath, status, bytes) VALUES (?,?,?,?)"
 			DB.insert_rows(sql, fas)
 			self.fastx_tree.update_model()
 
@@ -752,10 +743,11 @@ class KraitMainWindow(QMainWindow):
 
 			qf = QFileInfo(fa)
 			name = qf.baseName()
-			fas.append((name, fa))
+			size = get_file_size(fa)
+			fas.append((name, fa, 4, size))
 
 		if fas:
-			sql = "INSERT INTO fastx (name, fpath) VALUES (?,?)"
+			sql = "INSERT INTO fastx (name, fpath, status, bytes) VALUES (?,?,?,?)"
 			DB.insert_rows(sql, fas)
 			self.fastx_tree.update_model()
 
@@ -917,6 +909,7 @@ class KraitMainWindow(QMainWindow):
 		self.current_worker.signals.failure.connect(self.show_error_message)
 		self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
 		self.current_worker.signals.messages.connect(self.show_status_message)
+		self.current_worker.signals.status.connect(self.fastx_tree.update_model)
 		QThreadPool.globalInstance().start(self.current_worker)
 
 	def do_ssr_search(self):
@@ -954,7 +947,7 @@ class KraitMainWindow(QMainWindow):
 			count = 0
 
 		if not count or rtype not in {'ssr', 'issr', 'cssr', 'gtr'}:
-			QMessageBox.warning(self, "Warning", "Please select some tandem repeats for primer design")
+			QMessageBox.warning(self, "Warning", "Please select some repeats for primer design")
 			return
 
 		self.run_work_thread(KraitPrimerDesignWorker, self.current_file, count, rows, rtype)
