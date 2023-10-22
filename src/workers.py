@@ -366,6 +366,7 @@ class KraitMappingWorker(KraitSearchWorker):
 		fastx = self.get_fastx()
 
 		if fastx:
+			fastx['weight'] = fastx['bytes']/self.total_size
 			repeats = self.get_repeats(fastx['id'])
 			self.start_process(repeats, fastx)
 			self.processes += 1
@@ -397,6 +398,57 @@ class KraitMappingWorker(KraitSearchWorker):
 class KraitStatisticsWorker(KraitBaseWorker):
 	table_name = 'stats'
 	processer = KraitStatisticsProcess
+
+	def get_params(self):
+		default, convert = KRAIT_SEARCH_PARAMETERS['STAT/unit']
+		unit = self.settings.value('STAT/unit', default, convert)
+		return {'unit': unit}
+
+	def start_process(self, rtype, repeats, fastx):
+		self.proc = self.processer(rtype, repeats, self.params, self.queue, fastx)
+		self.proc.start()
+
+	def get_repeats(self):
+		if self.fastx_query is None:
+			return
+
+		fastx = self.get_fastx()
+
+		if not fastx:
+			return
+
+		for rtype in ['ssr', 'cssr', 'gtr', 'issr']:
+			rows = DB.get_rows("SELECT * FROM {}_{}".format(rtype, fastx['id']))
+
+			if rows:
+				yield (rtype, fastx, rows)
+
+	def submit_process(self):
+		if self.processes >= self.concurrent:
+			return
+
+		res = self.get_repeats()
+
+		if res:
+			rtype, fastx, repeats = res
+			self.start_process(rtype, repeats, fastx)
+			self.processes += 1
+
+	def call_response(self, data):
+		if data['type'] == 'success':
+			self.processes -= 1
+			self.submit_process()
+
+		elif data['type'] == 'finish':
+			if self.processes == 0:
+				self.queue.close()
+
+			self.signals.show_tab.emit(self.table_name, data['id'])
+
+		else:
+			table = "{}_{}".format(data['type'], data['id'])
+			DB.insert_rows(DB.get_sql(table), data['records'])
+			self.update_progress(data)
 
 class KraitSaveWorker(QRunnable):
 	def __init__(self, save_file=None):

@@ -183,48 +183,37 @@ def get_fastx_info(index):
 		('format', 'Sequence format'),
 		('fpath', 'Full path'),
 		('apath', 'Annotation file'),
-		['hr', False],
 		('size', 'Total bases'),
 		('ns', 'Unknown bases'),
 		('count', 'Sequence count'),
 		('gc', 'GC content'),
 		('avglen', 'Average sequence length'),
-		('minlen', 'minimum sequence length'),
-		('maxlen', 'maximum sequence length'),
-		['hr', False],
+		('minlen', 'Minimum sequence length'),
+		('maxlen', 'Maximum sequence length'),
 		('message', 'Message')
 	]
 
-	if fastx.size:
-		fields[5][1] = True
+	contents = ['<table cellspacing="0" align="center" cellpadding="12" width="98%">']
 
-	if fastx.message:
-		fields[13][1] = True
-
-	contents = ['<table width="100%">']
-
+	i = -1
 	for field, title in fields:
-		if field == 'hr':
-			if title:
-				contents.append("""
-					<tr>
-						<td colspan="2"><hr></td>
-					</tr>
-				""")
-		else:
-			val = fastx[field]
+		val = fastx[field]
 
-			if val:
-				contents.append("""
-					<tr>
-						<th align="left">{}: </th>
-						<td></td>
-					</tr>
-					<tr>
-						<th></th>
-						<td align="left">{}</td>
-					</tr>
-				""".format(title, val))
+		if val:
+			if field == 'ns':
+				val = "{} ({}%)".format(val, round(val/fastx['size']*100, 2))
+
+			elif field == 'gc':
+				val = "{}%".format(val)
+
+			i += 1
+			color = ['white', '#efefef'][i%2]
+			contents.append("""
+				<tr bgcolor="{}">
+					<th align="left">{}: </th>
+					<td>{}</td>
+				</tr>
+			""".format(color, title, val))
 
 	contents.append('</table>')
 

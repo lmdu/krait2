@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS map_{} (
 STATS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS stats_{} (
 	id INTEGER PRIMARY KEY,
-	category INTEGER,
+	type INTEGER,
 	option TEXT,
 	value TEXT
 )
@@ -178,11 +178,7 @@ class DataBackend:
 
 	@property
 	def cursor(self):
-		cur = self.conn.cursor()
-		cur.execute("SELECT 1")
-		print(id(cur))
-
-		return cur
+		return self.conn.cursor()
 
 	def _optimize(self):
 		self.query("PRAGMA synchronous=OFF")
