@@ -330,4 +330,10 @@ class KraitMappingProcess(KraitBaseProcess):
 			self.send(type='map', records=rows, progress=p)
 
 class KraitStatisticsProcess(multiprocessing.Process):
-	pass
+	def __init__(self, repeats, params, queue, fastx):
+		super().__init__(params, queue, fastx)
+		self.repeats = repeats
+
+	def run(self):
+		pass
+		

@@ -409,29 +409,34 @@ class KraitStatisticsWorker(KraitBaseWorker):
 		self.proc.start()
 
 	def get_repeats(self):
-		if self.fastx_query is None:
-			return
-
 		fastx = self.get_fastx()
 
 		if not fastx:
-			return
+			return None, None
 
+		repeats = []
 		for rtype in ['ssr', 'cssr', 'gtr', 'issr']:
-			rows = DB.get_rows("SELECT * FROM {}_{}".format(rtype, fastx['id']))
+			table = "{}_{}".format(rtype, self.fastx_obj['id'])
 
-			if rows:
-				yield (rtype, fastx, rows)
+			if DB.table_exists(table):
+				rows = DB.get_rows("SELECT * FROM {}".format(table))
+
+				if rows:
+					repeats.append((rtype, rows))
+
+		return fastx, repeats
 
 	def submit_process(self):
+		if self.fastx_query is None:
+			return
+
 		if self.processes >= self.concurrent:
 			return
 
-		res = self.get_repeats()
+		fastx, repeats = self.get_repeats()
 
-		if res:
-			rtype, fastx, repeats = res
-			self.start_process(rtype, repeats, fastx)
+		if fastx:
+			self.start_process(repeats, self.params, self.queue, fastx)
 			self.processes += 1
 
 	def call_response(self, data):

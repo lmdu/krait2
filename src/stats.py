@@ -7,6 +7,122 @@ from backend import *
 __all__ = ['SSRStatistics', 'CSSRStatistics', 'ISSRStatistics',
 			'VNTRStatistics', 'FastaStatistics', 'get_stats_report']
 
+
+class KraitBaseStatistics:
+	_size = None
+
+	def __init__(repeats, fastx, unit):
+		self.repeats = repeats
+		self.fastx = fastx
+		self.unit = unit
+
+	@property:
+	def size(self):
+		return self.fastx['size']
+
+	@property
+	def transize(self):
+		if self._size is None:
+			scales = [1000000, 1000]
+			self._size = self.fastx['size']/scales[self.unit]
+		return self._size
+
+	def type(self, i):
+		return ['', 'Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa'][i]
+
+	def scale(self, num):
+		return round(num/self.transize, 2)
+
+	def average(self, length, count):
+		return round(length/count, 2)
+
+	def coverage(self, length):
+		return round(length/self.size, 2)
+
+	def percent(self, num, total):
+		return round(num/total*100, 2)
+
+class KraitSSRStatistics(KraitBaseStatistics):
+	def do_stats(self):
+		total_counts = len(self.repeats)
+		total_length = 0
+
+		type_stats = {}
+		motif_stats = {}
+		repeat_stats = {}
+		length_stats = {}
+
+		for r in self.repeats:
+			total_length += r[8]
+
+			if r[6] not in type_stats:
+				type_stats[r[6]] = [0, 0]
+
+			type_stats[r[6]][0] += 1
+			type_stats[r[6]][1] += r[8]
+
+			if r[5] not in motif_stats:
+				motif_stats[r[6]] = [0, 0]
+
+			motif_stats[r[6]][0] += 1
+			motif_stats[r[6]][1] += r[8]
+
+			if r[6] not in repeat_counts:
+				repeat_stats[r[6]] = {}
+				length_stats[r[6]] = {}
+
+			if r[7] not in repeat_stats[r[6]]:
+				repeat_stats[r[6]][r[7]] = [0, 0]
+
+			if r[8] not in repeat_stats[r[6]]:
+				repeat_stats[r[6]][r[8]] = [0, 0]
+
+			repeat_stats[r[6]][r[7]][0] += 1
+			repeat_stats[r[6]][r[7]][1] += r[8]
+
+			length_stats[r[6]][r[8]][0] += 1
+			length_length[r[6]][r[8]][1] += r[8]
+
+		results['total_counts'] = total_counts
+		results['total_length'] = total_lenght
+		results['average_length'] = self.average(total_length, total_counts)
+		results['coverage'] = self.coverage(total_length)
+		results['frequency'] = self.scale(total_counts)
+		results['density'] = self.scale(total_length)
+
+		results['ssr_type'] = []
+		for i in sorted(type_stats):
+			results['ssr_type'].append((
+				self.type(i),
+				type_counts[i],
+				type_length[i],
+				self.percent(type_counts[i]/total_counts),
+				self.average(type_length[i]/type_counts[i]),
+				self.scale(type_counts[i]),
+				self.scale(type_length[i])
+			))
+
+		results['motif_type'] = []
+
+		
+
+
+
+
+
+
+
+
+
+
+
+			
+
+
+
+
+
+
 class Statistics:
 	#total sequence counts
 	_count = 0
