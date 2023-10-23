@@ -10,13 +10,28 @@ __all__ = ['SSRStatistics', 'CSSRStatistics', 'ISSRStatistics',
 
 class KraitBaseStatistics:
 	_size = None
+	_motif_col = 5
+	_type_col = 6
+	_rep_col = 7
+	_len_col = 8
 
 	def __init__(repeats, fastx, unit):
 		self.repeats = repeats
 		self.fastx = fastx
 		self.unit = unit
 
-	@property:
+		self.total_counts = 0
+		self.total_length = 0
+
+		self.type_stats = {}
+		self.motif_stats = {}
+		self.repeat_stats = {}
+		self.length_stats = {}
+		self.result_stats = {}
+
+		self.__calculate()
+
+	@property
 	def size(self):
 		return self.fastx['size']
 
@@ -24,7 +39,7 @@ class KraitBaseStatistics:
 	def transize(self):
 		if self._size is None:
 			scales = [1000000, 1000]
-			self._size = self.fastx['size']/scales[self.unit]
+			self._size = self.fastx['size'] / scales[self.unit]
 		return self._size
 
 	def type(self, i):
@@ -42,67 +57,129 @@ class KraitBaseStatistics:
 	def percent(self, num, total):
 		return round(num/total*100, 2)
 
+	def __calculate(self):
+		self.total_counts = len(self.repeats)
+		self.total_length = 0
+
+		m = self._motif_col
+		t = self._type_col
+		r = self._rep_col
+		l = self._len_col
+
+		for s in self.repeats:
+			self.total_length += s[l]
+
+			if s[t] not in self.type_stats:
+				self.type_stats[s[t]] = [0, 0]
+
+			self.type_stats[s[t]][0] += 1
+			self.type_stats[s[t]][1] += s[l]
+
+			if s[m] not in self.motif_stats:
+				self.motif_stats[s[m]] = [0, 0]
+
+			self.motif_stats[s[m]][0] += 1
+			self.motif_stats[s[m]][1] += s[l]
+
+			if s[t] not in self.repeat_stats:
+				self.repeat_stats[s[t]] = {}
+				self.length_stats[s[t]] = {}
+
+			if s[r] not in self.repeat_stats[s[t]]:
+				self.repeat_stats[s[t]][s[r]] = [0, 0]
+
+			if s[l] not in self.length_stats[s[t]]:
+				self.length_stats[s[t]][s[l]] = [0, 0]
+
+			self.repeat_stats[s[t]][s[r]][0] += 1
+			self.repeat_stats[s[t]][s[r]][1] += s[l]
+
+			self.length_stats[s[t]][s[l]][0] += 1
+			self.length_stats[s[t]][s[l]][1] += s[l]
+
+		def json(self):
+			self.result_stats['total_counts'] = self.total_counts
+			self.result_stats['total_length'] = self.total_lenght
+			self.result_stats['average_length'] = self.average(self.total_length, self.total_counts)
+			self.result_stats['coverage'] = self.coverage(self.total_length)
+			self.result_stats['frequency'] = self.scale(self.total_counts)
+			self.result_stats['density'] = self.scale(self.total_length)
+
+			self.result_stats['type_stats'] = []
+			for t in sorted(self.type_stats):
+				self.result_stats['type_stats'].append((
+					t,
+					self.type_stats[t][0],
+					self.type_stats[t][1],
+					self.percent(self.type_stats[t][0]/self.total_counts),
+					self.average(self.type_stats[t][1]/self.type_stats[t][0]),
+					self.scale(self.type_stats[t][0]),
+					self.scale(self.type_stats[t][1])
+				))
+
+			self.result_stats['motif_stats'] = []
+			for m in sorted(self.motif_stats, key=lambda x: len(x)):
+				self.result_stats['motif_stats'].append((m,
+					self.motif_stats[m][0],
+					self.motif_stats[m][1],
+					self.percent(self.motif_stats[m][0]/self.total_counts),
+					self.average(self.motif_stats[m][1]/self.motif_stats[m][0]),
+					self.scale(self.motif_stats[m][0]),
+					self.scale(self.motif_stats[m][1])
+				))
+
+			self.result_stats['repeat_stats'] = []
+			for t in sorted(self.repeat_stats):
+				for r in sorted(self.repeat_stats[t]):
+					self.result_stats['repeat_stats'].append((t, r,
+						self.repeat_stats[t][r][0],
+						self.repeat_stats[t][r][1],
+						self.percent(self.repeat_stats[t][r][0]/self.total_counts),
+						self.average(self.repeat_stats[t][r][1]/self.repeat_stats[t][r][0]),
+						self.scale(self.repeat_stats[t][r][0]),
+						self.scale(self.repeat_stats[t][r][1])
+					))
+
+			self.result_stats['length_stats'] = []
+			for t in sorted(self.length_stats):
+				for l in sorted(self.length_stats[t]):
+					self.result_stats['length_stats'].append((t, l,
+						self.length_stats[t][l][0],
+						self.length_stats[t][l][1],
+						self.percent(self.length_stats[t][l][0]/self.total_counts),
+						self.average(self.length_stats[t][l][1]/self.length_stats[t][l][0]),
+						self.scale(self.length_stats[t][l][0]),
+						self.scale(self.length_stats[t][l][1])
+					))
+
+			return json.dumps(self.result_stats)
+
+
+		def html(self):
+			pass
+
+		@classmethod
+		def get_reports(cls, repeats, fastx, unit):
+			stats = cls(repeats, fastx, unit)
+			json_str = stats.json()
+			html_str = stats.html()
+			return json_str, html_str
+
+
 class KraitSSRStatistics(KraitBaseStatistics):
-	def do_stats(self):
-		total_counts = len(self.repeats)
-		total_length = 0
+	pass
 
-		type_stats = {}
-		motif_stats = {}
-		repeat_stats = {}
-		length_stats = {}
+class KraitGTRStatistics(KraitBaseStatistics):
+	pass
 
-		for r in self.repeats:
-			total_length += r[8]
+class KraitISSRStatistics(KraitBaseStatistics):
+	pass
 
-			if r[6] not in type_stats:
-				type_stats[r[6]] = [0, 0]
+class KraitCSSRStatistics(KraitBaseStatistics):
+	pass
 
-			type_stats[r[6]][0] += 1
-			type_stats[r[6]][1] += r[8]
 
-			if r[5] not in motif_stats:
-				motif_stats[r[6]] = [0, 0]
-
-			motif_stats[r[6]][0] += 1
-			motif_stats[r[6]][1] += r[8]
-
-			if r[6] not in repeat_counts:
-				repeat_stats[r[6]] = {}
-				length_stats[r[6]] = {}
-
-			if r[7] not in repeat_stats[r[6]]:
-				repeat_stats[r[6]][r[7]] = [0, 0]
-
-			if r[8] not in repeat_stats[r[6]]:
-				repeat_stats[r[6]][r[8]] = [0, 0]
-
-			repeat_stats[r[6]][r[7]][0] += 1
-			repeat_stats[r[6]][r[7]][1] += r[8]
-
-			length_stats[r[6]][r[8]][0] += 1
-			length_length[r[6]][r[8]][1] += r[8]
-
-		results['total_counts'] = total_counts
-		results['total_length'] = total_lenght
-		results['average_length'] = self.average(total_length, total_counts)
-		results['coverage'] = self.coverage(total_length)
-		results['frequency'] = self.scale(total_counts)
-		results['density'] = self.scale(total_length)
-
-		results['ssr_type'] = []
-		for i in sorted(type_stats):
-			results['ssr_type'].append((
-				self.type(i),
-				type_counts[i],
-				type_length[i],
-				self.percent(type_counts[i]/total_counts),
-				self.average(type_length[i]/type_counts[i]),
-				self.scale(type_counts[i]),
-				self.scale(type_length[i])
-			))
-
-		results['motif_type'] = []
+		
 
 		
 
