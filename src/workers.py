@@ -26,7 +26,8 @@ __all__ = [
 	'KraitSSRSearchWorker', 'KraitCSSRSearchWorker',
 	'KraitISSRSearchWorker', 'KraitGTRSearchWorker',
 	'KraitPrimerDesignWorker', 'KraitMappingWorker',
-	'KraitStatisticsWorker', 'KraitSaveWorker'
+	'KraitStatisticsWorker', 'KraitSaveWorker',
+	'KraitExportStatisticsWorker',
 ]
 
 #signals can only be emit from QObject
@@ -312,10 +313,11 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 
 	def call_response(self, data):
 		if data['type'] == 'success':
-			self.processes -= 1
 			self.submit_process()
 
 		elif data['type'] == 'finish':
+			self.processes -= 1
+
 			if self.processes == 0:
 				self.queue.close()
 
@@ -336,6 +338,8 @@ class KraitMappingWorker(KraitSearchWorker):
 	processer = KraitMappingProcess
 
 	def start_process(self, repeats, fastx):
+		DB.drop_table('map', fastx['id'])
+		DB.drop_table('annot', fastx['id'])
 		DB.create_table('map', fastx['id'])
 		DB.create_table('annot', fastx['id'])
 		proc = self.processer(repeats, self.queue, fastx)
@@ -395,7 +399,7 @@ class KraitMappingWorker(KraitSearchWorker):
 			if data['progress']:
 				self.update_progress(data)
 
-class KraitStatisticsWorker(KraitBaseWorker):
+class KraitStatisticsWorker(KraitSearchWorker):
 	table_name = 'stats'
 	processer = KraitStatisticsProcess
 
@@ -404,8 +408,10 @@ class KraitStatisticsWorker(KraitBaseWorker):
 		unit = self.settings.value('STAT/unit', default, convert)
 		return {'unit': unit}
 
-	def start_process(self, rtype, repeats, fastx):
-		self.proc = self.processer(rtype, repeats, self.params, self.queue, fastx)
+	def start_process(self, repeats, annots, fastx):
+		DB.drop_table(self.table_name, fastx['id'])
+		DB.create_table(self.table_name, fastx['id'])
+		self.proc = self.processer(repeats, annots, self.params, self.queue, fastx)
 		self.proc.start()
 
 	def get_repeats(self):
@@ -416,7 +422,7 @@ class KraitStatisticsWorker(KraitBaseWorker):
 
 		repeats = []
 		for rtype in ['ssr', 'cssr', 'gtr', 'issr']:
-			table = "{}_{}".format(rtype, self.fastx_obj['id'])
+			table = "{}_{}".format(rtype, fastx['id'])
 
 			if DB.table_exists(table):
 				rows = DB.get_rows("SELECT * FROM {}".format(table))
@@ -424,7 +430,13 @@ class KraitStatisticsWorker(KraitBaseWorker):
 				if rows:
 					repeats.append((rtype, rows))
 
-		return fastx, repeats
+		table = "map_{}".format(fastx['id'])
+		if DB.table_exists(table):
+			annots = DB.get_rows("SELECT * FROM {}".format(table))
+		else:
+			annots = []
+
+		return fastx, repeats, annots
 
 	def submit_process(self):
 		if self.fastx_query is None:
@@ -433,22 +445,25 @@ class KraitStatisticsWorker(KraitBaseWorker):
 		if self.processes >= self.concurrent:
 			return
 
-		fastx, repeats = self.get_repeats()
+		fastx, repeats, annots = self.get_repeats()
 
 		if fastx:
-			self.start_process(repeats, self.params, self.queue, fastx)
+			self.start_process(repeats, annots, fastx)
 			self.processes += 1
 
 	def call_response(self, data):
 		if data['type'] == 'success':
-			self.processes -= 1
 			self.submit_process()
 
 		elif data['type'] == 'finish':
+			self.processes -= 1
 			if self.processes == 0:
 				self.queue.close()
 
 			self.signals.show_tab.emit(self.table_name, data['id'])
+
+		elif data['type'] == 'error':
+			self.update_error(data['id'], data['message'])
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])
@@ -478,7 +493,24 @@ class KraitSaveWorker(QRunnable):
 
 		self.signals.messages.emit("Successfully saved to {}".format(self.save_file))
 
+class KraitExportStatisticsWorker(QRunnable):
+	def __init__(self, report_file=None):
+		super().__init__()
+		self.report_file = report_file
+		self.signals = KraitWorkerSignals()
 
+	def run(self):
+		self.signals.messages.emit("Exporting report to {}".format(self.report_file))
+		progress = 0
+
+		stats = KraitExportStatistics()
+		html = stats.generate_summary_report()
+
+		with open(self.report_file, 'w', encoding='utf-8') as fw:
+			fw.write(html)
+
+		self.signals.messages.emit("Successfully export to {}".format(self.report_file))
+		self.signals.show_tab.emit(self.report_file, 0)
 
 
 

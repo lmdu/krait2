@@ -11,7 +11,8 @@ __all__ = ["check_fastx_format", "AttrDict", "get_fastx_info",
 			"iupac_numerical_multiplier", "primer_tag_format",
 			"product_size_format", "get_annotation_format",
 			'generate_tandem_marks', 'generate_primer_marks',
-			'get_feature_parents', 'get_file_size'
+			'get_feature_parents', 'get_file_size',
+			'get_stats_report'
 			]
 
 class AttrDict(dict):
@@ -207,7 +208,7 @@ def get_fastx_info(index):
 				val = "{}%".format(val)
 
 			i += 1
-			color = ['white', '#efefef'][i%2]
+			color = ['white', '#f2f2f2'][i%2]
 			contents.append("""
 				<tr bgcolor="{}">
 					<th align="left">{}: </th>
@@ -329,6 +330,11 @@ def get_feature_parents(feature, index):
 	tmp = get_feature_parents(parent, index)
 	parents.extend(tmp)
 	return parents
+
+def get_stats_report(file_index):
+	sql = "SELECT html FROM stats_{}".format(file_index)
+	report = ''.join([row[0] for row in DB.query(sql)])
+	return report
 
 
 if __name__ == '__main__':

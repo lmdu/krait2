@@ -1,17 +1,27 @@
 import json
 import pyfastx
 
+from PySide6.QtCore import *
+
 from config import *
 from backend import *
 
 __all__ = ['SSRStatistics', 'CSSRStatistics', 'ISSRStatistics',
-			'VNTRStatistics', 'FastaStatistics', 'get_stats_report']
+			'VNTRStatistics', 'FastaStatistics',
+			'KraitSTRStatistics', 'KraitCSSRStatistics', 'KraitISSRStatistics',
+			'KraitGTRStatistics', 'KraitExportStatistics']
 
 class KraitBaseStatistics:
 	_size = None
+	rep_cat = 1
+	motif_col = 5
+	type_col = 6
+	rep_col = 7
+	len_col = 8
 
-	def __init__(repeats, fastx, unit):
+	def __init__(self, repeats, annots, fastx, unit):
 		self.repeats = repeats
+		self.annots = annots
 		self.fastx = fastx
 		self.unit = unit
 
@@ -20,12 +30,38 @@ class KraitBaseStatistics:
 
 		self.result_stats = {}
 
-	def __type(self, i):
+		self.type_stats = {}
+		self.motif_stats = {}
+		self.repeat_stats = {}
+		self.length_stats = {}
+		self.annot_stats = {}
+
+		self.do_calculate()
+		self.do_annotation()
+		self.do_statistics()
+
+	def do_calculate(self):
+		pass
+
+	def do_annotation(self):
+		pass
+
+	def do_statistics(self):
+		pass
+
+	def get_type(self, i):
 		return ['', 'Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa'][i]
+
+	def get_feature(self, i):
+		return ['Intergenic', 'CDS', 'Exon', '3UTR', 'UTR', '5UTR', 'Intron'][i]
 
 	@property
 	def size(self):
 		return self.fastx['size']
+
+	@property
+	def uname(self):
+		return ['Mb', 'Kb'][self.unit]
 
 	@property
 	def transize(self):
@@ -41,119 +77,141 @@ class KraitBaseStatistics:
 		return round(length/count, 2)
 
 	def coverage(self, length):
-		return round(length/self.size, 2)
+		return round(length/self.size*100, 2)
 
 	def percent(self, num, total):
 		return round(num/total*100, 2)
 
 	@classmethod
-		def get_reports(cls, repeats, fastx, unit):
-			stats = cls(repeats, fastx, unit)
-			json_str = stats.json()
-			html_str = stats.html()
-			return json_str, html_str
+	def get_reports(cls, repeats, fastx, unit):
+		stats = cls(repeats, fastx, unit)
+		json_str = stats.json()
+		html_str = stats.html()
+		return json_str, html_str
 
 	def json(self):
 		return json.dumps(self.result_stats)
 
 	def html(self):
+		category = [
+			"",
+			"Perfect microsatellite",
+			"Compound microsatellite",
+			"Generic tandem repeat",
+			"Imperfect microsatellite"
+		]
+
 		heads = {
-			'type_stats': "Type statistics",
+			'type_stats': "Motif type statistics",
+			'annot_stats': "Annotation statistics",
 			'motif_stats': "Motif statistics",
 			'repeat_stats': "Repeat statistics",
 			'length_stats': "Length statistics",
 			'complex_stats': "Complexity statistics"
 		}
 
-		titles = {
-			'type_stats': ["Type"],
-			'motif_stats': ["Motif"],
-			'repeat_stats': ["Type", "Repeat"],
-			'length_stats': ["Type", "Length"],
-			'complex_stats': ["Complexity"]
-		}
+		titles = [
+			('type_stats', ["Motif type"]),
+			('annot_stats', ["Feature"]),
+			('motif_stats', ["Motif"]),
+			('repeat_stats', ["Motif type", "Repeat"]),
+			('length_stats', ["Motif type", "Length"]),
+			('complex_stats', ["Complexity"])
+		]
 
 		tables = []
 		summary_table = """
-		<h3>Summary statistics</h3>
-		<table>
+		<h3 class="mt-5">{}</h2>
+		<h4 class="mt-3">Summary statistics</h3>
+		<table cellspacing="0" align="center" cellpadding="10" width="98%">
+			<thead>
 			<tr>
 				<th>Total counts</th>
-				<td>{}</td>
-			</tr>
-			<tr>
 				<th>Total length (bp)</th>
-				<td>{}</td>
-			</tr>
-			<tr>
 				<th>Average length (bp)</th>
-				<td>{}</td>
-			</tr>
-			<tr>
 				<th>Sequence coverage (%)</th>
-				<td>{}</td>
-			</tr>
-			<tr>
 				<th>Relative abundance (loci/{})</th>
-				<td>{}</td>
-			</tr>
-			<tr>
 				<th>Relative density (bp/{})</th>
-				<td>{}</td>
 			</tr>
+			</thead>
+			<tbody>
+			<tr bgcolor="#f2f2f2">
+				<td align="center">{}</td>
+				<td align="center">{}</td>
+				<td align="center">{}</td>
+				<td align="center">{}</td>
+				<td align="center">{}</td>
+				<td align="center">{}</td>
+			</tr>
+			</tbody>
 		</table>
 		""".format(
+			category[self.rep_cat],
+			self.uname,
+			self.uname,
 			self.result_stats['total_counts'],
 			self.result_stats['total_length'],
 			self.result_stats['average_length'],
 			self.result_stats['coverage'],
-			self.unit,
 			self.result_stats['frequency'],
-			self.unit,
 			self.result_stats['density']
 		)
 		tables.append(summary_table)
 
-		for k, title in titles.items():
-			table = ["<h3>{}</h3><table>".format(heads[k])]
-			title.extend(["Total count", "Total length", "Percentage", "Average length",
-				"Frequency (loci/{})".format(self.unit), "Density (bp/{})".format(self.unit)])
+		if 'total_cssrs' in self.result_stats:
+			tables.append("""
+				<table cellspacing="0" align="center" cellpadding="10" width="98%" class="mt-3">
+					<thead>
+					<tr>
+						<th></th>
+						<th>Counts</th>
+					</tr>
+					</thead>
+					<tbody>
+					<tr bgcolor="#f2f2f2">
+						<th>Total number of individual microsatellites forming compound microsatellites</th>
+						<td align="center">{}</td>
+					</tr>
+					</tbody>
+				</table>
+			""".format(self.result_stats['total_cssrs']))
 
-			table.append("<tr>{}</tr>".format(''.join("<th>{}</th>".format(t) for t in title)))
 
+		for k, title in titles:
+			if k not in self.result_stats:
+				continue
+
+			if not self.result_stats[k]:
+				continue
+
+			table = ["<h4 class='mt-3'>{}</h4>".format(heads[k])]
+			table.append('<table cellspacing="0" align="center" cellpadding="10" width="98%">')
+			title.extend(["Total count", "Total length (bp)", "Percentage (%)", "Average length (bp)",
+				"Frequency (loci/{})".format(self.uname), "Density (bp/{})".format(self.uname)])
+
+			table.append("<thead><tr>{}</tr></thead><tbody>".format(''.join("<th>{}</th>".format(t) for t in title)))
+
+			i = 0
 			for row in self.result_stats[k]:
-				table.append("<tr>{}</tr>".format(''.join("<td>{}</td>".format(col) for col in row)))
+				i += 1
+				color = ['white', '#f2f2f2'][i%2]
+				datas = ''.join("<td align='center'>{}</td>".format(col) for col in row)
+				table.append("<tr bgcolor='{}'>{}</tr>".format(color, datas))
 
-			table.append("</table>")
-			tables.append(table)
+			table.append("</tbody></table>")
+			tables.append(''.join(table))
 
 		return ''.join(tables)
 
 class KraitSTRStatistics(KraitBaseStatistics):
-	_motif_col = 5
-	_type_col = 6
-	_rep_col = 7
-	_len_col = 8
-
-	def __init__(repeats, fastx, unit):
-		super().__init__(repeats, fastx, unit)
-
-		self.type_stats = {}
-		self.motif_stats = {}
-		self.repeat_stats = {}
-		self.length_stats = {}
-
-		self.__calculate()
-		self.__statistics()
-
-	def __calculate(self):
+	def do_calculate(self):
 		self.total_counts = len(self.repeats)
 		self.total_length = 0
 
-		m = self._motif_col
-		t = self._type_col
-		r = self._rep_col
-		l = self._len_col
+		m = self.motif_col
+		t = self.type_col
+		r = self.rep_col
+		l = self.len_col
 
 		for s in self.repeats:
 			self.total_length += s[l]
@@ -186,7 +244,27 @@ class KraitSTRStatistics(KraitBaseStatistics):
 			self.length_stats[s[t]][s[l]][0] += 1
 			self.length_stats[s[t]][s[l]][1] += s[l]
 
-	def __statistics(self):
+	def do_annotation(self):
+		tc = 0
+		tl = 0
+		l = self.len_col
+		for a in self.annots:
+			if a[1] != self.rep_cat:
+				continue
+
+			if a[3] not in self.annot_stats:
+				self.annot_stats[a[3]] = [0, 0]
+
+			self.annot_stats[a[3]][0] += 1
+			self.annot_stats[a[3]][1] += self.repeats[a[2]-1][l]
+
+			tc += 1
+			tl += self.repeats[a[2]-1][l]
+
+		if self.annot_stats:
+			self.annot_stats[0] = [self.total_counts-tc, self.total_length-tl]
+
+	def do_statistics(self):
 		self.result_stats['total_counts'] = self.total_counts
 		self.result_stats['total_length'] = self.total_length
 		self.result_stats['average_length'] = self.average(self.total_length, self.total_counts)
@@ -197,11 +275,11 @@ class KraitSTRStatistics(KraitBaseStatistics):
 		self.result_stats['type_stats'] = []
 		for t in sorted(self.type_stats):
 			self.result_stats['type_stats'].append((
-				t,
+				self.get_type(t),
 				self.type_stats[t][0],
 				self.type_stats[t][1],
-				self.percent(self.type_stats[t][0]/self.total_counts),
-				self.average(self.type_stats[t][1]/self.type_stats[t][0]),
+				self.percent(self.type_stats[t][0], self.total_counts),
+				self.average(self.type_stats[t][1], self.type_stats[t][0]),
 				self.scale(self.type_stats[t][0]),
 				self.scale(self.type_stats[t][1])
 			))
@@ -211,8 +289,8 @@ class KraitSTRStatistics(KraitBaseStatistics):
 			self.result_stats['motif_stats'].append((m,
 				self.motif_stats[m][0],
 				self.motif_stats[m][1],
-				self.percent(self.motif_stats[m][0]/self.total_counts),
-				self.average(self.motif_stats[m][1]/self.motif_stats[m][0]),
+				self.percent(self.motif_stats[m][0], self.total_counts),
+				self.average(self.motif_stats[m][1], self.motif_stats[m][0]),
 				self.scale(self.motif_stats[m][0]),
 				self.scale(self.motif_stats[m][1])
 			))
@@ -220,11 +298,11 @@ class KraitSTRStatistics(KraitBaseStatistics):
 		self.result_stats['repeat_stats'] = []
 		for t in sorted(self.repeat_stats):
 			for r in sorted(self.repeat_stats[t]):
-				self.result_stats['repeat_stats'].append((t, r,
+				self.result_stats['repeat_stats'].append((self.get_type(t), r,
 					self.repeat_stats[t][r][0],
 					self.repeat_stats[t][r][1],
-					self.percent(self.repeat_stats[t][r][0]/self.total_counts),
-					self.average(self.repeat_stats[t][r][1]/self.repeat_stats[t][r][0]),
+					self.percent(self.repeat_stats[t][r][0], self.total_counts),
+					self.average(self.repeat_stats[t][r][1], self.repeat_stats[t][r][0]),
 					self.scale(self.repeat_stats[t][r][0]),
 					self.scale(self.repeat_stats[t][r][1])
 				))
@@ -232,22 +310,36 @@ class KraitSTRStatistics(KraitBaseStatistics):
 		self.result_stats['length_stats'] = []
 		for t in sorted(self.length_stats):
 			for l in sorted(self.length_stats[t]):
-				self.result_stats['length_stats'].append((t, l,
+				self.result_stats['length_stats'].append((self.get_type(t), l,
 					self.length_stats[t][l][0],
 					self.length_stats[t][l][1],
-					self.percent(self.length_stats[t][l][0]/self.total_counts),
-					self.average(self.length_stats[t][l][1]/self.length_stats[t][l][0]),
+					self.percent(self.length_stats[t][l][0], self.total_counts),
+					self.average(self.length_stats[t][l][1], self.length_stats[t][l][0]),
 					self.scale(self.length_stats[t][l][0]),
 					self.scale(self.length_stats[t][l][1])
 				))
 
+		self.result_stats['annot_stats'] = []
+		for a in sorted(self.annot_stats):
+			self.result_stats['annot_stats'].append((
+				self.get_feature(a),
+				self.annot_stats[a][0],
+				self.annot_stats[a][1],
+				self.percent(self.annot_stats[a][0], self.total_counts),
+				self.average(self.annot_stats[a][1], self.annot_stats[a][0]),
+				self.scale(self.annot_stats[a][0]),
+				self.scale(self.annot_stats[a][1])
+			))
+
 class KraitCSSRStatistics(KraitBaseStatistics):
-	def __calculate(self):
+	rep_cat = 2
+	len_col = 5
+
+	def do_calculate(self):
 		self.total_counts = len(self.repeats)
 		self.total_length = 0
 		self.total_cssrs = 0
 		self.complex_stats = {}
-
 
 		for s in self.repeats:
 			self.total_length += s[5]
@@ -259,9 +351,10 @@ class KraitCSSRStatistics(KraitBaseStatistics):
 			self.complex_stats[s[4]][0] += 1
 			self.complex_stats[s[4]][1] += s[5]
 
-	def __statistics(self):
+	def do_statistics(self):
 		self.result_stats['total_counts'] = self.total_counts
 		self.result_stats['total_length'] = self.total_length
+		self.result_stats['total_cssrs'] = self.total_cssrs
 		self.result_stats['average_length'] = self.average(self.total_length, self.total_counts)
 		self.result_stats['coverage'] = self.coverage(self.total_length)
 		self.result_stats['frequency'] = self.scale(self.total_counts)
@@ -271,17 +364,26 @@ class KraitCSSRStatistics(KraitBaseStatistics):
 		for c in sorted(self.complex_stats):
 			self.result_stats['complex_stats'].append((
 				c,
-				self.complex_stats[t][0],
-				self.complex_stats[t][1],
-				self.percent(self.complex_stats[t][0]/self.total_counts),
-				self.average(self.complex_stats[t][1]/self.complex_stats[t][0]),
-				self.scale(self.complex_stats[t][0]),
-				self.scale(self.complex_stats[t][1])
+				self.complex_stats[c][0],
+				self.complex_stats[c][1],
+				self.percent(self.complex_stats[c][0], self.total_counts),
+				self.average(self.complex_stats[c][1], self.complex_stats[c][0]),
+				self.scale(self.complex_stats[c][0]),
+				self.scale(self.complex_stats[c][1])
 			))
 
-	def html(self):
-		pass
+class KraitGTRStatistics(KraitSTRStatistics):
+	rep_cat = 3
+	motif_col = 7
+	type_col = 4
+	rep_col = 5
+	len_col = 6
 
+	def get_type(self, i):
+		return i
+
+class KraitISSRStatistics(KraitSTRStatistics):
+	rep_cat = 4
 
 class Statistics:
 	#total sequence counts
@@ -627,36 +729,149 @@ class ISSRStatistics(Statistics):
 		fields = {'issrtypes': 'type', 'issrmotifs': 'standard'}
 		self.calc_group(fields, issr_count)
 
-def get_stats_report(file_index):
-	sql = "SELECT value FROM stats_{} WHERE option=?".format(file_index)
-	reports = DB.get_column(sql, ('statsreport',))
+class KraitExportStatistics:
+	def __init__(self):
+		self.fastx_files = [f for f in DB.get_objects("SELECT * FROM fastx")]
+		self.fastx_datas = []
+		sql = "SELECT * FROM stats_{}"
 
-	html = """
-	<html>
-	<head>
-	<style type="text/css">
-	body {{
-		margin: 20px;
-	}}
-	table {{
-		border-collapse: collapse;
-		border-width: 1px;
-		border-color:black;
-	}}
-	table th,
-	table td {{
-		padding: 5px 15px;
-	}}
-	.center {{
-		text-align: center;
-	}}
-	</style>
-	</head>
-	<body>
-		<h2 class="center">Statistical Report</h2>
-		<p class="center"><i>This report was generate by Krait2 v{0}.</i></p>
-		{1}
-	</body>
-	</html>"""
+		for fastx_file in self.fastx_files:
+			res = DB.get_objects(sql.format(fastx_file.id))
+			self.fastx_datas.append({r.type: (json.loads(r.json), r.html) for r in res})
 
-	return html.format(KRAIT_VERSION, "".join(reports))
+	def get_style_css(self):
+		css_files = [
+			":/scripts/bootstrap.min.css",
+			":/scripts/datatables.min.css",
+			":/scripts/select2.min.css"
+		]
+
+		styles = []
+		for css_file in css_files:
+			f = QFile(css_file)
+			if f.open(QIODevice.ReadOnly | QFile.Text):
+				text = QTextStream(f).readAll()
+			else:
+				text = ''
+			f.close()
+			styles.append(text)
+
+		return '\n'.join(styles)
+
+
+	def get_script_js(self):
+		js_files = [
+			":/scripts/bootstrap.min.js",
+			":/scripts/datatables.min.js",
+			":/scripts/select2.min.js",
+			":/scripts/plotly.min.js"
+		]
+
+		js = []
+		for js_file in js_files:
+			f = QFile(js_file)
+			if f.open(QIODevice.ReadOnly | QFile.Text):
+				text = QTextStream(f).readAll()
+			else:
+				text = ''
+			f.close()
+			js.append(text)
+
+		return '\n'.join(js)
+
+	def get_file_summary_table(self):
+		tables = ["<h3>File information summary</h3><table>"]
+		tables.append("""
+			<thead><tr>
+				<th>No.</th>
+				<th>File Name</th>
+				<th>File Format</th>
+				<th>Total Bases (bp)</th>
+				<th>Sequence Counts</th>
+				<th>GC Content (%)</th>
+				<th>Unknown Bases (bp)</th>
+				<th>Average Length (bp)</th>
+				<th>Minimum Length (bp)</th>
+				<th>Maximum Length (bp)</th>
+			</tr></thead></tbody>
+		""")
+
+		for f in self.fastx_files:
+			row = """
+			<tr>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+				<td>{}</td>
+			</tr>
+			""".format(
+				f.id,
+				f.name,
+				f.format,
+				f.size,
+				f.count,
+				round(f.gc, 2),
+				f.ns,
+				f.avglen,
+				f.minlen,
+				f.maxlen
+			)
+			tables.append(row)
+
+		tables.append('</tbody></table>')
+		return ''.join(tables)
+
+	def get_file_report_tables(self):
+		tables = []
+		for f in self.fastx_files:
+			data = self.fastx_datas[f.id-1]
+
+			if data:
+				tables.append('\n'.join(h for j, h in data.values()))
+
+		return '\n'.join(tables)
+
+	def get_stats_tables(self):
+		tables = []
+		tables.append(self.get_file_summary_table())
+		tables.append(self.get_file_report_tables())
+		return '\n'.join(tables)
+
+	def generate_summary_report(self):
+		template = """
+		<!DOCTYPE html>
+		<html lang="en>
+			<head>
+				<meta charset="utf-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1">
+				<title>Krait Statistical Report</title>
+				<style>{}</style>
+				<script>{}</script>
+				<script>
+					$(document).ready(function(){{
+						$('table').DataTable({{
+							dom: 'lfrtipB',
+							buttons: ['copy', 'csv', 'excel']
+						}});
+					}});
+				</script>
+			</head>
+			<body>
+				<div class="container-fluid">
+					<div class="p-5">{}</div>
+				</div>
+			</body>
+		</html>
+		"""
+
+		styles = self.get_style_css()
+		scripts = self.get_script_js()
+		tables = self.get_stats_tables()
+
+		return template.format(styles, scripts, tables)

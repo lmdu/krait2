@@ -6,13 +6,14 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
+import resources
 from window import *
 from config import *
 
 if __name__ == '__main__':
 	multiprocessing.freeze_support()
 
-	QCoreApplication.setOrganizationName("BIG")
+	QCoreApplication.setOrganizationName("DuLab")
 	QCoreApplication.setOrganizationDomain("krait2.readthedocs.io")
 	QCoreApplication.setApplicationName("Kriat2")
 
@@ -22,7 +23,7 @@ if __name__ == '__main__':
 	#fix taskbar icon display
 	if os.name == 'nt':
 		import ctypes
-		myappid = "BIG.Krait.Krait2.{}".format(KRAIT_VERSION)
+		myappid = "DuLab.Krait.Krait2.{}".format(KRAIT_VERSION)
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 	app = QApplication(sys.argv)

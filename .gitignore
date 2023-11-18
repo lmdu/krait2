@@ -41,3 +41,12 @@ data/GCF_000001635.27_GRCm39_genomic.fna.gz
 data/GCF_000003025.6_Sscrofa11.1_genomic.gff.gz
 data/GCF_000003025.6_Sscrofa11.1_genomic.gtf.gz
 src/__pycache__/backend.cpython-310.pyc
+*.pyc
+src/scripts/bootstrap.min.css
+src/scripts/bootstrap.min.js
+src/scripts/datatables.min.css
+src/scripts/datatables.min.js
+src/scripts/plotly.min.js
+src/scripts/select2.min.css
+src/scripts/select2.min.js
+src/resources.qrc

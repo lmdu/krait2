@@ -10,6 +10,7 @@ from PySide6.QtCore import *
 
 from utils import *
 from motif import *
+from stats import *
 from annotate import *
 
 __all__ = ['KraitSSRSearchProcess', 'KraitCSSRSearchProcess',
@@ -329,11 +330,31 @@ class KraitMappingProcess(KraitBaseProcess):
 			p = self.progress/self.total*self.fastx['weight']
 			self.send(type='map', records=rows, progress=p)
 
-class KraitStatisticsProcess(multiprocessing.Process):
-	def __init__(self, repeats, params, queue, fastx):
+class KraitStatisticsProcess(KraitBaseProcess):
+	def __init__(self, repeats, annots, params, queue, fastx):
 		super().__init__(params, queue, fastx)
 		self.repeats = repeats
+		self.annots = annots
 
-	def run(self):
-		pass
-		
+	def get_class(self, rtype):
+		classes = {
+			'ssr': KraitSTRStatistics,
+			'cssr': KraitCSSRStatistics,
+			'issr': KraitISSRStatistics,
+			'gtr': KraitGTRStatistics
+		}
+
+		return classes[rtype]
+
+	def do(self):
+		total = len(self.repeats)
+		progress = 0
+		for rtype, repeats in self.repeats:
+			progress += 1
+			_class = self.get_class(rtype)
+			stats = _class(repeats, self.annots, self.fastx, self.params['unit'])
+			json = stats.json()
+			html = stats.html()
+			p = progress/total
+			self.send(type='stats', records=[(None, '{}_stats'.format(rtype), json, html)], progress=p)
+

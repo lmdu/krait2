@@ -93,7 +93,7 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	</tr>
 	<tr>
 		<td>cgranges</td>
-		<td>v0.1.0</td>
+		<td>v0.1.1</td>
 		<td>
 			<a href="https://github.com/lh3/cgranges">
 				https://github.com/lh3/cgranges
@@ -102,7 +102,7 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	</tr>
 	<tr>
 		<td>plotly.js</td>
-		<td>v1.58.4</td>
+		<td>v2.27.0</td>
 		<td>
 			<a href="https://plotly.com/javascript/">
 				https://plotly.com/javascript
@@ -111,7 +111,7 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	</tr>
 	<tr>
 		<td>DataTables</td>
-		<td>v1.10.24</td>
+		<td>v1.13.8</td>
 		<td>
 			<a href="https://datatables.net/">
 				https://datatables.net

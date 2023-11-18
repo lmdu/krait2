@@ -1,3 +1,5 @@
+import os
+import sys
 import time
 
 from PySide6.QtGui import *
@@ -22,7 +24,7 @@ class KraitMainWindow(QMainWindow):
 		super(KraitMainWindow, self).__init__()
 
 		self.setWindowTitle("Krait v{}".format(KRAIT_VERSION))
-		self.setWindowIcon(QIcon('icons/logo.svg'))
+		self.setWindowIcon(QIcon(':/icons/logo.svg'))
 
 		self.tab_widget = QTabWidget(self)
 		self.tab_widget.currentChanged.connect(self.on_tab_changed)
@@ -171,6 +173,11 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.export_all_tables
 		)
 
+		self.export_stats_action = QAction("&Export Statistical Report", self,
+			statusTip = "Export html statistical report",
+			triggered = self.export_stats_report
+		)
+
 		self.exit_action = QAction("&Exit", self,
 			shortcut = "Alt+Q",
 			statusTip = "Exit",
@@ -239,43 +246,43 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		#toolbar actions
-		self.search_ssr_action = QAction(QIcon("icons/ssr.svg"), "SSRs", self,
+		self.search_ssr_action = QAction(QIcon(":/icons/ssr.svg"), "SSRs", self,
 			#statusTip = "Search for perfect microsatellites",
 			toolTip = "Search for perferct microsatellites",
 			triggered = self.do_ssr_search
 		)
 
-		self.search_cssr_action = QAction(QIcon("icons/cssr.svg"), "cSSRs", self,
+		self.search_cssr_action = QAction(QIcon(":/icons/cssr.svg"), "cSSRs", self,
 			toolTip = "Search for compound microsatellites",
 			triggered = self.do_cssr_search
 		)
 
-		self.search_gtr_action = QAction(QIcon("icons/gtr.svg"), "GTRs", self,
+		self.search_gtr_action = QAction(QIcon(":/icons/gtr.svg"), "GTRs", self,
 			toolTip = "Search for GTRs",
 			triggered = self.do_gtr_search
 		)
 
-		self.search_issr_action = QAction(QIcon("icons/issr.svg"), "iSSRs", self,
+		self.search_issr_action = QAction(QIcon(":/icons/issr.svg"), "iSSRs", self,
 			toolTip = "Search for imperfect microsatellites",
 			triggered = self.do_issr_search
 		)
 
-		self.locating_action = QAction(QIcon("icons/locating.svg"), "Mapping", self,
+		self.locating_action = QAction(QIcon(":/icons/locating.svg"), "Mapping", self,
 			toolTip = "Mapping tandem repeat sequences to gene features",
 			triggered = self.do_str_mapping
 		)
 
-		self.primer_action = QAction(QIcon("icons/primer.svg"), "Primer", self,
+		self.primer_action = QAction(QIcon(":/icons/primer.svg"), "Primer", self,
 			toolTip = "Design primers for selected tandem repeats",
 			triggered = self.do_primer_design
 		)
 
-		self.stat_action = QAction(QIcon("icons/statistics.svg"), "Statistics", self,
+		self.stat_action = QAction(QIcon(":/icons/statistics.svg"), "Statistics", self,
 			toolTip = "Perform statistics and generate statistics report",
-			triggered = self.perform_stats_analysis
+			triggered = self.do_stats_analysis
 		)
 
-		self.filter_action = QAction(QIcon("icons/filter.svg"), "Filter", self,
+		self.filter_action = QAction(QIcon(":/icons/filter.svg"), "Filter", self,
 			toolTip = "Filter rows from the current table",
 			triggered = self.open_filter_dialog
 		)
@@ -296,6 +303,8 @@ class KraitMainWindow(QMainWindow):
 		self.file_menu.addAction(self.export_select_action)
 		self.file_menu.addAction(self.export_whole_action)
 		self.file_menu.addAction(self.export_all_action)
+		self.file_menu.addSeparator()
+		self.file_menu.addAction(self.export_stats_action)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.exit_action)
 
@@ -857,6 +866,28 @@ class KraitMainWindow(QMainWindow):
 		worker = ExportAllTablesThread(self, out_dir)
 		self.perform_new_task(worker)
 
+	def show_report_in_browser(self, reprot_file, i):
+		if os.path.isfile(reprot_file):
+			QDesktopServices.openUrl(QUrl("file:///{}".format(reprot_file), QUrl.TolerantMode))
+
+	def export_stats_report(self):
+		html_file, _ = QFileDialog.getSaveFileName(self, filter="HTML (*.html)")
+
+		if not html_file: return
+
+		if not self.check_work_thread(): return
+
+		self.current_worker = KraitExportStatisticsWorker(html_file)
+		self.current_worker.signals.messages.connect(self.show_status_message)
+		self.current_worker.signals.show_tab.connect(self.show_report_in_browser)
+		#self.current_worker.signals.progress.connect(self.progress_bar.setValue)
+		#self.current_worker.signals.failure.connect(self.show_error_message)
+		#self.current_worker.signals.show_tab.connect(self.show_tab_widgets)
+		#self.current_worker.signals.messages.connect(self.show_status_message)
+		#self.current_worker.signals.status.connect(self.fastx_tree.update_model)
+		QThreadPool.globalInstance().start(self.current_worker)
+
+
 	def wait_task_finish(self):
 		pool = QThreadPool.globalInstance()
 		pool.waitForDone()
@@ -951,6 +982,9 @@ class KraitMainWindow(QMainWindow):
 			return
 
 		self.run_work_thread(KraitPrimerDesignWorker, self.current_file, count, rows, rtype)
+
+	def do_stats_analysis(self):
+		self.run_work_thread(KraitStatisticsWorker)
 
 	def perform_primer_design(self):
 		worker = PrimerDesignThread(self, self.current_table)

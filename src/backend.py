@@ -133,9 +133,9 @@ CREATE TABLE IF NOT EXISTS map_{} (
 STATS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS stats_{} (
 	id INTEGER PRIMARY KEY,
-	type INTEGER,
-	option TEXT,
-	value TEXT
+	type TEXT,
+	json TEXT,
+	html TEXT
 )
 """
 
