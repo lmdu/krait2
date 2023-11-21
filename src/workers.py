@@ -97,25 +97,25 @@ class KraitBaseWorker(QRunnable):
 		finally:
 			self.signals.progress.emit(100)
 			self.signals.finished.emit()
+			self.signals.messages.emit('Done')
 
 class KraitSearchWorker(KraitBaseWorker):
 	table_name = None
 
 	def __init__(self):
 		super().__init__()
-
-		self.total_fastx = 0
+		
 		self.total_size = 0
 		self.fastx_query = None
 		self.progresses = {}
 		self.concurrent = self.settings.value('Run/concurrent', 1, int)
+		self.total_fastx = DB.get_count('fastx')
 
 	def get_params(self):
 		pass
 
 	def query_fastx(self):
 		self.total_size = DB.get_one("SELECT SUM(bytes) FROM fastx")
-		self.total_fastx = DB.get_count('fastx')
 		self.fastx_query = DB.query("SELECT * FROM fastx")
 
 	def update_progress(self, data):
@@ -151,6 +151,9 @@ class KraitSearchWorker(KraitBaseWorker):
 		DB.query("UPDATE fastx SET message=? WHERE id=?", (err, fid))
 		self.update_status(fid, 0)
 		self.signals.status.emit()
+
+	def update_info(self, info):
+		self.signals.messages.emit(info)
 
 	def submit_process(self):
 		if self.fastx_query is None:
@@ -188,6 +191,9 @@ class KraitSearchWorker(KraitBaseWorker):
 
 		elif data['type'] == 'error':
 			self.update_error(data['id'], data['message'])
+
+		elif data['type'] == 'info':
+			self.update_info(data['message'])
 
 		else:
 			table = "{}_{}".format(data['type'], data['id'])
@@ -313,10 +319,14 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 
 	def call_response(self, data):
 		if data['type'] == 'success':
-			self.submit_process()
+			pass
+
+		elif data['type'] == 'info':
+			self.signals.messages.emit(data['message'])
 
 		elif data['type'] == 'finish':
 			self.processes -= 1
+			self.submit_process()
 
 			if self.processes == 0:
 				self.queue.close()
@@ -337,15 +347,25 @@ class KraitMappingWorker(KraitSearchWorker):
 	table_name = 'map'
 	processer = KraitMappingProcess
 
+	def before_run(self):
+		for i in range(1, self.total_fastx+1):
+			DB.drop_index('map', i)
+		
+		super().before_run()
+
 	def start_process(self, repeats, fastx):
 		DB.drop_table('map', fastx['id'])
 		DB.drop_table('annot', fastx['id'])
+
 		DB.create_table('map', fastx['id'])
 		DB.create_table('annot', fastx['id'])
+		
 		proc = self.processer(repeats, self.queue, fastx)
 		proc.start()
 
 	def get_repeats(self, index):
+		self.signals.messages.emit("Preparing repeats for annotation ...")
+
 		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
 
 		repeats = []
@@ -374,6 +394,12 @@ class KraitMappingWorker(KraitSearchWorker):
 			repeats = self.get_repeats(fastx['id'])
 			self.start_process(repeats, fastx)
 			self.processes += 1
+			self.update_status(fastx['id'], 2)
+
+	def create_index(self, tid):
+		self.signals.messages.emit("Create query index ...")
+		sql = "CREATE INDEX index_{0} ON map_{0}(type, locus)"
+		DB.query(sql.format(tid))
 
 	def call_response(self, data):
 		if data['type'] == 'annot':
@@ -381,11 +407,16 @@ class KraitMappingWorker(KraitSearchWorker):
 			DB.insert_rows(DB.get_sql(table), data['records'])
 
 		elif data['type'] == 'success':
+			self.create_index(data['id'])
 			self.update_success(data['id'])
+
+		elif data['type'] == 'info':
+			self.update_info(data['message'])
 
 		elif data['type'] == 'finish':
 			self.processes -= 1
 			self.submit_process()
+
 			if self.processes == 0:
 				self.exit()
 
@@ -418,7 +449,7 @@ class KraitStatisticsWorker(KraitSearchWorker):
 		fastx = self.get_fastx()
 
 		if not fastx:
-			return None, None
+			return None, None, None
 
 		repeats = []
 		for rtype in ['ssr', 'cssr', 'gtr', 'issr']:
@@ -448,15 +479,21 @@ class KraitStatisticsWorker(KraitSearchWorker):
 		fastx, repeats, annots = self.get_repeats()
 
 		if fastx:
+			fastx['weight'] = fastx['bytes']/self.total_size
 			self.start_process(repeats, annots, fastx)
 			self.processes += 1
 
 	def call_response(self, data):
 		if data['type'] == 'success':
-			self.submit_process()
+			self.update_success(data['id'])
+
+		elif data['type'] == 'info':
+			self.update_info(data['message'])
 
 		elif data['type'] == 'finish':
 			self.processes -= 1
+			self.submit_process()
+
 			if self.processes == 0:
 				self.queue.close()
 

@@ -376,10 +376,12 @@ class KraitRepeatModel(KraitTableModel):
 			return
 
 		colors = {
-			1: QColor(245, 183, 177), 
-			2: QColor(250, 215, 160), 
+			1: QColor(245, 183, 177),
+			2: QColor(250, 215, 160),
 			3: QColor(169, 223, 191),
-			4: QColor(174, 214, 241)
+			4: QColor(174, 214, 241),
+			5: QColor(),
+			6: QColor(),
 		}
 
 		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}

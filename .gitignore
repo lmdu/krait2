@@ -50,3 +50,8 @@ src/scripts/plotly.min.js
 src/scripts/select2.min.css
 src/scripts/select2.min.js
 src/resources.qrc
+data/dd2.html
+data/dd2.kpf
+data/dd3.html
+data/dd3.kpf
+data/GCF_000001635.27_GRCm39_genomic.fna.gz.fxi

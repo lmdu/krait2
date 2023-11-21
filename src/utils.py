@@ -207,6 +207,10 @@ def get_fastx_info(index):
 			elif field == 'gc':
 				val = "{}%".format(val)
 
+			elif field == 'message':
+				if fastx.status != 0:
+					continue
+
 			i += 1
 			color = ['white', '#f2f2f2'][i%2]
 			contents.append("""
@@ -332,10 +336,14 @@ def get_feature_parents(feature, index):
 	return parents
 
 def get_stats_report(file_index):
-	sql = "SELECT html FROM stats_{}".format(file_index)
-	report = ''.join([row[0] for row in DB.query(sql)])
-	return report
+	sql = "SELECT * FROM stats_{}".format(file_index)
+	rows = [row[3] for row in DB.query(sql)]
 
+	if len(rows) > 1:
+		return ''.join(rows)
+
+	else:
+		return rows[0]
 
 if __name__ == '__main__':
 	affix = iupac_numerical_multiplier(int(sys.argv[1]))

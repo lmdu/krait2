@@ -41,6 +41,9 @@ class KraitBaseProcess(multiprocessing.Process):
 		print(msg)
 		self.send(type='error', message=msg)
 
+	def info(self, msg):
+		self.send(type='info', message=msg)
+
 	def prepare(self):
 		pass
 
@@ -68,6 +71,7 @@ class KraitSearchProcess(KraitBaseProcess):
 
 		fastx_format = check_fastx_format(self.fastx['fpath'])
 
+		self.info("Building index for {} ...".format(self.fastx['fpath']))
 		if fastx_format == 'fasta':
 			fx = pyfastx.Fasta(self.fastx['fpath'], full_index=True)
 			avg_len = round(fx.mean)
@@ -99,6 +103,7 @@ class KraitSearchProcess(KraitBaseProcess):
 
 class KraitSSRSearchProcess(KraitSearchProcess):
 	def do(self):
+		self.info("Finding SSRs from {} ...".format(self.fastx['fpath']))
 		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
 		SM = StandardMotif(self.params['standard_level'])
 
@@ -121,6 +126,7 @@ class KraitSSRSearchProcess(KraitSearchProcess):
 
 class KraitCSSRSearchProcess(KraitSearchProcess):
 	def do(self):
+		self.info("Finding cSSRs from {} ...".format(self.fastx['fpath']))
 		ssrs = self.params['ssrs']
 		dmax = self.params['dmax']
 
@@ -173,6 +179,7 @@ class KraitCSSRSearchProcess(KraitSearchProcess):
 
 class KraitISSRSearchProcess(KraitSearchProcess):
 	def do(self):
+		self.info("Finding iSSRs from {} ...".format(self.fastx['fpath']))
 		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
 		SM = StandardMotif(self.params['standard_level'])
 
@@ -205,6 +212,7 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 
 class KraitGTRSearchProcess(KraitSearchProcess):
 	def do(self):
+		self.info("Finding GTRs from {}".format(self.fastx['fpath']))
 		fx = pyfastx.Fastx(self.fastx['fpath'], uppercase=True)
 
 		for item in fx:
@@ -236,6 +244,7 @@ class KraitPrimerDesignProcess(KraitBaseProcess):
 		self.category = category
 
 	def do(self):
+		self.info("Designing primers ...")
 		seq_name = None
 		seq_cache = None
 		flank_len = self.params.pop('PRIMER_FLANK_LENGTH')
@@ -303,13 +312,16 @@ class KraitMappingProcess(KraitBaseProcess):
 		if not self.fastx['apath']:
 			return
 
+		self.info("Parsing annotation file {} ...".format(self.fastx['apath']))
 		mapper = get_annotation_mapper(self.fastx['apath'])
 		features = mapper.feature_records
 
+		self.info("Saving annotaion for {} ...".format(self.fastx['apath']))
 		for i in range(0, len(features), 200):
 			chunk = features[i:i+200]
 			self.send(type='annot', records=chunk)
 
+		self.info("Peforming annotation mapping for {} ...".format(self.fastx['fpath']))
 		rows = []
 		for r in self.repeats:
 			fs = mapper.contain(r[1], r[2], r[3])
@@ -347,14 +359,16 @@ class KraitStatisticsProcess(KraitBaseProcess):
 		return classes[rtype]
 
 	def do(self):
-		total = len(self.repeats)
+		self.info("Performing statistics anlysis for {} ...".format(self.fastx['fpath']))
+		total = sum(len(v) for k, v in self.repeats)
 		progress = 0
 		for rtype, repeats in self.repeats:
-			progress += 1
+			progress += len(repeats)
 			_class = self.get_class(rtype)
 			stats = _class(repeats, self.annots, self.fastx, self.params['unit'])
 			json = stats.json()
 			html = stats.html()
-			p = progress/total
-			self.send(type='stats', records=[(None, '{}_stats'.format(rtype), json, html)], progress=p)
+			plot = stats.plot()
+			p = progress/total*self.fastx['weight']
+			self.send(type='stats', records=[(None, '{}_stats'.format(rtype), json, html, plot)], progress=p)
 

@@ -258,7 +258,7 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		self.search_gtr_action = QAction(QIcon(":/icons/gtr.svg"), "GTRs", self,
-			toolTip = "Search for GTRs",
+			toolTip = "Search for generic tandem repeats",
 			triggered = self.do_gtr_search
 		)
 
@@ -337,7 +337,7 @@ class KraitMainWindow(QMainWindow):
 	def create_toolbar(self):
 		self.tool_bar = self.addToolBar('')
 		self.tool_bar.setMovable(False)
-		#self.tool_bar.setIconSize(QtCore.QSize(36, 36))
+		#self.tool_bar.setIconSize(QSize(24, 24))
 		#self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 		self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
@@ -497,8 +497,11 @@ class KraitMainWindow(QMainWindow):
 
 			if table == 'stats':
 				report = get_stats_report(self.current_file)
-				self.table_widgets[table].set_html(report)
-	
+
+				#it's too slow to directly use QTextedit setHtml
+				#self.table_widgets[table].set_html(report)
+				QTimer.singleShot(1, lambda : self.table_widgets[table].set_html(report))
+
 			elif table == 'info':
 				content = get_fastx_info(self.current_file)
 				self.table_widgets[table].set_html(content)

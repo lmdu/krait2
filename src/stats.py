@@ -18,6 +18,8 @@ class KraitBaseStatistics:
 	type_col = 6
 	rep_col = 7
 	len_col = 8
+	title = None
+	stype = None
 
 	def __init__(self, repeats, annots, fastx, unit):
 		self.repeats = repeats
@@ -92,15 +94,71 @@ class KraitBaseStatistics:
 	def json(self):
 		return json.dumps(self.result_stats)
 
-	def html(self):
-		category = [
-			"",
-			"Perfect microsatellite",
-			"Compound microsatellite",
-			"Generic tandem repeat",
-			"Imperfect microsatellite"
-		]
+	def summary_table(self):
+		return """
+		<div class="row">
+			<div class="col">
+				<h3>{}</h3>
+				<h4 class="mt-3">Summary statistics</h4>
+				<table class="table" cellspacing="0" align="center" cellpadding="10" width="98%">
+					<thead>
+						<tr>
+							<th>Total counts</th>
+							<th>Total length (bp)</th>
+							<th>Average length (bp)</th>
+							<th>Sequence coverage (%)</th>
+							<th>Relative abundance (loci/{})</th>
+							<th>Relative density (bp/{})</th>
+						</tr>
+					</thead>
+					<tbody class="table-group-divider">
+						<tr bgcolor="#f2f2f2">
+							<td align="center">{}</td>
+							<td align="center">{}</td>
+							<td align="center">{}</td>
+							<td align="center">{}</td>
+							<td align="center">{}</td>
+							<td align="center">{}</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		""".format(
+			self.title,
+			self.uname,
+			self.uname,
+			self.result_stats['total_counts'],
+			self.result_stats['total_length'],
+			self.result_stats['average_length'],
+			self.result_stats['coverage'],
+			self.result_stats['frequency'],
+			self.result_stats['density']
+		)
 
+	def cssr_table(self):
+		return """
+		<div class="row mt-3">
+			<div class="col">
+				<table class="table" cellspacing="0" align="center" cellpadding="10" width="98%" class="mt-3">
+					<thead>
+						<tr>
+							<th></th>
+							<th>Counts</th>
+						</tr>
+					</thead>
+					<tbody class="table-group-divider">
+						<tr bgcolor="#f2f2f2">
+							<th>Total number of individual microsatellites forming compound microsatellites</th>
+							<td align="center">{}</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		""".format(self.result_stats['total_cssrs'])
+
+	def html(self):
 		heads = {
 			'type_stats': "Motif type statistics",
 			'annot_stats': "Annotation statistics",
@@ -120,62 +178,10 @@ class KraitBaseStatistics:
 		]
 
 		tables = []
-		summary_table = """
-		<h3 class="mt-5">{}</h2>
-		<h4 class="mt-3">Summary statistics</h3>
-		<table cellspacing="0" align="center" cellpadding="10" width="98%">
-			<thead>
-			<tr>
-				<th>Total counts</th>
-				<th>Total length (bp)</th>
-				<th>Average length (bp)</th>
-				<th>Sequence coverage (%)</th>
-				<th>Relative abundance (loci/{})</th>
-				<th>Relative density (bp/{})</th>
-			</tr>
-			</thead>
-			<tbody>
-			<tr bgcolor="#f2f2f2">
-				<td align="center">{}</td>
-				<td align="center">{}</td>
-				<td align="center">{}</td>
-				<td align="center">{}</td>
-				<td align="center">{}</td>
-				<td align="center">{}</td>
-			</tr>
-			</tbody>
-		</table>
-		""".format(
-			category[self.rep_cat],
-			self.uname,
-			self.uname,
-			self.result_stats['total_counts'],
-			self.result_stats['total_length'],
-			self.result_stats['average_length'],
-			self.result_stats['coverage'],
-			self.result_stats['frequency'],
-			self.result_stats['density']
-		)
-		tables.append(summary_table)
+		tables.append(self.summary_table())
 
 		if 'total_cssrs' in self.result_stats:
-			tables.append("""
-				<table cellspacing="0" align="center" cellpadding="10" width="98%" class="mt-3">
-					<thead>
-					<tr>
-						<th></th>
-						<th>Counts</th>
-					</tr>
-					</thead>
-					<tbody>
-					<tr bgcolor="#f2f2f2">
-						<th>Total number of individual microsatellites forming compound microsatellites</th>
-						<td align="center">{}</td>
-					</tr>
-					</tbody>
-				</table>
-			""".format(self.result_stats['total_cssrs']))
-
+			tables.append(self.cssr_table())
 
 		for k, title in titles:
 			if k not in self.result_stats:
@@ -184,26 +190,283 @@ class KraitBaseStatistics:
 			if not self.result_stats[k]:
 				continue
 
-			table = ["<h4 class='mt-3'>{}</h4>".format(heads[k])]
-			table.append('<table cellspacing="0" align="center" cellpadding="10" width="98%">')
+			table = ['''<div class="row mt-3"><div class="col"><h4>{}</h4>\n'''.format(heads[k])]
+			table.append('''<table class="table" cellspacing="0" align="center" cellpadding="10" width="98%">\n''')
 			title.extend(["Total count", "Total length (bp)", "Percentage (%)", "Average length (bp)",
 				"Frequency (loci/{})".format(self.uname), "Density (bp/{})".format(self.uname)])
 
-			table.append("<thead><tr>{}</tr></thead><tbody>".format(''.join("<th>{}</th>".format(t) for t in title)))
+			table.append('''<thead>\n<tr>{}</tr>\n</thead>\n<tbody class="table-group-divider">\n'''.format(
+				''.join("<th>{}</th>\n".format(t) for t in title)))
 
 			i = 0
 			for row in self.result_stats[k]:
 				i += 1
 				color = ['white', '#f2f2f2'][i%2]
-				datas = ''.join("<td align='center'>{}</td>".format(col) for col in row)
-				table.append("<tr bgcolor='{}'>{}</tr>".format(color, datas))
+				datas = ''.join('''<td align="center">{}</td>\n'''.format(col) for col in row)
+				table.append('''<tr bgcolor="{}">{}</tr>\n'''.format(color, datas))
 
-			table.append("</tbody></table>")
-			tables.append(''.join(table))
+			table.append("</tbody>\n</table>\n</div>\n</div>\n")
+			tables.append('\n'.join(table))
 
-		return ''.join(tables)
+			if k == 'type_stats':
+				tables.append('''
+				<div class="row mt-3">
+					<div class="col-4">
+						<div id="{cat}-count-pie-{idx}"></div>
+					</div>
+					<div class="col-4">
+						<div id="{cat}-length-pie-{idx}"></div>
+					</div>
+					<div class="col-4">
+						<div id="{cat}-annot-pie-{idx}"></div>
+					</div>
+				</div>
+				'''.format(
+					cat = self.stype,
+					idx = self.fastx['id']
+				))
+
+			elif k == 'motif_stats':
+				tables.append('''
+				<div class="row mt-3">
+					<div class="col-12">
+						<div id="{cat}-motif-bar-{idx}"></div>
+					</div>
+				</div>
+				'''.format(
+					cat = self.stype,
+					idx = self.fastx['id']
+				))
+
+			elif k == 'repeat_stats':
+				tables.append('''
+				<div class="row mt-3">
+					<div class="col-12">
+						<div id="{cat}-repeat-line-{idx}"></div>
+					</div>
+				</div>
+				'''.format(
+					cat = self.stype,
+					idx = self.fastx['id']
+				))
+
+			elif k == 'length_stats':
+				tables.append('''
+				<div class="row mt-3">
+					<div class="col-12">
+						<div id="{cat}-length-line-{idx}"></div>
+					</div>
+				</div>
+				'''.format(
+					cat = self.stype,
+					idx = self.fastx['id']
+				))
+
+		return '\n'.join(tables)
+
+	def plot(self):
+		plots = []
+
+		if 'type_stats' in self.result_stats and self.result_stats['type_stats']:
+			names = []
+			counts = []
+			lengths = []
+
+			for row in self.result_stats['type_stats']:
+				names.append(row[0])
+				counts.append(row[1])
+				lengths.append(row[2])
+
+			plots.append("""
+				Plotly.newPlot('{cat}-count-pie-{idx}', [{{
+					type: 'pie',
+					values: [{counts}],
+					labels: [{names}]
+				}}], {{
+					title: "{cat} count distribution",
+					font: {{size: 14}}
+				}}, {{
+					responsive: true
+				}});
+
+				Plotly.newPlot('{cat}-length-pie-{idx}', [{{
+					type: 'pie',
+					values: [{lengths}],
+					labels: [{names}]
+				}}], {{
+					title: "{cat} length distribution",
+					font: {{size: 14}}
+				}}, {{
+					responsive: true
+				}});
+			""".format(
+				cat = self.stype,
+				idx = self.fastx['id'],
+				names = ','.join("'{}'".format(n) for n in names),
+				counts = ','.join(map(str, counts)),
+				lengths = ','.join(map(str, lengths))
+			))
+
+		if 'annot_stats' in self.result_stats and self.result_stats['annot_stats']:
+			names = []
+			counts = []
+
+			for row in self.result_stats['annot_stats']:
+				names.append(row[0])
+				counts.append(row[1])
+
+			plots.append("""
+				Plotly.newPlot('{cat}-annot-pie-{idx}', [{{
+					type: 'pie',
+					values: [{counts}],
+					labels: [{names}]
+				}}], {{
+					title: "{cat} distribution in different regions",
+					font: {{size: 14}}
+				}}, {{
+					responsive: true
+				}});
+			""".format(
+				cat = self.stype,
+				idx = self.fastx['id'],
+				names = ','.join("'{}'".format(n) for n in names),
+				counts = ','.join(map(str, counts))
+			))
+
+		if 'motif_stats' in self.result_stats and self.result_stats['motif_stats']:
+			motifs = []
+			counts = []
+
+			for row in sorted(self.result_stats['motif_stats'], key=lambda x: (len(x[0]), -x[1])):
+				motifs.append(row[0])
+				counts.append(row[5])
+
+			plots.append("""
+				Plotly.newPlot('{cat}-motif-bar-{idx}', [{{
+					type: 'bar',
+					y: [{counts}],
+					x: [{motifs}]
+				}}], {{
+					title: "{cat} motif distribution",
+					font: {{size: 14}},
+					yaxis: {{
+						title: {{
+							text: "{ylab}"
+						}}
+					}}
+				}}, {{
+					responsive: true
+				}});
+			""".format(
+				cat = self.stype,
+				idx = self.fastx['id'],
+				motifs = ','.join("'{}'".format(n) for n in motifs),
+				counts = ','.join(map(str, counts)),
+				ylab = "Frequency (loci/{})".format(self.uname)
+			))
+
+		if 'repeat_stats' in self.result_stats and self.result_stats['repeat_stats']:
+			datasets = {}
+			for row in self.result_stats['repeat_stats']:
+				if row[0] not in datasets:
+					datasets[row[0]] = []
+				datasets[row[0]].append((row[1], row[6]))
+
+			data = []
+			for t in datasets:
+				xs = []
+				ys = []
+				for x, y in sorted(datasets[t]):
+					xs.append(x)
+					ys.append(y)
+
+				data.append({
+					'name': t,
+					'mode': 'lines+markers',
+					'x': xs,
+					'y': ys
+				})
+
+			plots.append("""
+				Plotly.newPlot('{cat}-repeat-line-{idx}', {data}, {{
+					title: "{cat} repeat distribution",
+					font: {{size: 14}},
+					yaxis: {{
+						title: {{
+							text: "{ylab}"
+						}}
+					}},
+					xaxis: {{
+						title: {{
+							text: "Repeat number"
+						}}
+					}}
+				}}, {{
+					responsive: true
+				}});
+			""".format(
+				cat = self.stype,
+				idx = self.fastx['id'],
+				data = json.dumps(data),
+				motifs = ','.join("'{}'".format(n) for n in motifs),
+				counts = ','.join(map(str, counts)),
+				ylab = "Frequency (loci/{})".format(self.uname)
+			))
+
+		if 'length_stats' in self.result_stats and self.result_stats['length_stats']:
+			datasets = {}
+			for row in self.result_stats['length_stats']:
+				if row[0] not in datasets:
+					datasets[row[0]] = []
+				datasets[row[0]].append((row[1], row[6]))
+
+			data = []
+			for t in datasets:
+				xs = []
+				ys = []
+				for x, y in sorted(datasets[t]):
+					xs.append(x)
+					ys.append(y)
+
+				data.append({
+					'name': t,
+					'mode': 'lines+markers',
+					'x': xs,
+					'y': ys
+				})
+
+			plots.append("""
+				Plotly.newPlot('{cat}-length-line-{idx}', {data}, {{
+					title: "{cat} length distribution",
+					font: {{size: 14}},
+					yaxis: {{
+						title: {{
+							text: "{ylab}"
+						}}
+					}},
+					xaxis: {{
+						title: {{
+							text: "Length"
+						}}
+					}}
+				}}, {{
+					responsive: true
+				}});
+			""".format(
+				cat = self.stype,
+				idx = self.fastx['id'],
+				data = json.dumps(data),
+				motifs = ','.join("'{}'".format(n) for n in motifs),
+				counts = ','.join(map(str, counts)),
+				ylab = "Frequency (loci/{})".format(self.uname)
+			))
+
+		return '\n'.join(plots)
 
 class KraitSTRStatistics(KraitBaseStatistics):
+	title = "Perfect microsatellite"
+	stype = 'ssr'
+
 	def do_calculate(self):
 		self.total_counts = len(self.repeats)
 		self.total_length = 0
@@ -334,6 +597,8 @@ class KraitSTRStatistics(KraitBaseStatistics):
 class KraitCSSRStatistics(KraitBaseStatistics):
 	rep_cat = 2
 	len_col = 5
+	title = "Compound microsatellite"
+	stype = 'cssr'
 
 	def do_calculate(self):
 		self.total_counts = len(self.repeats)
@@ -378,12 +643,16 @@ class KraitGTRStatistics(KraitSTRStatistics):
 	type_col = 4
 	rep_col = 5
 	len_col = 6
+	title = "Generic tandem repeat"
+	stype = 'gtr'
 
 	def get_type(self, i):
 		return i
 
 class KraitISSRStatistics(KraitSTRStatistics):
 	rep_cat = 4
+	title = "Imperfect microsatellite"
+	stype = 'issr'
 
 class Statistics:
 	#total sequence counts
@@ -737,13 +1006,12 @@ class KraitExportStatistics:
 
 		for fastx_file in self.fastx_files:
 			res = DB.get_objects(sql.format(fastx_file.id))
-			self.fastx_datas.append({r.type: (json.loads(r.json), r.html) for r in res})
+			self.fastx_datas.append({r.type: (json.loads(r.json), r.html, r.plot) for r in res})
 
 	def get_style_css(self):
 		css_files = [
 			":/scripts/bootstrap.min.css",
-			":/scripts/datatables.min.css",
-			":/scripts/select2.min.css"
+			":/scripts/datatables.min.css"
 		]
 
 		styles = []
@@ -752,18 +1020,19 @@ class KraitExportStatistics:
 			if f.open(QIODevice.ReadOnly | QFile.Text):
 				text = QTextStream(f).readAll()
 			else:
-				text = ''
+				text = None
+
 			f.close()
-			styles.append(text)
+
+			if text:
+				styles.append("<style>{}</style>".format(text))
 
 		return '\n'.join(styles)
-
 
 	def get_script_js(self):
 		js_files = [
 			":/scripts/bootstrap.min.js",
 			":/scripts/datatables.min.js",
-			":/scripts/select2.min.js",
 			":/scripts/plotly.min.js"
 		]
 
@@ -773,9 +1042,12 @@ class KraitExportStatistics:
 			if f.open(QIODevice.ReadOnly | QFile.Text):
 				text = QTextStream(f).readAll()
 			else:
-				text = ''
+				text = None
+
 			f.close()
-			js.append(text)
+
+			if text:
+				js.append("<script>{}</script>".format(text))
 
 		return '\n'.join(js)
 
@@ -833,9 +1105,33 @@ class KraitExportStatistics:
 			data = self.fastx_datas[f.id-1]
 
 			if data:
-				tables.append('\n'.join(h for j, h in data.values()))
+				content = '\n'.join(h for j, h, _ in data.values())
 
-		return '\n'.join(tables)
+				tables.append('''
+				<div class="accordion-item">
+					<h2 class="accordion-header">
+						<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-fastx-{idx}" aria-controls="#collapse-fastx-{idx}">
+							{name}
+						</button>
+					</h2>
+					<div id="collapse-fastx-{idx}" class="accordion-collapse collapse" data-bs-parent="#fastx-accordion">
+						<div class="accordion-body">
+							{content}
+						</div>
+					</div>
+				</div>
+				'''.format(
+					idx = f.id,
+					name = f.fpath,
+					content = content
+				))
+
+		return '''
+		<h3 class="mt-5">View statistical results for each input file</h3>
+		<div class="accordion" id="fastx-accordion">
+			{}
+		</div>
+		'''.format('\n'.join(tables))
 
 	def get_stats_tables(self):
 		tables = []
@@ -843,35 +1139,61 @@ class KraitExportStatistics:
 		tables.append(self.get_file_report_tables())
 		return '\n'.join(tables)
 
+	def get_stats_plots(self):
+		plots = []
+		for f in self.fastx_files:
+			data = self.fastx_datas[f.id-1]
+
+			if data:
+				plots.append('\n'.join(p for _, _, p in data.values()))
+
+		return '\n'.join(plots)
+
 	def generate_summary_report(self):
 		template = """
 		<!DOCTYPE html>
-		<html lang="en>
+		<html lang="en">
 			<head>
 				<meta charset="utf-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1">
 				<title>Krait Statistical Report</title>
-				<style>{}</style>
-				<script>{}</script>
+				<!-- styles -->
+				{}
+				<style>
+				div.dt-buttons {{
+					margin-left: 20px;
+				}}
+				div.dt-buttons > .dt-button {{
+					padding: 2px 5px;
+				}}
+				</style>
+				<!-- scripts -->
+				{}
 				<script>
 					$(document).ready(function(){{
 						$('table').DataTable({{
-							dom: 'lfrtipB',
+							dom: 'lBfrtip',
 							buttons: ['copy', 'csv', 'excel']
+						}});
+
+						$('select').select2();
+
+						$('select').on('change', function(e){{
+							$('option:selected', this).tab('show');
 						}});
 					}});
 				</script>
 			</head>
 			<body>
-				<div class="container-fluid">
-					<div class="p-5">{}</div>
-				</div>
+				<div class="container-fluid p-5">{}</div>
 			</body>
+			<script>{}</script>
 		</html>
 		"""
 
 		styles = self.get_style_css()
 		scripts = self.get_script_js()
 		tables = self.get_stats_tables()
+		plots = self.get_stats_plots()
 
-		return template.format(styles, scripts, tables)
+		return template.format(styles, scripts, tables, plots)

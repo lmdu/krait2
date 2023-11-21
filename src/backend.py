@@ -135,7 +135,8 @@ CREATE TABLE IF NOT EXISTS stats_{} (
 	id INTEGER PRIMARY KEY,
 	type TEXT,
 	json TEXT,
-	html TEXT
+	html TEXT,
+	plot TEXT
 )
 """
 
@@ -210,8 +211,13 @@ class DataBackend:
 		self.cursor.execute(sql)
 
 	def drop_table(self, table, idx):
-		if self.table_exists("{}_{}".format(table, idx)):
-			self.cursor.execute("DELETE FROM {}_{}".format(table, idx))
+		table = "{}_{}".format(table, idx)
+
+		if self.table_exists(table):
+			self.query("DELETE FROM {}".format(table))
+
+	def drop_index(self, table, idx):
+		self.query("DROP INDEX IF EXISTS index_{}".format(idx))
 
 	def clear_table(self, table, idx):
 		self.query("DELETE FROM {}_{}".format(table, idx))
