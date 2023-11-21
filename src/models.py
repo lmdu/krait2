@@ -376,16 +376,16 @@ class KraitRepeatModel(KraitTableModel):
 			return
 
 		colors = {
-			1: QColor(245, 183, 177),
-			2: QColor(250, 215, 160),
-			3: QColor(169, 223, 191),
-			4: QColor(174, 214, 241),
-			5: QColor(),
-			6: QColor(),
+			1: QColor(187, 143, 206),
+			2: QColor(245, 183, 177),
+			3: QColor(174, 214, 241),
+			4: QColor(191, 201, 202),
+			5: QColor(249, 231, 159),
+			6: QColor(169, 223, 191)
 		}
 
 		types = {'ssr': 1, 'cssr': 2, 'gtr': 3, 'issr': 4}
-		
+
 		rid = self.displayed[index.row()]
 		sql = "SELECT feature FROM {} WHERE type=? AND locus=? LIMIT 1".format(map_table)
 		fid = DB.get_one(sql, (types[item[0]], rid))

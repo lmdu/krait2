@@ -240,7 +240,7 @@ class KraitFilterDialog(QDialog):
 		if self.exon_check.isChecked(): _features.append(2)
 		if self.utr3_check.isChecked(): _features.append(3)
 		if self.utr5_check.isChecked(): _features.append(5)
-		if self.intron_check.isChecked(): _features.append(4)
+		if self.intron_check.isChecked(): _features.append(6)
 
 		for row in self.filters:
 			for idx, col in enumerate(row):
