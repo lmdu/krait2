@@ -4,7 +4,7 @@ import time
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
-from PySide6.QtWidgets import * 
+from PySide6.QtWidgets import *
 
 from utils import *
 from stats import *
@@ -44,6 +44,7 @@ class KraitMainWindow(QMainWindow):
 		#self.file_table = FastaTableView(self)
 		self.create_fastx_tree()
 		self.create_seq_view()
+		self.create_align_view()
 		self.create_annot_view()
 
 		self.create_actions()
@@ -89,6 +90,15 @@ class KraitMainWindow(QMainWindow):
 		self.seq_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
 		self.seq_dock.setWidget(self.seq_view)
 		self.addDockWidget(Qt.BottomDockWidgetArea, self.seq_dock)
+
+	def create_align_view(self):
+		self.align_view = QTextBrowser(self)
+
+		self.align_dock = QDockWidget("Alignment", self)
+		self.align_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
+		self.align_dock.setWidget(self.align_view)
+		self.align_dock.setVisible(False)
+		self.tabifyDockWidget(self.seq_dock, self.align_dock)
 
 	def create_annot_view(self):
 		self.annot_view = QTreeWidget(self)
@@ -211,6 +221,10 @@ class KraitMainWindow(QMainWindow):
 		self.annotview_action.setText("Show annotation viewer")
 		self.annotview_action.setChecked(False)
 
+		self.alignview_action = self.align_dock.toggleViewAction()
+		self.alignview_action.setText("Show alignment viewer")
+		self.alignview_action.setChecked(False)
+
 		#run actions
 		#self.search_group_action = QActionGroup(self)
 		#self.search_group_action.triggered.connect(self.search_switch)
@@ -318,6 +332,7 @@ class KraitMainWindow(QMainWindow):
 		self.view_menu.addAction(self.fastx_action)
 		self.view_menu.addAction(self.seqview_action)
 		self.view_menu.addAction(self.annotview_action)
+		self.view_menu.addAction(self.alignview_action)
 
 		self.run_menu = self.menuBar().addMenu("&Run")
 		#self.run_menu.addAction(self.search_all_action)
@@ -529,6 +544,12 @@ class KraitMainWindow(QMainWindow):
 
 		self.seq_view.mark_sequence(self.current_file, target, marks)
 		#self.seq_view.set_sequence(self.current_file, cat, trs)
+
+	def show_repeat_alignment(self, category, repeat):
+		if not self.alignview_action.isChecked() or category != 'issr':
+			return
+
+		self.align_view.mark_alignment(self.current_file, repeat)
 
 	def show_repeat_annotation(self, category, repeat):
 		if not self.annotview_action.isChecked() or self.current_table.startswith('primer'):

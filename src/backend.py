@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS stats_{} (
 	type TEXT,
 	json TEXT,
 	html TEXT,
+	meta TEXT,
 	plot TEXT
 )
 """

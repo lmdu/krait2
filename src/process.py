@@ -368,7 +368,8 @@ class KraitStatisticsProcess(KraitBaseProcess):
 			stats = _class(repeats, self.annots, self.fastx, self.params['unit'])
 			json = stats.json()
 			html = stats.html()
+			meta = stats.meta()
 			plot = stats.plot()
 			p = progress/total*self.fastx['weight']
-			self.send(type='stats', records=[(None, '{}_stats'.format(rtype), json, html, plot)], progress=p)
+			self.send(type='stats', records=[(None, '{}_stats'.format(rtype), json, html, meta, plot)], progress=p)
 

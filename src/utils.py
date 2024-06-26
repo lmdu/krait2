@@ -336,8 +336,8 @@ def get_feature_parents(feature, index):
 	return parents
 
 def get_stats_report(file_index):
-	sql = "SELECT * FROM stats_{}".format(file_index)
-	rows = [row[3] for row in DB.query(sql)]
+	sql = "SELECT meta FROM stats_{}".format(file_index)
+	rows = [row[0] for row in DB.query(sql)]
 
 	if len(rows) > 1:
 		return ''.join(rows)

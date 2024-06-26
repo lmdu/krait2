@@ -158,6 +158,50 @@ class KraitBaseStatistics:
 		</div>
 		""".format(self.result_stats['total_cssrs'])
 
+	def meta(self):
+		heads = {
+			'type_stats': "Motif type statistics",
+			'annot_stats': "Annotation statistics"
+		}
+
+		titles = [
+			('type_stats', ["Motif type"]),
+			('annot_stats', ["Feature"])
+		]
+
+		tables = []
+		tables.append(self.summary_table())
+
+		if 'total_cssrs' in self.result_stats:
+			tables.append(self.cssr_table())
+
+		for k, title in titles:
+			if k not in self.result_stats:
+				continue
+
+			if not self.result_stats[k]:
+				continue
+
+			table = ['''<div class="row mt-3"><div class="col"><h4>{}</h4>\n'''.format(heads[k])]
+			table.append('''<table class="table" cellspacing="0" align="center" cellpadding="10" width="98%">\n''')
+			title.extend(["Total count", "Total length (bp)", "Percentage (%)", "Average length (bp)",
+				"Frequency (loci/{})".format(self.uname), "Density (bp/{})".format(self.uname)])
+
+			table.append('''<thead>\n<tr>{}</tr>\n</thead>\n<tbody class="table-group-divider">\n'''.format(
+				''.join("<th>{}</th>\n".format(t) for t in title)))
+
+			i = 0
+			for row in self.result_stats[k]:
+				i += 1
+				color = ['white', '#f2f2f2'][i%2]
+				datas = ''.join('''<td align="center">{}</td>\n'''.format(col) for col in row)
+				table.append('''<tr bgcolor="{}">{}</tr>\n'''.format(color, datas))
+
+			table.append("</tbody>\n</table>\n</div>\n</div>\n")
+			tables.append('\n'.join(table))
+
+		return '\n'.join(tables)
+
 	def html(self):
 		heads = {
 			'type_stats': "Motif type statistics",
