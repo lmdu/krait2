@@ -16,6 +16,7 @@ from seqview import *
 from backend import *
 from workers import *
 from widgets import *
+from alignment import *
 
 __all__ = ['KraitMainWindow']
 
@@ -92,7 +93,7 @@ class KraitMainWindow(QMainWindow):
 		self.addDockWidget(Qt.BottomDockWidgetArea, self.seq_dock)
 
 	def create_align_view(self):
-		self.align_view = QTextBrowser(self)
+		self.align_view = KraitAlignmentViewer(self)
 
 		self.align_dock = QDockWidget("Alignment", self)
 		self.align_dock.setAllowedAreas(Qt.BottomDockWidgetArea)

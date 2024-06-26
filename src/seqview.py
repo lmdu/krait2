@@ -417,7 +417,7 @@ class KraitSequenceViewer(QPlainTextEdit):
 			fastx = DB.get_object("SELECT * FROM fastx WHERE id=? LIMIT 1", (index,))
 
 			if fastx.format == 'fasta':
-				self.fastx_file = pyfastx.Fasta(fastx.fpath)
+				self.fastx_file = pyfastx.Fasta(fastx.fpath, uppercase=True)
 			else:
 				self.fastx_file = pyfastx.Fastq(fastx.fpath)
 

@@ -4,7 +4,9 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-__all__ = ['generate_alignment_sequence']
+from backend import *
+
+__all__ = ['KraitAlignmentViewer']
 
 def create_matrix(n, m):
 	d = []
@@ -149,17 +151,19 @@ def generate_alignment_pattern(seqs):
 	origin, perfect = seqs
 	patterns = []
 	template = (
+		"<td>\n"
 		"<span>{}</span>\n"
 		"<span>{}</span>\n"
 		"<span>{}</span>\n"
 		"<span>{}</span>\n"
+		"</td>\n"
 	)
 
 	for i in range(len(origin)):
-		align = ''
+		align = '&nbsp;'
 
 		if origin[i] == perfect[i]:
-			mtype = ''
+			mtype = '&nbsp;'
 			align = '|'
 		elif origin[i] == '-':
 			mtype = 'd'
@@ -172,7 +176,7 @@ def generate_alignment_pattern(seqs):
 
 	return patterns
 
-def generate_alignment_sequence(left, seq, right, motif):
+def generate_alignment_sequence(left, seq, right, motif, num):
 	patterns = []
 
 	if left:
@@ -188,16 +192,60 @@ def generate_alignment_sequence(left, seq, right, motif):
 		patterns += generate_alignment_pattern(seqs)
 
 	return ''.join(patterns)
+	rows = ['<tr>\n']
+
+	for i, p in enumerate(patterns, 1):
+		rows.append(p)
+
+		if i % num == 0:
+			rows.append('</tr>\n<tr>\n')
+
+	rows.append('</tr>\n')
+
+	return ''.join(rows)
 
 class KraitAlignmentViewer(QTextBrowser):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 
-	def mark_alignment(self, file, issr):
-		fa = pyfastx.Fasta(file, uppercase=True)
-		left = fa[issr.chrom][start-1:issr.sstart].seq
-		seq = fa[issr.chrom][issr.sstart-1:issr.send].seq
-		right = fa[issr.chrom][issr]
+		font = QFont("Roboto Mono")
+		font.setPointSize(10)
+		self.setFont(font)
+
+		self.target = None
+
+	def update_alignment(self):
+		ww = self.width()
+		fw = self.fontMetrics().averageCharWidth()
+		mw = self.contentsMargins()
+		num = int((ww - mw.left() - mw.right()) / fw)
+
+		patterns = generate_alignment_sequence(*self.target, num)
+		content = "<table>{}</table>".format(patterns)
+		self.setHtml(content)
+
+	def resizeEvent(self, event):
+		if self.target:
+			self.update_alignment()
+
+		super().resizeEvent(event)
+
+	def mark_alignment(self, findex, issr):
+		sql = "SELECT * FROM fastx WHERE id=? LIMIT 1"
+		fastx = DB.get_object(sql, (findex,))
+
+		if fastx.format == 'fasta':
+			fastx_file = pyfastx.Fasta(fastx.fpath, uppercase=True)
+		else:
+			fastx_file = pyfastx.Fastq(fastx.fpath)
+
+		left = fastx_file[issr.chrom][issr.start-1:issr.sstart].seq
+		seq = fastx_file[issr.chrom][issr.sstart-1:issr.send].seq
+		right = fastx_file[issr.chrom][issr.send-1:issr.end].seq
+		self.target = (left, seq, right, issr.motif)
+		self.update_alignment()
+
+
 
 
 
