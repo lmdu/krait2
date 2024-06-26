@@ -298,7 +298,7 @@ class KraitBaseModel(QAbstractTableModel):
 			return
 
 		select_count = len(self.selected)
-		extract_once = 100
+		extract_once = 200
 
 		if select_count == self.total_count:
 			sql = self.all_sql.replace("SELECT id FROM", "SELECT * FROM")

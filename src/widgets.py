@@ -42,6 +42,9 @@ class KraitTextBrowser(QTextBrowser):
 	def set_html(self, html):
 		self.setHtml(html)
 
+	def set_document(self, doc):
+		self.setDocument(doc)
+
 	def count_emit(self):
 		self.parent.column_counter.setNum(0)
 		self.parent.row_counter.setNum(0)

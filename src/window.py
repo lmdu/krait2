@@ -173,14 +173,19 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.export_selected_rows
 		)
 
-		self.export_whole_action = QAction("&Export All Rows...", self,
+		self.export_table_action = QAction("&Export Current Table...", self,
 			statusTip = "Export all rows in the current table",
 			triggered = self.export_current_table
 		)
 
 		self.export_all_action = QAction("&Export All Tables...", self,
-			statusTip = "Export all result tables of all input files to a folder",
+			statusTip = "Export all result tables for current input files to a folder",
 			triggered = self.export_all_tables
+		)
+
+		self.export_whole_action = QAction("&Export Whole Tables...", self,
+			statusTip = "Export all result tables for all input files to a folder",
+			triggered = self.export_whole_tables
 		)
 
 		self.export_stats_action = QAction("&Export Statistical Report", self,
@@ -508,14 +513,12 @@ class KraitMainWindow(QMainWindow):
 				idx = self.tab_widget.indexOf(self.table_widgets[table])
 				self.tab_widget.setTabVisible(idx, True)
 
-			self.tab_widget.setCurrentIndex(idx)
+			if idx is not None:
+				self.tab_widget.setCurrentIndex(idx)
 
 			if table == 'stats':
 				report = get_stats_report(self.current_file)
-
-				#it's too slow to directly use QTextedit setHtml
-				#self.table_widgets[table].set_html(report)
-				QTimer.singleShot(1, lambda : self.table_widgets[table].set_html(report))
+				self.table_widgets['stats'].set_html(report)
 
 			elif table == 'info':
 				content = get_fastx_info(self.current_file)
@@ -889,6 +892,9 @@ class KraitMainWindow(QMainWindow):
 
 		worker = ExportAllTablesThread(self, out_dir)
 		self.perform_new_task(worker)
+
+	def export_whole_tables(self):
+		pass
 
 	def show_report_in_browser(self, reprot_file, i):
 		if os.path.isfile(reprot_file):

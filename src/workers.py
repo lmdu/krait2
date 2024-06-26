@@ -7,6 +7,7 @@ import primer3
 import traceback
 import multiprocessing
 
+from PySide6.QtGui import *
 from PySide6.QtCore import *
 
 from motif import *
@@ -510,6 +511,7 @@ class KraitStatisticsWorker(KraitSearchWorker):
 class KraitSaveWorker(QRunnable):
 	def __init__(self, save_file=None):
 		super().__init__()
+		self.setAutoDelete(True)
 		self.save_file = save_file
 		self.signals = KraitWorkerSignals()
 
@@ -533,6 +535,7 @@ class KraitSaveWorker(QRunnable):
 class KraitExportStatisticsWorker(QRunnable):
 	def __init__(self, report_file=None):
 		super().__init__()
+		self.setAutoDelete(True)
 		self.report_file = report_file
 		self.signals = KraitWorkerSignals()
 
