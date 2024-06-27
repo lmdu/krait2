@@ -151,19 +151,22 @@ def generate_alignment_pattern(seqs):
 	origin, perfect = seqs
 	patterns = []
 	template = (
-		"<td>\n"
-		"<span>{}</span>\n"
-		"<span>{}</span>\n"
-		"<span>{}</span>\n"
-		"<span>{}</span>\n"
-		"</td>\n"
+		'<td class="B">'
+		'<span>{}</span><br>'
+		'<span class="{}">{}</span><br>'
+		'<span>{}</span><br>'
+		'<span class="{}">{}</span>'
+		'</td>'
 	)
 
 	for i in range(len(origin)):
-		align = '&nbsp;'
+		ob = origin[i]
+		pb = perfect[i]
+
+		align = ''
 
 		if origin[i] == perfect[i]:
-			mtype = '&nbsp;'
+			mtype = ''
 			align = '|'
 		elif origin[i] == '-':
 			mtype = 'd'
@@ -172,7 +175,7 @@ def generate_alignment_pattern(seqs):
 		else:
 			mtype = 's'
 
-		patterns.append(template.format(mtype, origin[i], align, perfect[i]))
+		patterns.append(template.format(mtype, ob, ob, align, pb, pb))
 
 	return patterns
 
@@ -191,16 +194,15 @@ def generate_alignment_sequence(left, seq, right, motif, num):
 		seqs = wrap_around_backtrace(mx, right, motif, 1)
 		patterns += generate_alignment_pattern(seqs)
 
-	return ''.join(patterns)
-	rows = ['<tr>\n']
+	rows = ['<tr>']
 
 	for i, p in enumerate(patterns, 1):
 		rows.append(p)
 
 		if i % num == 0:
-			rows.append('</tr>\n<tr>\n')
+			rows.append('</tr><tr>')
 
-	rows.append('</tr>\n')
+	rows.append('</tr>')
 
 	return ''.join(rows)
 
@@ -216,19 +218,52 @@ class KraitAlignmentViewer(QTextBrowser):
 
 	def update_alignment(self):
 		ww = self.width()
-		fw = self.fontMetrics().averageCharWidth()
+		fw = self.fontMetrics().averageCharWidth() * 2
 		mw = self.contentsMargins()
 		num = int((ww - mw.left() - mw.right()) / fw)
 
 		patterns = generate_alignment_sequence(*self.target, num)
-		content = "<table>{}</table>".format(patterns)
+		#content = "<table>{}</table>".format(patterns)
+		content = """
+		<html>
+			<head>
+				<style>
+					*{{
+						margin: 0;
+						padding: 0;
+					}}
+					.B{{
+						white-space: pre-line;
+						text-align: center;
+						display: inline-block;
+					}}
+					.A{{color:#5050ff;}}
+					.T{{color:#ffd700;}}
+					.G{{color:#00c000;}}
+					.C{{color:#f40000;}}
+				</style>
+			</head>
+			<body>
+				<table boder="0" cellpadding="0" cellspacing="0">{}</table>
+			</body>
+		</html>
+
+		""".format(patterns)
 		self.setHtml(content)
 
-	def resizeEvent(self, event):
-		if self.target:
-			self.update_alignment()
+		with open('report.html', 'w') as fw:
+			print(content, file=fw)
 
-		super().resizeEvent(event)
+	#def resizeEvent(self, event):
+	#	super().resizeEvent(event)
+
+	#	if not self.target:
+	#		return
+
+	#	if event.oldSize().width() == event.size().width():
+	#		return
+
+	#	self.update_alignment()
 
 	def mark_alignment(self, findex, issr):
 		sql = "SELECT * FROM fastx WHERE id=? LIMIT 1"
@@ -239,9 +274,9 @@ class KraitAlignmentViewer(QTextBrowser):
 		else:
 			fastx_file = pyfastx.Fastq(fastx.fpath)
 
-		left = fastx_file[issr.chrom][issr.start-1:issr.sstart].seq
+		left = fastx_file[issr.chrom][issr.start-1:issr.sstart-1].seq
 		seq = fastx_file[issr.chrom][issr.sstart-1:issr.send].seq
-		right = fastx_file[issr.chrom][issr.send-1:issr.end].seq
+		right = fastx_file[issr.chrom][issr.send:issr.end].seq
 		self.target = (left, seq, right, issr.motif)
 		self.update_alignment()
 
