@@ -251,9 +251,6 @@ class KraitAlignmentViewer(QTextBrowser):
 		""".format(patterns)
 		self.setHtml(content)
 
-		with open('report.html', 'w') as fw:
-			print(content, file=fw)
-
 	#def resizeEvent(self, event):
 	#	super().resizeEvent(event)
 

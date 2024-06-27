@@ -431,8 +431,8 @@ class KraitISSRModel(KraitRepeatModel):
 	table = 'issr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif', 'Smotif',
 						'Type', 'Repeats', 'Length', 'Seed start', 'Seed end',
-						'Seed repeat', 'Extend match', 'Extend subsitution',
-						'Extend insertion', 'Extend deletion', 'Extend identity']
+						'Seed repeat', 'Match', 'Subsitution', 'Insertion',
+						'Deletion', 'identity']
 
 
 class KraitPrimerModel(KraitTableModel):
