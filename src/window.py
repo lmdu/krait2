@@ -218,7 +218,7 @@ class KraitMainWindow(QMainWindow):
 
 		#view actions
 		self.fastx_action = self.fastx_dock.toggleViewAction()
-		self.fastx_action.setText("Show file list")
+		self.fastx_action.setText("Show input file list")
 
 		self.seqview_action = self.seq_dock.toggleViewAction()
 		self.seqview_action.setText("Show sequence viewer")

@@ -24,6 +24,10 @@ def create_matrix(n, m):
 
 	return d
 
+def print_matrix(mx):
+	for row in mx:
+		print('\t'.join(map(str, row)))
+
 def wrap_around_distance(b, s, i, d):
 	m = len(s)
 
@@ -38,8 +42,6 @@ def wrap_around_distance(b, s, i, d):
 
 	for j in range(2, m):
 		d[i][j] = min(d[i][j], d[i][j-1]+1)
-
-	return d[i][m] > d[i-1][m]
 
 def wrap_around_extend(s, ms, dr):
 	mx = create_matrix(len(s), len(ms))
@@ -57,8 +59,14 @@ def wrap_around_extend(s, ms, dr):
 	return mx
 
 def wrap_around_backtrace(mx, s, ms, dr):
-	j = m = len(ms)
+	m = len(ms)
 	i = len(s)
+
+	#find minimum value
+	minv = min(mx[i])
+	for idx, val in enumerate(mx[i]):
+		if minv == val:
+			j = idx
 
 	if dr == -1:
 		ms = ms[::-1]
@@ -67,6 +75,7 @@ def wrap_around_backtrace(mx, s, ms, dr):
 	origin = []
 	perfect = []
 
+	"""
 	while i > 0 or j > 0:
 		if i > 0 and j > 0 and j < m:
 			if j == 1:
@@ -117,6 +126,13 @@ def wrap_around_backtrace(mx, s, ms, dr):
 				perfect.append('-')
 
 				i -= 1
+
+		elif j == 0 and i == 1:
+			origin.append(s[i-1])
+			perfect.append('-')
+
+			i -= 1
+
 		else:
 			v = min(mx[i-1][j-1], mx[i-1][j], mx[i][j-1])
 
@@ -138,6 +154,55 @@ def wrap_around_backtrace(mx, s, ms, dr):
 				origin.append('-')
 				perfect.append(ms[j-1])
 
+				j -= 1
+	"""
+	while i > 0 or j > 0:
+		if j == 0:
+			origin.append(s[i-1])
+			perfect.append('-')
+			i -= 1
+
+		elif i == 0:
+			origin.append('-')
+			perfect.append(ms[j-1])
+			j -= 1
+
+		elif j == 1:
+			v = min(mx[i-1][0], mx[i-1][m], mx[i][0], mx[i-1][1])
+
+			if v == mx[i-1][m]:
+				origin.append(s[i-1])
+				perfect.append(ms[j-1])
+				i -= 1
+				j = m
+			elif v == mx[i-1][0]:
+				origin.append(s[i-1])
+				perfect.append(ms[j-1])
+				i -= 1
+				j = 0
+			elif v == mx[i-1][1]:
+				origin.append(s[i-1])
+				perfect.append('-')
+				i -= 1
+			elif v == mx[i][0]:
+				origin.append('-')
+				perfect.append(ms[j-1])
+				j -= 1
+		else:
+			v = min(mx[i-1][j-1], mx[i-1][j], mx[i][j-1])
+
+			if v == mx[i-1][j-1]:
+				origin.append(s[i-1])
+				perfect.append(ms[j-1])
+				i -= 1
+				j -= 1
+			elif v == mx[i-1][j]:
+				origin.append(s[i-1])
+				perfect.append('-')
+				i -= 1
+			elif v == mx[i][j-1]:
+				origin.append('-')
+				perfect.append(ms[j-1])
 				j -= 1
 
 	if dr == 1:
@@ -284,15 +349,9 @@ class KraitAlignmentViewer(QTextBrowser):
 
 
 if __name__ == '__main__':
-	seq = "ATGACGATGAGACTG"
+	seq = "CCACTGAGGATGATC"
 	motif = "ATG"
-	mx = wrap_around_extend(seq, motif, 1)
+	mx = wrap_around_extend(seq, motif, -1)
 
-	for row in mx:
-		print(row)
-
-	origin, perfect = wrap_around_backtrace(mx, seq, motif, 1)
-	
-	for row in generate_alignment_pattern((origin, perfect)):
-		print(row)
+	print_matrix(mx)
 		

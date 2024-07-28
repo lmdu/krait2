@@ -151,7 +151,7 @@ KRAIT_SEARCH_PARAMETERS = {
 	'ISSR/minsrep': (3, int),
 	'ISSR/minslen': (10, int),
 	'ISSR/maxerr': (3, int),
-	'ISSR/identity': (0.7, float),
+	'ISSR/identity': (70, float),
 	'ISSR/maxextend': (2000, int),
 	'STR/level': (3, int),
 	'STR/flank': (50, int),

@@ -430,7 +430,7 @@ class KraitCSSRModel(KraitRepeatModel):
 class KraitISSRModel(KraitRepeatModel):
 	table = 'issr'
 	custom_headers = ['ID', 'Chrom', 'Start', 'End', 'Motif', 'Smotif',
-						'Type', 'Repeats', 'Length', 'Seed start', 'Seed end',
+						'Type', 'Length', 'Seed start', 'Seed end',
 						'Seed repeat', 'Match', 'Subsitution', 'Insertion',
 						'Deletion', 'identity']
 

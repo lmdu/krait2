@@ -187,13 +187,13 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 			name, seq = item[0:2]
 
 			finder = pytrf.ATRFinder(name, seq,
-				min_motif_size = 1,
-				max_motif_size = 6,
-				min_seed_repeat = self.params['minsrep'],
-				min_seed_length = self.params['minslen'],
-				max_consecutive_error = self.params['maxerr'],
-				min_extend_identity = self.params['identity'],
-				max_extend_length = self.params['maxextend']
+				min_motif = 1,
+				max_motif = 6,
+				min_seedrep = self.params['minsrep'],
+				min_seedlen = self.params['minslen'],
+				max_errors = self.params['maxerr'],
+				min_identity = self.params['identity'],
+				max_extend = self.params['maxextend']
 			)
 
 			issrs = finder.as_list()
@@ -202,7 +202,7 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 			for issr in issrs:
 				smotif = SM.standard(issr[3])
 				records.append((None, name, issr[6], issr[7], issr[3], smotif,
-					issr[4], issr[8], issr[9], issr[1], issr[2], issr[5],
+					issr[4], round(issr[8], 2), issr[9], issr[1], issr[2], issr[5],
 					issr[10], issr[11], issr[12], issr[13], round(issr[14], 2)))
 
 			self.progress += len(seq)

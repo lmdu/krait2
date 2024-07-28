@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS issr_{} (
 	motif TEXT,
 	smotif TEXT,
 	type INTEGER,
-	repeat INTEGER,
+	repeat REAL,
 	length INTEGER,
 	sstart INTEGER,
 	send INTEGER,

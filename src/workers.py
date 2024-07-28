@@ -48,7 +48,7 @@ class KraitBaseWorker(QRunnable):
 		self.setAutoDelete(True)
 		self.fastx = None
 		self.processes = 0
-		self.queue = multiprocessing.SimpleQueue()
+		self.queue = multiprocessing.Queue()
 		self.signals = KraitWorkerSignals()
 		self.settings = QSettings()
 		self.params = self.get_params()
@@ -87,7 +87,7 @@ class KraitBaseWorker(QRunnable):
 					data = self.queue.get()
 					self.call_response(data)
 
-				except (EOFError, OSError):
+				except ValueError:
 					break
 
 		except:
