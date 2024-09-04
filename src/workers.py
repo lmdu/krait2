@@ -508,51 +508,70 @@ class KraitStatisticsWorker(KraitSearchWorker):
 			DB.insert_rows(DB.get_sql(table), data['records'])
 			self.update_progress(data)
 
-class KraitSaveWorker(QRunnable):
-	def __init__(self, save_file=None):
+class KraitExportWorker(QRunnable):
+	def __init__(self, export_dest=None):
 		super().__init__()
 		self.setAutoDelete(True)
-		self.save_file = save_file
+		self.export_dest = export_dest
 		self.signals = KraitWorkerSignals()
 
+	def before_run():
+		pass
+
 	def run(self):
-		self.signals.messages.emit("Saving to {}".format(self.save_file))
+		self.before_run()
+		self.signals.progress.emit(0)
+
+		try:
+			self.do()
+
+		except:
+			error = traceback.format_exc()
+			self.signals.failure.emit(error)
+			print(error)
+
+		finally:
+			self.signals.progress.emit(100)
+			self.signals.finished.emit()
+			self.signals.messages.emit('Done')
+
+
+class KraitSaveWorker(KraitExportWorker):
+	def do(self):
+		self.signals.messages.emit("Saving to {}".format(self.export_dest))
 		progress = 0
 
 		#close transaction
 		DB.commit()
 
-		with DB.save_to_file(self.save_file) as backup:
+		with DB.save_to_file(self.export_dest) as backup:
 			while not backup.done:
 				backup.step(10)
 				p = int((backup.pagecount - backup.remaining)/backup.pagecount*100)
+
 				if p > progress:
 					self.signals.progress.emit(p)
 					progress = p
 
-		self.signals.messages.emit("Successfully saved to {}".format(self.save_file))
+		self.signals.messages.emit("Successfully saved to {}".format(self.export_dest))
 
-class KraitExportStatisticsWorker(QRunnable):
-	def __init__(self, report_file=None):
-		super().__init__()
-		self.setAutoDelete(True)
-		self.report_file = report_file
-		self.signals = KraitWorkerSignals()
-
-	def run(self):
-		self.signals.messages.emit("Exporting report to {}".format(self.report_file))
+class KraitExportStatisticsWorker(KraitExportWorker):
+	def do(self):
+		self.signals.messages.emit("Exporting report to {}".format(self.export_dest))
 		progress = 0
 
 		stats = KraitExportStatistics()
 		html = stats.generate_summary_report()
 
-		with open(self.report_file, 'w', encoding='utf-8') as fw:
+		with open(self.export_dest, 'w', encoding='utf-8') as fw:
 			fw.write(html)
 
-		self.signals.messages.emit("Successfully export to {}".format(self.report_file))
-		self.signals.show_tab.emit(self.report_file, 0)
+		self.signals.messages.emit("Successfully export to {}".format(self.export_dest))
+		self.signals.show_tab.emit(self.export_dest, 0)
 
-
+class KraitExportSelectedWorker(KraitExportWorker):
+	def do(self):
+		pass
 
 
 

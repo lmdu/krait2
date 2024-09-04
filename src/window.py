@@ -169,7 +169,7 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.import_annotation_folder
 		)
 
-		self.export_select_action = QAction("&Export Selected Rows...", self,
+		self.export_select_action = QAction("&Export selected rows...", self,
 			statusTip = "Export selected rows in the current table",
 			triggered = self.export_selected_rows
 		)
@@ -189,7 +189,7 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.export_whole_tables
 		)
 
-		self.export_stats_action = QAction("&Export Statistical Report", self,
+		self.export_stats_action = QAction("&Export statistical report...", self,
 			statusTip = "Export html statistical report",
 			triggered = self.export_stats_report
 		)
@@ -201,7 +201,7 @@ class KraitMainWindow(QMainWindow):
 		)
 
 		#edit actions
-		self.filter_set_action = QAction("&Filter rows", self,
+		self.filter_set_action = QAction("&Filter current table rows", self,
 			toolTip = "Filter rows for the current table",
 			triggered = self.open_filter_dialog
 		)
@@ -238,7 +238,7 @@ class KraitMainWindow(QMainWindow):
 		#self.search_sel_action = QAction("Running for Selected Fastas", self, checkable=True)
 		#self.search_group_action.addAction(self.search_all_action)
 		#self.search_group_action.addAction(self.search_sel_action)
-		self.cancel_action = QAction("&Cancel the running task", self,
+		self.cancel_action = QAction("&Stop running tasks", self,
 			triggered = self.cancel_running_tasks
 		)
 
@@ -340,10 +340,10 @@ class KraitMainWindow(QMainWindow):
 		self.view_menu.addAction(self.annotview_action)
 		self.view_menu.addAction(self.alignview_action)
 
-		self.run_menu = self.menuBar().addMenu("&Run")
+		self.tool_menu = self.menuBar().addMenu("&Tool")
 		#self.run_menu.addAction(self.search_all_action)
 		#self.run_menu.addAction(self.search_sel_action)
-		self.run_menu.addAction(self.cancel_action)
+		self.tool_menu.addAction(self.cancel_action)
 
 		#self.menuBar().addSeparator()
 

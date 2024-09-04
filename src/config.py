@@ -12,7 +12,7 @@ __all__ = ['KRAIT_VERSION', 'KRAIT_BUILD', 'KRAIT_ABOUT',
 
 KRAIT_VERSION = "2.0.0"
 
-KRAIT_BUILD = "20230307"
+KRAIT_BUILD = "20240808"
 
 KRAIT_CITATION = """
 Du L, Zhang C, Liu Q, Zhang X, Yue B (2018)
@@ -128,8 +128,6 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	pyfastx = pyfastx.__version__,
 	pygros = pygros.__version__,
 	apsw = apsw.apswversion(),
-	sqlite = apsw.sqlitelibversion(),
-	primer3 = '2.6.1',
 	primerpy = primer3.__version__
 )
 
