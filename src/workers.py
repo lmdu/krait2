@@ -571,7 +571,40 @@ class KraitExportStatisticsWorker(KraitExportWorker):
 
 class KraitExportSelectedWorker(KraitExportWorker):
 	def do(self):
-		pass
+		selected = sorted(self.parent.get_selected_rows())
+		title = DB.get_field(self.table)
+
+		total = len(selected)
+		processed = 0
+		progress = 0
+		slice_start = 0
+		slice_end = 0
+
+		if self.out_file.endswith('.csv'):
+			separator = ','
+		else:
+			separator = '\t'
+
+		with open(self.out_file, 'w') as fh:
+			writer = csv.writer(fh, delimiter=separator)
+			writer.writerow(title)
+
+			while slice_start < total:
+				slice_end = slice_start + self.batch
+				ids = selected[slice_start:slice_end]
+				slice_start = slice_end
+				sql = "SELECT * FROM {} WHERE id IN ({})".format(self.table, ','.join(['?']*len(ids)))
+
+				for row in DB.query(sql, ids):
+					writer.writerow(row)
+
+				processed += len(ids)
+				p = int(processed/total*100)
+				if p > progress:
+					self.signals.progress.emit(p)
+					progress = p
+
+		self.signals.messages.emit("Successfully exported {} rows to {}".format(total, self.out_file))
 
 
 
