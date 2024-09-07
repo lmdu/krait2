@@ -873,8 +873,7 @@ class KraitMainWindow(QMainWindow):
 		if not out_file:
 			return
 
-		worker = ExportSelectedRowsThread(self, self.current_table, out_file)
-		self.perform_new_task(worker)
+		self.run_work_thread(KraitExportSelectedWorker, self, out_file)
 
 	def export_current_table(self):
 		out_file, _ = QFileDialog.getSaveFileName(self, filter="TSV (*.tsv);;CSV (*.csv)")

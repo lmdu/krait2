@@ -28,7 +28,7 @@ __all__ = [
 	'KraitISSRSearchWorker', 'KraitGTRSearchWorker',
 	'KraitPrimerDesignWorker', 'KraitMappingWorker',
 	'KraitStatisticsWorker', 'KraitSaveWorker',
-	'KraitExportStatisticsWorker',
+	'KraitExportStatisticsWorker', 'KraitExportSelectedWorker'
 ]
 
 #signals can only be emit from QObject
@@ -515,7 +515,10 @@ class KraitExportWorker(QRunnable):
 		self.export_dest = export_dest
 		self.signals = KraitWorkerSignals()
 
-	def before_run():
+	def before_run(self):
+		pass
+
+	def do(self):
 		pass
 
 	def run(self):
@@ -533,7 +536,7 @@ class KraitExportWorker(QRunnable):
 		finally:
 			self.signals.progress.emit(100)
 			self.signals.finished.emit()
-			self.signals.messages.emit('Done')
+			#self.signals.messages.emit('Done')
 
 
 class KraitSaveWorker(KraitExportWorker):
@@ -570,41 +573,37 @@ class KraitExportStatisticsWorker(KraitExportWorker):
 		self.signals.show_tab.emit(self.export_dest, 0)
 
 class KraitExportSelectedWorker(KraitExportWorker):
-	def do(self):
-		selected = sorted(self.parent.get_selected_rows())
-		title = DB.get_field(self.table)
+	def __init__(self, parent, export_dest):
+		super().__init__(export_dest)
+		self.parent = parent 
 
-		total = len(selected)
+	def do(self):
+		table, total, selected = self.parent.get_selected_rows()
+		title = DB.get_field(table)
+
 		processed = 0
 		progress = 0
-		slice_start = 0
-		slice_end = 0
 
-		if self.out_file.endswith('.csv'):
+		if self.export_dest.endswith('.csv'):
 			separator = ','
 		else:
 			separator = '\t'
 
-		with open(self.out_file, 'w') as fh:
+		with open(self.export_dest, 'w') as fh:
 			writer = csv.writer(fh, delimiter=separator)
 			writer.writerow(title)
 
-			while slice_start < total:
-				slice_end = slice_start + self.batch
-				ids = selected[slice_start:slice_end]
-				slice_start = slice_end
-				sql = "SELECT * FROM {} WHERE id IN ({})".format(self.table, ','.join(['?']*len(ids)))
-
-				for row in DB.query(sql, ids):
+			for rows in selected:
+				for row in rows:
 					writer.writerow(row)
 
-				processed += len(ids)
+				processed += len(rows)
 				p = int(processed/total*100)
 				if p > progress:
 					self.signals.progress.emit(p)
 					progress = p
 
-		self.signals.messages.emit("Successfully exported {} rows to {}".format(total, self.out_file))
+		self.signals.messages.emit("Successfully exported {} selected rows to {}".format(total, self.export_dest))
 
 
 
