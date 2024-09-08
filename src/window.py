@@ -174,19 +174,14 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.export_selected_rows
 		)
 
-		self.export_table_action = QAction("&Export Current Table...", self,
+		self.export_table_action = QAction("&Export current table...", self,
 			statusTip = "Export all rows in the current table",
 			triggered = self.export_current_table
 		)
 
-		self.export_all_action = QAction("&Export All Tables...", self,
-			statusTip = "Export all result tables for current input files to a folder",
+		self.export_all_action = QAction("&Export all tables...", self,
+			statusTip = "Export all result tables for selected files to a folder",
 			triggered = self.export_all_tables
-		)
-
-		self.export_whole_action = QAction("&Export Whole Tables...", self,
-			statusTip = "Export all result tables for all input files to a folder",
-			triggered = self.export_whole_tables
 		)
 
 		self.export_stats_action = QAction("&Export statistical report...", self,
@@ -321,7 +316,7 @@ class KraitMainWindow(QMainWindow):
 		self.file_menu.addAction(self.annotfolder_action)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.export_select_action)
-		self.file_menu.addAction(self.export_whole_action)
+		self.file_menu.addAction(self.export_table_action)
 		self.file_menu.addAction(self.export_all_action)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.export_stats_action)
@@ -881,20 +876,24 @@ class KraitMainWindow(QMainWindow):
 		if not out_file:
 			return
 
-		worker = ExportWholeTableThread(self, self.current_table, out_file)
-		self.perform_new_task(worker)
+		self.run_work_thread(KraitExportCurrentTableWorker, self, out_file)
 
 	def export_all_tables(self):
+		item, ok = QInputDialog.getItem(self, "Export tables", "Export all tables for:",
+			["Current sequence file", "All sequence files"], 0, False
+		)
+
+		if not (ok and item):
+			return
+
+		item = item == "Current sequence file"
+
 		out_dir = QFileDialog.getExistingDirectory(self)
 
 		if not out_dir:
 			return
 
-		worker = ExportAllTablesThread(self, out_dir)
-		self.perform_new_task(worker)
-
-	def export_whole_tables(self):
-		pass
+		self.run_work_thread(KraitExportAllTablesWorker, self, item, out_dir)
 
 	def show_report_in_browser(self, reprot_file, i):
 		if os.path.isfile(reprot_file):

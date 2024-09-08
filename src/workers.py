@@ -28,7 +28,8 @@ __all__ = [
 	'KraitISSRSearchWorker', 'KraitGTRSearchWorker',
 	'KraitPrimerDesignWorker', 'KraitMappingWorker',
 	'KraitStatisticsWorker', 'KraitSaveWorker',
-	'KraitExportStatisticsWorker', 'KraitExportSelectedWorker'
+	'KraitExportStatisticsWorker', 'KraitExportSelectedWorker',
+	'KraitExportCurrentTableWorker', 'KraitExportAllTablesWorker'
 ]
 
 #signals can only be emit from QObject
@@ -509,9 +510,10 @@ class KraitStatisticsWorker(KraitSearchWorker):
 			self.update_progress(data)
 
 class KraitExportWorker(QRunnable):
-	def __init__(self, export_dest=None):
+	def __init__(self, parent=None, export_dest=None):
 		super().__init__()
 		self.setAutoDelete(True)
+		self.parent = parent
 		self.export_dest = export_dest
 		self.signals = KraitWorkerSignals()
 
@@ -573,12 +575,10 @@ class KraitExportStatisticsWorker(KraitExportWorker):
 		self.signals.show_tab.emit(self.export_dest, 0)
 
 class KraitExportSelectedWorker(KraitExportWorker):
-	def __init__(self, parent, export_dest):
-		super().__init__(export_dest)
-		self.parent = parent 
-
 	def do(self):
 		table, total, selected = self.parent.get_selected_rows()
+		table = self.parent.get_current_table()
+
 		title = DB.get_field(table)
 
 		processed = 0
@@ -589,8 +589,8 @@ class KraitExportSelectedWorker(KraitExportWorker):
 		else:
 			separator = '\t'
 
-		with open(self.export_dest, 'w') as fh:
-			writer = csv.writer(fh, delimiter=separator)
+		with open(self.export_dest, 'w', newline='') as fw:
+			writer = csv.writer(fw, delimiter=separator)
 			writer.writerow(title)
 
 			for rows in selected:
@@ -605,8 +605,44 @@ class KraitExportSelectedWorker(KraitExportWorker):
 
 		self.signals.messages.emit("Successfully exported {} selected rows to {}".format(total, self.export_dest))
 
+class KraitExportCurrentTableWorker(KraitExportWorker):
+	def do(self):
+		table = self.parent.get_current_table()
+		title = DB.get_field(table)
+
+		processed = 0
+		progress = 0
+
+		if self.export_dest.endswith('.csv'):
+			separator = ','
+		else:
+			separator = '\t'
+
+		with open(self.export_dest, 'w', newline='') as fw:
+			writer = csv.writer(fw, delimiter=separator)
+			writer.writerow(title)
+			sql = "SELECT * FROM {}".format(table)
+
+			for row in DB.query(sql):
+				writer.writerow(row)
+
+				processed += 1
+				p = int(processed/total*100)
+
+				if p > progress:
+					self.signals.progress.emit(p)
+					progress = p
+
+		self.signals.messages.emit("Successfully exported to {}".format(self.export_dest))
 
 
+class KraitExportAllTablesWorker(KraitExportWorker):
+	def __init__(self, parent, is_current, export_dest):
+		super().__init__(parent, export_dest)
+		self.is_current = is_current
+
+	def do(self):
+		pass
 
 
 
