@@ -4,7 +4,10 @@ from PySide6.QtWidgets import *
 
 from config import *
 
-__all__ = ['KraitPrimerSettingDialog', 'KraitSearchSettingDialog']
+__all__ = [
+	'KraitPrimerSettingDialog', 'KraitSearchSettingDialog',
+	'KraitExportTablesDialog'
+]
 
 class KraitPrimerLabel(QLabel):
 	base_url = "https://primer3.org/manual.html#{}"
@@ -481,3 +484,39 @@ class KraitSearchParameterPanel(QWidget):
 class KraitSearchSettingDialog(KraitSettingDialog):
 	title = "Search Parameter Settings"
 	panel = KraitSearchParameterPanel
+
+class KraitExportTablesDialog(QDialog):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.setWindowTitle("Export all tables")
+		self.table_select = QComboBox(self)
+		self.table_select.addItems(["Current sequence file", "All sequence files"])
+		self.format_select = QComboBox(self)
+		self.format_select.addItems(["CSV", "TSV"])
+		self.button_box = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+		self.button_box.accepted.connect(self.accept)
+		self.button_box.rejected.connect(self.reject)
+		main_layout = QVBoxLayout()
+		main_layout.addWidget(QLabel("Export all tables for:", self))
+		main_layout.addWidget(self.table_select)
+		main_layout.addWidget(QLabel("Export format:", self))
+		main_layout.addWidget(self.format_select)
+		main_layout.addWidget(self.button_box)
+		self.setLayout(main_layout)
+
+	def sizeHint(self):
+		return QSize(300, 100)
+
+	@classmethod
+	def get_select(cls, parent):
+		dlg = cls(parent)
+
+		tab = None
+		fmt = None
+
+		if dlg.exec() == QDialog.Accepted:
+			tab = dlg.table_select.currentIndex()
+			fmt = dlg.format_select.currentText()
+
+		return (tab, fmt)
+

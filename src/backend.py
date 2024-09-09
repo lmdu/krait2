@@ -242,6 +242,11 @@ class DataBackend:
 		res = self.get_one(sql)
 		return True if res else False
 
+	def has_table(self, table):
+		sql = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1"
+		res = self.get_one(sql)
+		return True if res else False
+
 	def query(self, sql, paras=None):
 		if paras is None:
 			return self.cursor.execute(sql)
@@ -336,10 +341,10 @@ class DataBackend:
 	def changed(self):
 		return self.conn.changes() > 0
 
-	def export_to_csv(self, table, out_file):
+	def export_to_file(self, table, out_file, out_format='csv'):
 		with open(out_file, 'w') as fw:
 			shell = apsw.Shell(stdout=fw, db=self.conn)
-			shell.process_command(".mode csv")
+			shell.process_command(".mode {}".format(out_format))
 			shell.process_command(".headers on")
 			shell.process_complete_line("SELECT * FROM {}".format(table))
 

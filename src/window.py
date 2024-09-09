@@ -879,21 +879,17 @@ class KraitMainWindow(QMainWindow):
 		self.run_work_thread(KraitExportCurrentTableWorker, self, out_file)
 
 	def export_all_tables(self):
-		item, ok = QInputDialog.getItem(self, "Export tables", "Export all tables for:",
-			["Current sequence file", "All sequence files"], 0, False
-		)
+		tab, fmt = KraitExportTablesDialog.get_select(self)
 
-		if not (ok and item):
+		if tab is None:
 			return
-
-		item = item == "Current sequence file"
 
 		out_dir = QFileDialog.getExistingDirectory(self)
 
 		if not out_dir:
 			return
 
-		self.run_work_thread(KraitExportAllTablesWorker, self, item, out_dir)
+		self.run_work_thread(KraitExportAllTablesWorker, self, tab, fmt, out_dir)
 
 	def show_report_in_browser(self, reprot_file, i):
 		if os.path.isfile(reprot_file):

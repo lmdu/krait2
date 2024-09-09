@@ -637,12 +637,53 @@ class KraitExportCurrentTableWorker(KraitExportWorker):
 
 
 class KraitExportAllTablesWorker(KraitExportWorker):
-	def __init__(self, parent, is_current, export_dest):
+	def __init__(self, parent, export_tables, export_format, export_dest):
 		super().__init__(parent, export_dest)
-		self.is_current = is_current
+		self.export_tables = export_tables
+		self.export_format = export_format.lower()
 
 	def do(self):
-		pass
+		tables = DB.get_tables()
+		total = len(tables)
+		processed = 0
+		progress = 0
+
+		if self.export_tables == 0:
+			sql = "SELECT * FROM fastx WHERE id={}".format(self.parent.current_file)
+		else:
+			sql = "SELECT * FROM fastx"
+
+		files = {str(row[0]): row[1] for row in DB.query(sql)}
+
+		for table in tables:
+			processed += 1
+
+			if table == 'fastx':
+				out_file = os.path.join(self.export_dest, "input_fastx.{}".format(self.export_format))
+
+			else:
+				tname, fid = table.split('_')
+
+				if fid not in files:
+					continue
+
+				fname = files[fid]
+
+				if tname not in ['fastx', 'ssr', 'cssr', 'issr', 'gtr', 'primer']:
+					continue
+
+				out_file = os.path.join(self.export_dest, "{}_{}_{}.{}".format(fid, fname, tname, self.export_format))
+
+			DB.export_to_file(table, out_file, self.export_format)
+			p = int(processed/total*100)
+
+			if p > progress:
+				self.signals.progress.emit(p)
+				progress = p
+
+		self.signals.messages.emit("Successfully exported all tables to {}".format(self.export_dest))
+
+
 
 
 
@@ -1166,7 +1207,7 @@ class ExportAllTablesThread(WorkerThread):
 					fasta_mapping[_id], _type
 				))
 
-			DB.export_to_csv(table, out_file)
+			DB.export_to_file(table, out_file)
 
 			processed += 1
 			p = processed/total*100
