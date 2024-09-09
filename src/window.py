@@ -683,7 +683,7 @@ class KraitMainWindow(QMainWindow):
 				return
 
 			self.project_file = save_file
-			self.run_work_thread(KraitSaveWorker, save_file)
+			self.run_work_thread(KraitSaveWorker, self, save_file)
 			self.wait_task_finish()
 			DB.change_db(save_file)
 			self.setWindowTitle("{} - Krait v{}".format(save_file, KRAIT_VERSION))
@@ -911,7 +911,6 @@ class KraitMainWindow(QMainWindow):
 		#self.current_worker.signals.messages.connect(self.show_status_message)
 		#self.current_worker.signals.status.connect(self.fastx_tree.update_model)
 		QThreadPool.globalInstance().start(self.current_worker)
-
 
 	def wait_task_finish(self):
 		pool = QThreadPool.globalInstance()

@@ -342,6 +342,9 @@ class DataBackend:
 		return self.conn.changes() > 0
 
 	def export_to_file(self, table, out_file, out_format='csv'):
+		if out_format == 'tsv':
+			out_format = 'tabs'
+
 		with open(out_file, 'w') as fw:
 			shell = apsw.Shell(stdout=fw, db=self.conn)
 			shell.process_command(".mode {}".format(out_format))

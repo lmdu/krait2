@@ -622,6 +622,7 @@ class KraitExportCurrentTableWorker(KraitExportWorker):
 			writer = csv.writer(fw, delimiter=separator)
 			writer.writerow(title)
 			sql = "SELECT * FROM {}".format(table)
+			total = DB.get_one("SELECT COUNT(1) FROM {}".format(table))
 
 			for row in DB.query(sql):
 				writer.writerow(row)
