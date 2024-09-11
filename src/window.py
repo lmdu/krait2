@@ -898,11 +898,13 @@ class KraitMainWindow(QMainWindow):
 	def export_stats_report(self):
 		html_file, _ = QFileDialog.getSaveFileName(self, filter="HTML (*.html)")
 
-		if not html_file: return
+		if not html_file:
+			return
 
-		if not self.check_work_thread(): return
+		if not self.check_work_thread():
+			return
 
-		self.current_worker = KraitExportStatisticsWorker(html_file)
+		self.current_worker = KraitExportStatisticsWorker(self, html_file)
 		self.current_worker.signals.messages.connect(self.show_status_message)
 		self.current_worker.signals.show_tab.connect(self.show_report_in_browser)
 		#self.current_worker.signals.progress.connect(self.progress_bar.setValue)

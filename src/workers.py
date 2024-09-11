@@ -40,6 +40,7 @@ class KraitWorkerSignals(QObject):
 	show_tab = Signal(str, int)
 	progress = Signal(int)
 	messages = Signal(str)
+	prompt = Signal(str)
 
 class KraitBaseWorker(QRunnable):
 	processer = None
