@@ -132,10 +132,12 @@ class StandardMotif:
 		for i in range(6):
 			for motif in itertools.product(bases, repeat=i+1):
 				motif = "".join(list(motif))
+
 				if not is_motif(motif):
 					continue
 
 				smotif = self.standard(motif)
+
 				if smotif not in motifs:
 					motifs[smotif] = []
 

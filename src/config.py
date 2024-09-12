@@ -12,12 +12,10 @@ __all__ = ['KRAIT_VERSION', 'KRAIT_BUILD', 'KRAIT_ABOUT',
 
 KRAIT_VERSION = "2.0.0"
 
-KRAIT_BUILD = "20240808"
+KRAIT_BUILD = "20240912"
 
 KRAIT_CITATION = """
-Du L, Zhang C, Liu Q, Zhang X, Yue B (2018)
-Krait: an ultrafast tool for genome-wide survey of microsatellites and primer design.
-Bioinformatics. 34(4):681-683
+
 """
 
 KRAIT_ABOUT ="""

@@ -3,10 +3,11 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from config import *
+from motif import *
 
 __all__ = [
 	'KraitPrimerSettingDialog', 'KraitSearchSettingDialog',
-	'KraitExportTablesDialog'
+	'KraitExportTablesDialog', 'KraitMotifStandardDialog'
 ]
 
 class KraitPrimerLabel(QLabel):
@@ -520,3 +521,46 @@ class KraitExportTablesDialog(QDialog):
 
 		return (tab, fmt)
 
+class KraitMotifStandardDialog(QDialog):
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.setWindowTitle("Motif standardization")
+		self.level_select = QComboBox(self)
+		self.level_select.addItems([
+			"Level 1 Similar motifs",
+			"Level 2 = Level 1 + reverse complement motifs",
+			"Level 3 = Level 2 + complement motifs",
+			"Level 4 = Level 3 + reverse motifs"
+		])
+		self.level_select.currentIndexChanged.connect(self.show_motif_table)
+		self.motif_browse = QTextBrowser(self)
+		self.motif_normal = StandardMotif()
+		self.button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		self.button_box.accepted.connect(self.accept)
+		main_layout = QVBoxLayout()
+		select_layout = QHBoxLayout()
+		select_layout.addWidget(QLabel("Motif standardization level:", self))
+		select_layout.addWidget(self.level_select)
+		main_layout.addLayout(select_layout)
+		main_layout.addWidget(self.motif_browse)
+		main_layout.addWidget(self.button_box)
+		self.setLayout(main_layout)
+		self.show_motif_table()
+
+	@Slot()
+	def show_motif_table(self, level=0):
+		level += 1
+		self.motif_normal.setLevel(level)
+		contents = ["<table border='1' cellspacing='0' align='center' cellpadding='10' width='98%'><tr><th>Representative</th><th>Motifs</th></tr>"]
+		motifs = self.motif_normal.mapping()
+		for r in motifs:
+			contents.append("<tr><td>{}</td><td>{}</td></tr>".format(
+				r,
+				', '.join(motifs[r])
+			))
+		contents.append('</table>')
+
+		self.motif_browse.setHtml('\n'.join(contents))
+
+	def sizeHint(self):
+		return QSize(800, 600)

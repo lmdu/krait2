@@ -10,7 +10,7 @@ from utils import *
 from stats import *
 from filter import *
 from config import *
-from tables import *
+from table import *
 from dialog import *
 from seqview import *
 from backend import *
@@ -74,6 +74,8 @@ class KraitMainWindow(QMainWindow):
 
 		#opened project file
 		self.project_file = None
+
+		self.show()
 
 	def create_fastx_tree(self):
 		self.fastx_tree = KraitFastxTree(self)
@@ -237,6 +239,10 @@ class KraitMainWindow(QMainWindow):
 			triggered = self.cancel_running_tasks
 		)
 
+		self.motif_action = QAction("&Show motif standardization", self,
+			triggered = self.show_motif_standard
+		)
+
 
 		#help actions
 		self.about_action = QAction("&About krait", self,
@@ -339,6 +345,7 @@ class KraitMainWindow(QMainWindow):
 		#self.run_menu.addAction(self.search_all_action)
 		#self.run_menu.addAction(self.search_sel_action)
 		self.tool_menu.addAction(self.cancel_action)
+		self.tool_menu.addAction(self.motif_action)
 
 		#self.menuBar().addSeparator()
 
@@ -460,6 +467,11 @@ class KraitMainWindow(QMainWindow):
 	@Slot()
 	def cancel_running_tasks(self):
 		pass
+
+	@Slot()
+	def show_motif_standard(self):
+		dlg = KraitMotifStandardDialog(self)
+		dlg.exec()
 
 	@Slot(int)
 	def on_fastx_changed(self, index):
@@ -645,24 +657,25 @@ class KraitMainWindow(QMainWindow):
 	def show_error_message(self, err):
 		QMessageBox.critical(self, 'Error', err)
 
-	def open_project(self):
-		if self.project_file:
-			ret = QMessageBox.question(self, "Confirmation",
-				"A project file is already opened. Would you like to open a new project file?"
-			)
+	def open_project(self, open_file=None):
+		if open_file is None:
+			if self.project_file:
+				ret = QMessageBox.question(self, "Confirmation",
+					"A project file is already opened. Would you like to open a new project file?"
+				)
 
-			if ret == QMessageBox.No:
-				return
+				if ret == QMessageBox.No:
+					return
 
-		if DB.has_fastx():
-			ret = QMessageBox.question(self, "Confirmation",
-				"Would you like to save previous results before opening new project file?"
-			)
+			if DB.has_fastx():
+				ret = QMessageBox.question(self, "Confirmation",
+					"Would you like to save previous results before opening new project file?"
+				)
 
-			if ret == QMessageBox.Yes:
-				self.save_project()
+				if ret == QMessageBox.Yes:
+					self.save_project()
 
-		open_file, _ = QFileDialog.getOpenFileName(self, filter="Krait Project File (*.kpf)")
+			open_file, _ = QFileDialog.getOpenFileName(self, filter="Krait Project File (*.kpf)")
 
 		if not open_file:
 			return

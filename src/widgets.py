@@ -3,6 +3,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from models import *
+from motif import *
 
 __all__ = ['KraitFastxTree', 'KraitSSRTable', 'KraitCSSRTable',
 			'KraitISSRTable', 'KraitGTRTable', 'KraitPrimerTable',
