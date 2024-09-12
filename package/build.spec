@@ -60,7 +60,7 @@ if is_darwin:
     app = BUNDLE(
         coll,
         name = 'Krait.app',
-        icon = icons,
+        icon = icons[0],
         bundle_identifier=None,
         info_plist={
             'CFBundleDocumentTypes': [
