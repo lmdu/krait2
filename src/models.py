@@ -353,11 +353,11 @@ class KraitFastxModel(KraitBaseModel):
 			val = self.get_value(row, 3)
 
 			status_icons = {
-				0: QIcon('icons/error.svg'),
-				1: QIcon('icons/success.svg'),
-				2: QIcon('icons/run.svg'),
-				3: QIcon('icons/pend.svg'),
-				4: QIcon('icons/queue.svg')
+				0: QIcon(':/icons/error.svg'),
+				1: QIcon(':/icons/success.svg'),
+				2: QIcon(':/icons/run.svg'),
+				3: QIcon(':/icons/pend.svg'),
+				4: QIcon(':/icons/queue.svg')
 			}
 
 			return status_icons[val]

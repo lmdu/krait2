@@ -1,0 +1,28 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+	<file>fonts/robotomono.ttf</file>
+	<file>icons/logo.svg</file>
+	<file>icons/ssr.svg</file>
+	<file>icons/cssr.svg</file>
+	<file>icons/gtr.svg</file>
+	<file>icons/issr.svg</file>
+	<file>icons/locating.svg</file>
+	<file>icons/primer.svg</file>
+	<file>icons/statistics.svg</file>
+	<file>icons/filter.svg</file>
+	<file>icons/plus.svg</file>
+	<file>icons/minus.svg</file>
+	<file>icons/clear.svg</file>
+	<file>icons/update.svg</file>
+	<file>icons/pend.svg</file>
+	<file>icons/queue.svg</file>
+	<file>icons/run.svg</file>
+	<file>icons/error.svg</file>
+	<file>icons/success.svg</file>
+	<file>scripts/datatables.min.css</file>
+	<file>scripts/datatables.min.js</file>
+	<file>scripts/plotly.min.js</file>
+	<file>scripts/tabler.min.css</file>
+	<file>scripts/tabler.min.js</file>
+</qresource>
+</RCC>

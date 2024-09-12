@@ -1054,7 +1054,7 @@ class KraitExportStatistics:
 
 	def get_style_css(self):
 		css_files = [
-			":/scripts/bootstrap.min.css",
+			":/scripts/tabler.min.css",
 			":/scripts/datatables.min.css"
 		]
 
@@ -1075,7 +1075,7 @@ class KraitExportStatistics:
 
 	def get_script_js(self):
 		js_files = [
-			":/scripts/bootstrap.min.js",
+			":/scripts/tabler.min.js",
 			":/scripts/datatables.min.js",
 			":/scripts/plotly.min.js"
 		]
@@ -1199,7 +1199,7 @@ class KraitExportStatistics:
 		<html lang="en">
 			<head>
 				<meta charset="utf-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1">
+				<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 				<title>Krait Statistical Report</title>
 				<!-- styles -->
 				{}
@@ -1228,7 +1228,13 @@ class KraitExportStatistics:
 					}});
 				</script>
 			</head>
-			<body>
+			<body class="layout-fluid">
+				<div class="page">
+					<header class="navbar navbar-expand-md d-print-none">
+						<div></div>
+					</header>
+				</div>
+
 				<div class="container-fluid p-5">{}</div>
 			</body>
 			<script>{}</script>
