@@ -1,4 +1,5 @@
 import json
+import jinja2
 import pyfastx
 
 from PySide6.QtCore import *
@@ -1061,15 +1062,15 @@ class KraitExportStatistics:
 		styles = []
 		for css_file in css_files:
 			f = QFile(css_file)
+			text = None
+
 			if f.open(QIODevice.ReadOnly | QFile.Text):
 				text = QTextStream(f).readAll()
-			else:
-				text = None
 
 			f.close()
 
 			if text:
-				styles.append("<style>{}</style>".format(text))
+				styles.append(text)
 
 		return '\n'.join(styles)
 
@@ -1083,15 +1084,15 @@ class KraitExportStatistics:
 		js = []
 		for js_file in js_files:
 			f = QFile(js_file)
+			text = None
+
 			if f.open(QIODevice.ReadOnly | QFile.Text):
 				text = QTextStream(f).readAll()
-			else:
-				text = None
 
 			f.close()
 
 			if text:
-				js.append("<script>{}</script>".format(text))
+				js.append(text)
 
 		return '\n'.join(js)
 
@@ -1241,9 +1242,20 @@ class KraitExportStatistics:
 		</html>
 		"""
 
+		with open('template/stats.html') as fh:
+			content = fh.read()
+
+		template = jinja2.Template(content)
+
 		styles = self.get_style_css()
 		scripts = self.get_script_js()
+
+		return template.render(
+			styles = styles,
+			scripts = scripts
+		)
+
 		tables = self.get_stats_tables()
 		plots = self.get_stats_plots()
 
-		return template.format(styles, scripts, tables, plots)
+		#return template.format(styles, scripts, tables, plots)
