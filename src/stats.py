@@ -1097,37 +1097,10 @@ class KraitExportStatistics:
 		return '\n'.join(js)
 
 	def get_file_summary_table(self):
-		tables = ["<h3>File information summary</h3><table>"]
-		tables.append("""
-			<thead><tr>
-				<th>No.</th>
-				<th>File Name</th>
-				<th>File Format</th>
-				<th>Total Bases (bp)</th>
-				<th>Sequence Counts</th>
-				<th>GC Content (%)</th>
-				<th>Unknown Bases (bp)</th>
-				<th>Average Length (bp)</th>
-				<th>Minimum Length (bp)</th>
-				<th>Maximum Length (bp)</th>
-			</tr></thead></tbody>
-		""")
+		rows = []
 
 		for f in self.fastx_files:
-			row = """
-			<tr>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-				<td>{}</td>
-			</tr>
-			""".format(
+			rows.append([
 				f.id,
 				f.name,
 				f.format,
@@ -1138,11 +1111,9 @@ class KraitExportStatistics:
 				f.avglen,
 				f.minlen,
 				f.maxlen
-			)
-			tables.append(row)
+			])
 
-		tables.append('</tbody></table>')
-		return ''.join(tables)
+		return {'id': 'input-file-table', 'data': rows}
 
 	def get_file_report_tables(self):
 		tables = []
@@ -1181,8 +1152,9 @@ class KraitExportStatistics:
 	def get_stats_tables(self):
 		tables = []
 		tables.append(self.get_file_summary_table())
-		tables.append(self.get_file_report_tables())
-		return '\n'.join(tables)
+		#tables.append(self.get_file_report_tables())
+		#return '\n'.join(tables)
+		return tables
 
 	def get_stats_plots(self):
 		plots = []
@@ -1195,53 +1167,6 @@ class KraitExportStatistics:
 		return '\n'.join(plots)
 
 	def generate_summary_report(self):
-		template = """
-		<!DOCTYPE html>
-		<html lang="en">
-			<head>
-				<meta charset="utf-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-				<title>Krait Statistical Report</title>
-				<!-- styles -->
-				{}
-				<style>
-				div.dt-buttons {{
-					margin-left: 20px;
-				}}
-				div.dt-buttons > .dt-button {{
-					padding: 2px 5px;
-				}}
-				</style>
-				<!-- scripts -->
-				{}
-				<script>
-					$(document).ready(function(){{
-						$('table').DataTable({{
-							dom: 'lBfrtip',
-							buttons: ['copy', 'csv', 'excel']
-						}});
-
-						$('select').select2();
-
-						$('select').on('change', function(e){{
-							$('option:selected', this).tab('show');
-						}});
-					}});
-				</script>
-			</head>
-			<body class="layout-fluid">
-				<div class="page">
-					<header class="navbar navbar-expand-md d-print-none">
-						<div></div>
-					</header>
-				</div>
-
-				<div class="container-fluid p-5">{}</div>
-			</body>
-			<script>{}</script>
-		</html>
-		"""
-
 		with open('template/stats.html') as fh:
 			content = fh.read()
 
@@ -1249,13 +1174,11 @@ class KraitExportStatistics:
 
 		styles = self.get_style_css()
 		scripts = self.get_script_js()
+		tables = self.get_stats_tables()
 
 		return template.render(
 			styles = styles,
-			scripts = scripts
+			scripts = scripts,
+			fastxs = self.fastx_files,
+			tables = tables
 		)
-
-		tables = self.get_stats_tables()
-		plots = self.get_stats_plots()
-
-		#return template.format(styles, scripts, tables, plots)

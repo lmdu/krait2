@@ -15,7 +15,7 @@
       {{ styles }}
     </style>
   </head>
-  <body >
+  <body class=" layout-fluid">
     <div class="page">
       <header class="navbar navbar-expand-md d-print-none" >
         <div class="container-xl">
@@ -30,7 +30,56 @@
       <div class="page-wrapper">
         <div class="page-body">
           <div class="container-xl">
-            
+            <div class="card">
+              <div class="card-status-top bg-green"></div>
+              <div class="card-header">
+                <h3 class="card-title">Input sequence file summary information</h3>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-vcenter" id="input-file-table">
+                    <thead>
+                      <tr>
+                        <th>File No.</th>
+                        <th>File Name</th>
+                        <th>File Format</th>
+                        <th>Total Bases (bp)</th>
+                        <th>Sequence Counts</th>
+                        <th>GC Content (%)</th>
+                        <th>Unknown Bases (bp)</th>
+                        <th>Average Length (bp)</th>
+                        <th>Minimum Length (bp)</th>
+                        <th>Maximum Length (bp)</th>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="card mt-5">
+              <div class="card-status-top bg-green"></div>
+              <div class="card-header">
+                <h3 class="card-title">Statistics for each input file</h3>
+              </div>
+              <div class="card-body">
+                <div class="accordion" id="accordion-fastx">
+                  {% for fx in fastxs %}
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-{{ loop.index }}">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false">
+                        {{ fx.fpath }}
+                      </button>
+                    </h2>
+                    <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion-fastx">
+                      <div class="accordion-body">
+                        
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <footer class="footer footer-transparent d-print-none">
@@ -64,6 +113,24 @@
     </div>
     <script type="text/javascript">
       {{ scripts }}
+
+      var tables = {{ tables | tojson(2) }};
+
+      tables.forEach(function(t){
+        new DataTable('#'+t.id, {
+          data: t.data,
+          layout: {
+            topStart: {
+              pageLength: [10, 25, 50, 100],
+              buttons: [
+                {extend: 'copy', className: 'btn btn-sm btn-outline-secondary'},
+                {extend: 'csv', className: 'btn btn-sm btn-outline-secondary ms-2'},
+                {extend: 'excel', className: 'btn btn-sm btn-outline-secondary ms-2'}
+              ]
+            }
+          }
+        });
+      });
     </script>
   </body>
 </html>
