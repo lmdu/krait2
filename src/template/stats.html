@@ -33,7 +33,7 @@
             <div class="card">
               <div class="card-status-top bg-green"></div>
               <div class="card-header">
-                <h3 class="card-title">1. Input sequence file summary information</h3>
+                <h3 class="card-title">Input sequence file summary information</h3>
               </div>
               <div class="card-body">
                 <div class="table-responsive">
@@ -59,7 +59,7 @@
             <div class="card mt-5">
               <div class="card-status-top bg-green"></div>
               <div class="card-header">
-                <h3 class="card-title">2. Statistics for each input file</h3>
+                <h3 class="card-title">Statistics for each input file</h3>
               </div>
               <div class="card-body">
                 <div class="accordion" id="accordion-fastx">
@@ -67,18 +67,17 @@
                   <div class="accordion-item">
                     <h2 class="accordion-header" id="heading-{{ loop.index }}">
                       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false">
-                        {% set chapter = loop.index %}
-                        2.{{ chapter }}. {{ fx.fpath }}
+                        {{ fx.fpath }}
                       </button>
                     </h2>
                     <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion-fastx">
                       <div class="accordion-body">
                         {% for rt in ['ssr', 'cssr', 'issr', 'gtr'] %}
-                        <h2>2.{{ chapter }}.{{ loop.index }} {{ rt.upper() }} statistics</h2>
+                        <h3>{{ rt.upper() }} statistics</h3>
                         {% set tid = '{}-summary-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
-                        <h3>{{ rt.upper() }} summary information</h3>
-                        <div class="table-responsive">
+                        <h4>{{ rt.upper() }} summary information</h4>
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -96,8 +95,8 @@
 
                         {% set tid = '{}-total-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
-                        <h3>{{ rt.upper() }} summary information</h3>
-                        <div class="table-responsive">
+                        <h4>{{ rt.upper() }} summary information</h4>
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -112,7 +111,7 @@
                         {% set tid = '{}-type-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
                         <h3>{{ rt.upper() }} motif type statistics</h3>
-                        <div class="table-responsive">
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -127,12 +126,24 @@
                             </thead>
                           </table>
                         </div>
+
+                        <div class="row">
+                          <div class="col">
+                            <div id="{{ rt }}-count-pie-{{ fx.id }}"></div>
+                          </div>
+                          <div class="col">
+                            <div id="{{ rt }}-length-pie-{{ fx.id }}"></div>
+                          </div>
+                          <div class="col">
+                            <div id="{{ rt }}-annot-pie-{{ fx.id }}"></div>
+                          </div>
+                        </div>
                         {% endif %}
 
                         {% set tid = '{}-annot-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
                         <h3>{{ rt.upper() }} annotation statistics</h3>
-                        <div class="table-responsive">
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -152,7 +163,7 @@
                         {% set tid = '{}-motif-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
                         <h3>{{ rt.upper() }} motif statistics</h3>
-                        <div class="table-responsive">
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -167,12 +178,18 @@
                             </thead>
                           </table>
                         </div>
+
+                        <div class="row">
+                          <div class="col">
+                            <div id="{{ rt }}-motif-bar-{{ fx.id }}"></div>
+                          </div>
+                        </div>
                         {% endif %}
 
                         {% set tid = '{}-repeat-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
                         <h3>{{ rt.upper() }} repeat statistics</h3>
-                        <div class="table-responsive">
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -188,12 +205,18 @@
                             </thead>
                           </table>
                         </div>
-                        {% endif %}
 
+                        <div class="row">
+                          <div class="col">
+                            <div id="{{ rt }}-repeat-line-{{ fx.id }}"></div>
+                          </div>
+                        </div>
+                        {% endif %}
+                        
                         {% set tid = '{}-length-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
                         <h3>{{ rt.upper() }} length statistics</h3>
-                        <div class="table-responsive">
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -209,12 +232,18 @@
                             </thead>
                           </table>
                         </div>
+
+                        <div class="row">
+                          <div class="col">
+                            <div id="{{ rt }}-length-line-{{ fx.id }}"></div>
+                          </div>
+                        </div>
                         {% endif %}
 
                         {% set tid = '{}-complex-table-{}'.format(rt, fx.id) %}
                         {% if tid in tables %}
                         <h3>{{ rt.upper() }} complexity statistics</h3>
-                        <div class="table-responsive">
+                        <div class="table-responsive mb-5">
                           <table class="table table-vcenter" id="{{ tid }}">
                             <thead>
                               <tr>
@@ -290,6 +319,8 @@
           }
         });
       }
+
+      {{ plots }}
     </script>
   </body>
 </html>

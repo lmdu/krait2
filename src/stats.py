@@ -1046,7 +1046,8 @@ class ISSRStatistics(Statistics):
 		self.calc_group(fields, issr_count)
 
 class KraitExportStatistics:
-	def __init__(self):
+	def __init__(self, uname='Mb'):
+		self.uname = uname
 		self.fastx_files = [f for f in DB.get_objects("SELECT * FROM fastx")]
 		self.fastx_datas = []
 		sql = "SELECT type,json FROM stats_{}"
@@ -1120,14 +1121,14 @@ class KraitExportStatistics:
 	def get_repeat_summary_table(self, rtype, fastx, data):
 		rtype = rtype.split('_')[0]
 		tid = '{}-summary-table-{}'.format(rtype, fastx)
-		return {tid: [
+		return {tid: [[
 			data['total_counts'],
 			data['total_length'],
 			data['average_length'],
 			data['coverage'],
 			data['frequency'],
 			data['density']
-		]}
+		]]}
 
 	def get_cssr_summary_table(self, fastx, data):
 		tid = 'cssr-total-table-{}'.format(fastx)
@@ -1153,8 +1154,8 @@ class KraitExportStatistics:
 			for k, data in datas.items():
 				if k == 'cssr_stats':
 					tables.update(self.get_cssr_summary_table(f.id, data))
-				else:
-					tables.update(self.get_repeat_summary_table(k, f.id, data))
+				
+				tables.update(self.get_repeat_summary_table(k, f.id, data))
 				
 				for s in stats:
 					if s in data:
@@ -1162,212 +1163,209 @@ class KraitExportStatistics:
 
 		return tables
 
-	def plot(self):
-		plots = []
-
-		if 'type_stats' in self.result_stats and self.result_stats['type_stats']:
-			names = []
-			counts = []
-			lengths = []
-
-			for row in self.result_stats['type_stats']:
-				names.append(row[0])
-				counts.append(row[1])
-				lengths.append(row[2])
-
-			plots.append("""
-				Plotly.newPlot('{cat}-count-pie-{idx}', [{{
-					type: 'pie',
-					values: [{counts}],
-					labels: [{names}]
-				}}], {{
-					title: "{cat} count distribution",
-					font: {{size: 14}}
-				}}, {{
-					responsive: true
-				}});
-
-				Plotly.newPlot('{cat}-length-pie-{idx}', [{{
-					type: 'pie',
-					values: [{lengths}],
-					labels: [{names}]
-				}}], {{
-					title: "{cat} length distribution",
-					font: {{size: 14}}
-				}}, {{
-					responsive: true
-				}});
-			""".format(
-				cat = self.stype,
-				idx = self.fastx['id'],
-				names = ','.join("'{}'".format(n) for n in names),
-				counts = ','.join(map(str, counts)),
-				lengths = ','.join(map(str, lengths))
-			))
-
-		if 'annot_stats' in self.result_stats and self.result_stats['annot_stats']:
-			names = []
-			counts = []
-
-			for row in self.result_stats['annot_stats']:
-				names.append(row[0])
-				counts.append(row[1])
-
-			plots.append("""
-				Plotly.newPlot('{cat}-annot-pie-{idx}', [{{
-					type: 'pie',
-					values: [{counts}],
-					labels: [{names}]
-				}}], {{
-					title: "{cat} distribution in different regions",
-					font: {{size: 14}}
-				}}, {{
-					responsive: true
-				}});
-			""".format(
-				cat = self.stype,
-				idx = self.fastx['id'],
-				names = ','.join("'{}'".format(n) for n in names),
-				counts = ','.join(map(str, counts))
-			))
-
-		if 'motif_stats' in self.result_stats and self.result_stats['motif_stats']:
-			motifs = []
-			counts = []
-
-			for row in sorted(self.result_stats['motif_stats'], key=lambda x: (len(x[0]), -x[1])):
-				motifs.append(row[0])
-				counts.append(row[5])
-
-			plots.append("""
-				Plotly.newPlot('{cat}-motif-bar-{idx}', [{{
-					type: 'bar',
-					y: [{counts}],
-					x: [{motifs}]
-				}}], {{
-					title: "{cat} motif distribution",
-					font: {{size: 14}},
-					yaxis: {{
-						title: {{
-							text: "{ylab}"
-						}}
-					}}
-				}}, {{
-					responsive: true
-				}});
-			""".format(
-				cat = self.stype,
-				idx = self.fastx['id'],
-				motifs = ','.join("'{}'".format(n) for n in motifs),
-				counts = ','.join(map(str, counts)),
-				ylab = "Frequency (loci/{})".format(self.uname)
-			))
-
-		if 'repeat_stats' in self.result_stats and self.result_stats['repeat_stats']:
-			datasets = {}
-			for row in self.result_stats['repeat_stats']:
-				if row[0] not in datasets:
-					datasets[row[0]] = []
-				datasets[row[0]].append((row[1], row[6]))
-
-			data = []
-			for t in datasets:
-				xs = []
-				ys = []
-				for x, y in sorted(datasets[t]):
-					xs.append(x)
-					ys.append(y)
-
-				data.append({
-					'name': t,
-					'mode': 'lines+markers',
-					'x': xs,
-					'y': ys
-				})
-
-			plots.append("""
-				Plotly.newPlot('{cat}-repeat-line-{idx}', {data}, {{
-					title: "{cat} repeat distribution",
-					font: {{size: 14}},
-					yaxis: {{
-						title: {{
-							text: "{ylab}"
-						}}
-					}},
-					xaxis: {{
-						title: {{
-							text: "Repeat number"
-						}}
-					}}
-				}}, {{
-					responsive: true
-				}});
-			""".format(
-				cat = self.stype,
-				idx = self.fastx['id'],
-				data = json.dumps(data),
-				motifs = ','.join("'{}'".format(n) for n in motifs),
-				counts = ','.join(map(str, counts)),
-				ylab = "Frequency (loci/{})".format(self.uname)
-			))
-
-		if 'length_stats' in self.result_stats and self.result_stats['length_stats']:
-			datasets = {}
-			for row in self.result_stats['length_stats']:
-				if row[0] not in datasets:
-					datasets[row[0]] = []
-				datasets[row[0]].append((row[1], row[6]))
-
-			data = []
-			for t in datasets:
-				xs = []
-				ys = []
-				for x, y in sorted(datasets[t]):
-					xs.append(x)
-					ys.append(y)
-
-				data.append({
-					'name': t,
-					'mode': 'lines+markers',
-					'x': xs,
-					'y': ys
-				})
-
-			plots.append("""
-				Plotly.newPlot('{cat}-length-line-{idx}', {data}, {{
-					title: "{cat} length distribution",
-					font: {{size: 14}},
-					yaxis: {{
-						title: {{
-							text: "{ylab}"
-						}}
-					}},
-					xaxis: {{
-						title: {{
-							text: "Length"
-						}}
-					}}
-				}}, {{
-					responsive: true
-				}});
-			""".format(
-				cat = self.stype,
-				idx = self.fastx['id'],
-				data = json.dumps(data),
-				motifs = ','.join("'{}'".format(n) for n in motifs),
-				counts = ','.join(map(str, counts)),
-				ylab = "Frequency (loci/{})".format(self.uname)
-			))
-
-		return '\n'.join(plots)
-
 	def get_stats_plots(self):
 		plots = []
-		for f in self.fastx_files:
-			data = self.fastx_datas[f.id-1]
 
-			if data:
-				plots.append('\n'.join(p for _, _, p in data.values()))
+		for i, f in enumerate(self.fastx_files):
+			datas = self.fastx_datas[i]
+
+			for k, datai in datas.items():
+				rtype = k.split('_')[0]
+
+				for s in datai:
+					if s == 'type_stats':
+						names = []
+						counts = []
+						lengths = []
+
+						for row in datai[s]:
+							names.append(row[0])
+							counts.append(row[1])
+							lengths.append(row[2])
+
+						plots.append("""
+							Plotly.newPlot('{cat}-count-pie-{idx}', [{{
+								type: 'pie',
+								values: {counts},
+								labels: {names}
+							}}], {{
+								title: "{cat} count distribution",
+								font: {{size: 14}}
+							}}, {{
+								responsive: true
+							}});
+
+							Plotly.newPlot('{cat}-length-pie-{idx}', [{{
+								type: 'pie',
+								values: {lengths},
+								labels: {names}
+							}}], {{
+								title: "{cat} length distribution",
+								font: {{size: 14}}
+							}}, {{
+								responsive: true
+							}});
+						""".format(
+							cat = rtype,
+							idx = f.id,
+							names = json.dumps(names),
+							counts = json.dumps(counts),
+							lengths = json.dumps(lengths)
+						))
+
+					if s == 'annot_stats':
+						names = []
+						counts = []
+
+						for row in datai[s]:
+							names.append(row[0])
+							counts.append(row[1])
+
+						plots.append("""
+							Plotly.newPlot('{cat}-annot-pie-{idx}', [{{
+								type: 'pie',
+								values: {counts},
+								labels: {names}
+							}}], {{
+								title: "{cat} distribution in different regions",
+								font: {{size: 14}}
+							}}, {{
+								responsive: true
+							}});
+						""".format(
+							cat = rtype,
+							idx = f.id,
+							names = json.dumps(names),
+							counts = json.dumps(counts)
+						))
+
+					if s == 'motif_stats':
+						motifs = []
+						counts = []
+
+						for row in sorted(datai[s], key=lambda x: (len(x[0]), -x[1])):
+							motifs.append(row[0])
+							counts.append(row[5])
+
+						plots.append("""
+							Plotly.newPlot('{cat}-motif-bar-{idx}', [{{
+								type: 'bar',
+								y: {counts},
+								x: {motifs}
+							}}], {{
+								title: "{cat} motif distribution",
+								font: {{size: 14}},
+								yaxis: {{
+									title: {{
+										text: "{ylab}"
+									}}
+								}}
+							}}, {{
+								responsive: true
+							}});
+						""".format(
+							cat = rtype,
+							idx = f.id,
+							motifs = json.dumps(motifs),
+							counts = json.dumps(counts),
+							ylab = "Frequency (loci/{})".format(self.uname)
+						))
+
+					if s == 'repeat_stats':
+						datasets = {}
+						for row in datai[s]:
+							if row[0] not in datasets:
+								datasets[row[0]] = []
+							datasets[row[0]].append((row[1], row[6]))
+
+						data = []
+						for t in datasets:
+							xs = []
+							ys = []
+							for x, y in sorted(datasets[t]):
+								xs.append(x)
+								ys.append(y)
+
+							data.append({
+								'name': t,
+								'mode': 'lines+markers',
+								'x': xs,
+								'y': ys
+							})
+
+						plots.append("""
+							Plotly.newPlot('{cat}-repeat-line-{idx}', {data}, {{
+								title: "{cat} repeat distribution",
+								font: {{size: 14}},
+								yaxis: {{
+									title: {{
+										text: "{ylab}"
+									}}
+								}},
+								xaxis: {{
+									title: {{
+										text: "Repeat number"
+									}}
+								}}
+							}}, {{
+								responsive: true
+							}});
+						""".format(
+							cat = rtype,
+							idx = f.id,
+							data = json.dumps(data),
+							motifs = json.dumps(motifs),
+							counts = json.dumps(counts),
+							ylab = "Frequency (loci/{})".format(self.uname)
+						))
+
+					if s == 'length_stats':
+						datasets = {}
+						for row in datai[s]:
+							if row[0] not in datasets:
+								datasets[row[0]] = []
+							datasets[row[0]].append((row[1], row[6]))
+
+						data = []
+						for t in datasets:
+							xs = []
+							ys = []
+							for x, y in sorted(datasets[t]):
+								xs.append(x)
+								ys.append(y)
+
+							data.append({
+								'name': t,
+								'mode': 'lines+markers',
+								'x': xs,
+								'y': ys
+							})
+
+						plots.append("""
+							Plotly.newPlot('{cat}-length-line-{idx}', {data}, {{
+								title: "{cat} length distribution",
+								font: {{size: 14}},
+								yaxis: {{
+									title: {{
+										text: "{ylab}"
+									}}
+								}},
+								xaxis: {{
+									title: {{
+										text: "Length"
+									}}
+								}}
+							}}, {{
+								responsive: true
+							}});
+						""".format(
+							cat = rtype,
+							idx = f.id,
+							data = json.dumps(data),
+							motifs = json.dumps(motifs),
+							counts = json.dumps(counts),
+							ylab = "Frequency (loci/{})".format(self.uname)
+						))
 
 		return '\n'.join(plots)
 
@@ -1380,10 +1378,12 @@ class KraitExportStatistics:
 		styles = self.get_style_css()
 		scripts = self.get_script_js()
 		tables = self.get_stats_tables()
+		plots = self.get_stats_plots()
 
 		return template.render(
 			styles = styles,
 			scripts = scripts,
 			fastxs = self.fastx_files,
-			tables = tables
+			tables = tables,
+			plots = plots
 		)
