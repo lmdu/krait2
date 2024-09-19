@@ -291,8 +291,6 @@ def generate_primer_marks(index, primer, flank=100):
 	sql = "SELECT * FROM {}_{} WHERE id=?".format(category, index)
 	repeat = DB.get_object(sql, (int(locus),))
 
-	print(repeat)
-
 	start = repeat.start - flank
 	if start < 1: start = 1
 

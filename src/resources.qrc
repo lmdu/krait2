@@ -24,5 +24,6 @@
 	<file>scripts/plotly.min.js</file>
 	<file>scripts/tabler.min.css</file>
 	<file>scripts/tabler.min.js</file>
+	<file>template/stats.html</file>
 </qresource>
 </RCC>

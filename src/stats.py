@@ -7,10 +7,9 @@ from PySide6.QtCore import *
 from config import *
 from backend import *
 
-__all__ = ['SSRStatistics', 'CSSRStatistics', 'ISSRStatistics',
-			'VNTRStatistics', 'FastaStatistics',
-			'KraitSTRStatistics', 'KraitCSSRStatistics', 'KraitISSRStatistics',
-			'KraitGTRStatistics', 'KraitExportStatistics']
+__all__ = ['KraitSTRStatistics', 'KraitCSSRStatistics', 'KraitISSRStatistics',
+	'KraitGTRStatistics', 'KraitExportStatistics'
+]
 
 class KraitBaseStatistics:
 	_size = None
@@ -77,6 +76,9 @@ class KraitBaseStatistics:
 		return round(num/self.transize, 2)
 
 	def average(self, length, count):
+		if not count:
+			return 0
+
 		return round(length/count, 2)
 
 	def coverage(self, length):
@@ -1370,8 +1372,10 @@ class KraitExportStatistics:
 		return '\n'.join(plots)
 
 	def generate_summary_report(self):
-		with open('template/stats.html') as fh:
-			content = fh.read()
+		f = QFile(':/template/stats.html')
+		f.open(QIODevice.ReadOnly | QFile.Text)
+		content = QTextStream(f).readAll()
+		f.close()
 
 		template = jinja2.Template(content)
 

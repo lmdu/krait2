@@ -12,7 +12,7 @@ __all__ = ['KRAIT_VERSION', 'KRAIT_BUILD', 'KRAIT_ABOUT',
 
 KRAIT_VERSION = "2.0.0"
 
-KRAIT_BUILD = "20240912"
+KRAIT_BUILD = "20240919"
 
 KRAIT_CITATION = """
 
@@ -100,7 +100,7 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	</tr>
 	<tr>
 		<td>plotly.js</td>
-		<td>v2.27.0</td>
+		<td>v2.35.0</td>
 		<td>
 			<a href="https://plotly.com/javascript/">
 				https://plotly.com/javascript
@@ -109,7 +109,7 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 	</tr>
 	<tr>
 		<td>DataTables</td>
-		<td>v1.13.8</td>
+		<td>v2.1.6</td>
 		<td>
 			<a href="https://datatables.net/">
 				https://datatables.net
