@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="图层_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 256 256" style="enable-background:new 0 0 256 256;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-miterlimit:10;}
+	
+		.st1{fill-rule:evenodd;clip-rule:evenodd;fill:#3FA9F5;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+	
+		.st2{fill-rule:evenodd;clip-rule:evenodd;fill:#FF1D25;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+</style>
+<line class="st0" x1="11.89" y1="40.5" x2="245.09" y2="40.5"/>
+<line class="st0" x1="11.89" y1="212.5" x2="245.09" y2="212.5"/>
+<g>
+	<rect x="30.5" y="15.5" class="st1" width="40" height="50"/>
+	<rect x="70.5" y="15.5" class="st1" width="40" height="50"/>
+	<rect x="110.5" y="15.5" class="st1" width="40" height="50"/>
+	<rect x="150.5" y="15.5" class="st1" width="40" height="50"/>
+	<rect x="190.5" y="15.5" class="st1" width="40" height="50"/>
+</g>
+<g>
+	<rect x="30.5" y="85.5" class="st2" width="40" height="30"/>
+	<rect x="70.5" y="85.5" class="st2" width="40" height="30"/>
+</g>
+<g>
+	<rect x="150.5" y="137.5" class="st2" width="40" height="30"/>
+	<rect x="190.5" y="137.5" class="st2" width="40" height="30"/>
+</g>
+<g>
+	<rect x="30.5" y="187.5" class="st1" width="40" height="50"/>
+	<rect x="70.5" y="187.5" class="st1" width="40" height="50"/>
+	<rect x="110.5" y="187.5" class="st1" width="40" height="50"/>
+	<rect x="150.5" y="187.5" class="st1" width="40" height="50"/>
+	<rect x="190.5" y="187.5" class="st1" width="40" height="50"/>
+</g>
+</svg>
