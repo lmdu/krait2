@@ -207,6 +207,7 @@ The description of each column in GTRs table:
 	* - motif
 	  - repeat unit of GTR
 
+
 .. |ssr| image:: _static/ssr.svg
 	:width: 20
 .. |cssr| image:: _static/cssr.svg

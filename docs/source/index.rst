@@ -18,4 +18,6 @@ documentation for details.
    install
    window
    usage
+   others
+   output
 
