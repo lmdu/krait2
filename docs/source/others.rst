@@ -56,14 +56,17 @@ Click the row in primer table, you can view the primer sequence location in inpu
 	.. figure:: _static/primerseq.png
 		:align: center
 
-
 Perform Statistics
 ------------------
 
-After searching repeat, you can click |statistics| to perform statistics analysis.
+After searching repeat, you can click |statistics| to perform statistics analysis. Then, you can view the short statistics report in statistics tab.
+
+	.. figure:: _static/statsresults.png
 
 Motif Standardization
 ^^^^^^^^^^^^^^^^^^^^^
+
+Before statistics analysis, Krait2 will standardize the motif sequence and provide four standardization levels.
 
 **Level 0**
 
@@ -71,24 +74,23 @@ no standardization will be performed
 
 **Level 1**
 
-Similar motifs. For example, CA can be viewed as AC. ATGcan represent TGA and GAT
+Standardize similar motifs. For example, AGA can be viewed as AAG. AAG can represent AAG, AGA and GAA.
 
 **Level 2**
 
-Reverse complementary motifs, including Level 1. For example, CAT is a reverse complementary motif of ATG. ATG can represent TGA, 
-GAT, CAT, ATC and TCA
+Standardize reverse complementary motifs, including Level 1. For example, CAT is a reverse complementary motif of ATG. ATG can represent TGA, GAT, CAT, ATC and TCA
 
 **Level 3**
 
-Complementary motifs, including Level 1 and Level 2. For example, TAC is a complementary motif of ATG. ATG can represent TGA,GAT, 
-CAT, ATC, TCA, TAC, ACT and CTA
+Standardize complementary motifs, including Level 1 and Level 2. For example, TAC is a complementary motif of ATG. ATG can represent TGA,GAT, CAT, ATC, TCA, TAC, ACT and CTA
 
 **Level 4**
 
-Reverse motifs, including Level 1, Level 2 and Level 3. For example, GTA is a reverse motif of ATG. ATG can represent TGA,GAT, CAT, 
-ATC, TCA, TAC, ACT, CTA, GTA, TAG and AGT
+Standardize reverse motifs, including Level 1, Level 2 and Level 3. For example, GTA is a reverse motif of ATG. ATG can represent TGA,GAT, CAT, ATC, TCA, TAC, ACT, CTA, GTA, TAG and AGT
 
+You can go to **Tool** menu, click **Show motif standardization** to view the representative motifs.
 
+	.. figure:: _static/motifstandard.png
 
 Filter Tables
 -------------

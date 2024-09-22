@@ -344,7 +344,7 @@ class KraitMainWindow(QMainWindow):
 		self.tool_menu = self.menuBar().addMenu("&Tool")
 		#self.run_menu.addAction(self.search_all_action)
 		#self.run_menu.addAction(self.search_sel_action)
-		self.tool_menu.addAction(self.cancel_action)
+		#self.tool_menu.addAction(self.cancel_action)
 		self.tool_menu.addAction(self.motif_action)
 
 		#self.menuBar().addSeparator()

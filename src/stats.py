@@ -143,6 +143,7 @@ class KraitBaseStatistics:
 		return """
 		<div class="row mt-3">
 			<div class="col">
+				<h4 class="mt-3">Summary statistics</h4>
 				<table class="table" cellspacing="0" align="center" cellpadding="10" width="98%" class="mt-3">
 					<thead>
 						<tr>

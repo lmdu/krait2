@@ -319,6 +319,7 @@ class KraitPrimerDesignWorker(KraitBaseWorker):
 
 		self.start_process(trs)
 		self.processes += 1
+		#self.update_status(self.index, 2)
 
 	def call_response(self, data):
 		if data['type'] == 'success':
@@ -485,6 +486,7 @@ class KraitStatisticsWorker(KraitSearchWorker):
 			fastx['weight'] = fastx['bytes']/self.total_size
 			self.start_process(repeats, annots, fastx)
 			self.processes += 1
+			self.update_status(fastx['id'], 2)
 
 	def call_response(self, data):
 		if data['type'] == 'success':

@@ -334,14 +334,9 @@ def get_feature_parents(feature, index):
 	return parents
 
 def get_stats_report(file_index):
-	sql = "SELECT html FROM stats_{}".format(file_index)
+	sql = "SELECT meta FROM stats_{}".format(file_index)
 	rows = DB.get_column(sql)
-
-	if len(rows) > 1:
-		return ''.join(rows)
-
-	else:
-		return rows[0]
+	return ''.join(rows)
 
 if __name__ == '__main__':
 	affix = iupac_numerical_multiplier(int(sys.argv[1]))
