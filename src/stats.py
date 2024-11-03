@@ -1084,7 +1084,7 @@ class KraitExportStatistics:
 		js_files = [
 			":/scripts/tabler.min.js",
 			":/scripts/datatables.min.js",
-			":/scripts/plotly.min.js"
+			":/scripts/echarts.min.js"
 		]
 
 		js = []
@@ -1166,8 +1166,53 @@ class KraitExportStatistics:
 
 		return tables
 
+	def draw_pie_plot(self, pid, title, name, data):
+		return """
+			echarts.init(document.getElementById('{pid}')).setOption({
+				title: {
+					text: {title}
+				},
+				series: [{
+					name: {name},
+					type: 'pie',
+					radius: ['40%', '70%'],
+					label: {
+						show: true,
+					},
+					emphasis: {
+						label: {
+							show: true,
+							fontSize: 32,
+							fontWeight: 'bold'
+						}
+					},
+					data: {data}
+				}]
+			});
+		""".format(pid=pid, title=title, name=name, data=data)
+
+	def draw_bar_plot(self, pid, title, name, data):
+		return """
+			echarts.init(document.getElementById('{pid}')).setOption({
+				title: {
+					text: {title}
+				},
+				xAxis: {
+					type: 'category',
+					data: {name}
+				},
+				yAxis: {
+					type: 'value'
+				},
+				series: [{
+					data: {data},
+					type: 'bar'
+				}]
+			});
+		""".format(pid=pid, title=title, name=name, data=data)
+
 	def get_stats_plots(self):
-		plots = []
+		plots = {}
 
 		for i, f in enumerate(self.fastx_files):
 			datas = self.fastx_datas[i]
@@ -1177,70 +1222,33 @@ class KraitExportStatistics:
 
 				for s in datai:
 					if s == 'type_stats':
-						names = []
 						counts = []
 						lengths = []
 
 						for row in datai[s]:
-							names.append(row[0])
-							counts.append(row[1])
-							lengths.append(row[2])
+							counts.append({'value': row[1], 'name': row[0]})
+							lengths.append({'value': row[2], 'name': row[0]})
 
-						plots.append("""
-							Plotly.newPlot('{cat}-count-pie-{idx}', [{{
-								type: 'pie',
-								values: {counts},
-								labels: {names}
-							}}], {{
-								title: "{cat} count distribution",
-								font: {{size: 14}}
-							}}, {{
-								responsive: true
-							}});
+						pid = "{}-count-pie-{}".format(rtype, f.id)
+						title = "{} count distribution".format(rtype)
+						name = "{} count".format(rtype)
+						plots[pid] = self.draw_pie_plot(pid, title, name, counts)
 
-							Plotly.newPlot('{cat}-length-pie-{idx}', [{{
-								type: 'pie',
-								values: {lengths},
-								labels: {names}
-							}}], {{
-								title: "{cat} length distribution",
-								font: {{size: 14}}
-							}}, {{
-								responsive: true
-							}});
-						""".format(
-							cat = rtype,
-							idx = f.id,
-							names = json.dumps(names),
-							counts = json.dumps(counts),
-							lengths = json.dumps(lengths)
-						))
+						pid = "{}-length-pie-{}".format(rtype, f.id)
+						title = "{} length distribution".format(rtype)
+						name = "{} length".format(rtype)
+						plots[pid] = self.draw_pie_plot(pid, title, name, counts)
 
 					if s == 'annot_stats':
-						names = []
 						counts = []
 
 						for row in datai[s]:
-							names.append(row[0])
-							counts.append(row[1])
+							counts.append({'value': row[1], 'name': row[0]})
 
-						plots.append("""
-							Plotly.newPlot('{cat}-annot-pie-{idx}', [{{
-								type: 'pie',
-								values: {counts},
-								labels: {names}
-							}}], {{
-								title: "{cat} distribution in different regions",
-								font: {{size: 14}}
-							}}, {{
-								responsive: true
-							}});
-						""".format(
-							cat = rtype,
-							idx = f.id,
-							names = json.dumps(names),
-							counts = json.dumps(counts)
-						))
+						pid = "{}-annot-pie-{}".format(rtype, f.id)
+						title = "{} distribution in different gene regions".format(rtype)
+						name = "{} annotation".format(rtype)
+						plots[pid] = self.draw_pie_plot(pid, title, name, counts)
 
 					if s == 'motif_stats':
 						motifs = []
@@ -1250,13 +1258,17 @@ class KraitExportStatistics:
 							motifs.append(row[0])
 							counts.append(row[5])
 
+						pid = "{}-motif-bar-{idx}".format(rtype, f.id)
+						title = "{} motif distribution".format(rtype)
+						plots[pid] = self.draw_bar_plot(pid, title, motifs, counts)
+
 						plots.append("""
-							Plotly.newPlot('{cat}-motif-bar-{idx}', [{{
+							Plotly.newPlot('', [{{
 								type: 'bar',
 								y: {counts},
 								x: {motifs}
 							}}], {{
-								title: "{cat} motif distribution",
+								title: "",
 								font: {{size: 14}},
 								yaxis: {{
 									title: {{

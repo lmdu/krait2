@@ -21,7 +21,7 @@
 	<file>icons/success.svg</file>
 	<file>scripts/datatables.min.css</file>
 	<file>scripts/datatables.min.js</file>
-	<file>scripts/plotly.min.js</file>
+	<file>scripts/echarts.min.js</file>
 	<file>scripts/tabler.min.css</file>
 	<file>scripts/tabler.min.js</file>
 	<file>template/stats.html</file>
