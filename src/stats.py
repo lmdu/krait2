@@ -1181,7 +1181,7 @@ class KraitExportStatistics:
 				toolbox: {{
 					show: true,
 					feature: {{
-						dataView: {{readOnly: false}},
+						dataView: {{readOnly: true}},
 						saveAsImage: {{}}
 					}}
 				}},
@@ -1215,13 +1215,27 @@ class KraitExportStatistics:
 				title: {{
 					text: "{title}"
 				}},
+				tooltip: {{
+					trigger: 'item'
+				}},
+				toolbox: {{
+					show: true,
+					feature: {{
+						dataView: {{readOnly: true}},
+						saveAsImage: {{}}
+					}}
+				}},
 				xAxis: {{
 					type: 'category',
-					data: {name}
+					data: {name},
+					axisLabel: {{
+						rotate: 30
+					}}
 				}},
 				yAxis: {{
 					type: 'value',
-					name: {ylab},
+					name: "{ylab}",
+					nameGap: 30,
 					nameLocation: 'center'
 				}},
 				series: [{{
