@@ -1167,49 +1167,96 @@ class KraitExportStatistics:
 		return tables
 
 	def draw_pie_plot(self, pid, title, name, data):
+		pvar = pid.replace('-', '_')
 		return """
-			echarts.init(document.getElementById('{pid}')).setOption({
-				title: {
-					text: {title}
-				},
-				series: [{
-					name: {name},
+			var {pvar} = echarts.init(document.getElementById('{pid}'));
+			{pvar}.setOption({{
+				title: {{
+					text: "{title}"
+				}},
+				tooltip: {{
+					trigger: 'item',
+					formatter: '{{b}}<br>{{c}}, {{d}}%'
+				}},
+				toolbox: {{
+					show: true,
+					feature: {{
+						dataView: {{readOnly: false}},
+						saveAsImage: {{}}
+					}}
+				}},
+				series: [{{
+					name: "{name}",
 					type: 'pie',
 					radius: ['40%', '70%'],
-					label: {
+					label: {{
 						show: true,
-					},
-					emphasis: {
-						label: {
+					}},
+					emphasis: {{
+						label: {{
 							show: true,
 							fontSize: 32,
 							fontWeight: 'bold'
-						}
-					},
+						}}
+					}},
 					data: {data}
-				}]
-			});
-		""".format(pid=pid, title=title, name=name, data=data)
+				}}]
+			}});
+			window.addEventListener('resize', function(){{
+				{pvar}.resize();
+			}});
+		""".format(pvar=pvar, pid=pid, title=title, name=name, data=data)
 
-	def draw_bar_plot(self, pid, title, name, data):
+	def draw_bar_plot(self, pid, title, name, data, ylab):
+		pvar = pid.replace('-', '_')
 		return """
-			echarts.init(document.getElementById('{pid}')).setOption({
-				title: {
-					text: {title}
-				},
-				xAxis: {
+			var {pvar} = echarts.init(document.getElementById('{pid}'));
+			{pvar}.setOption({{
+				title: {{
+					text: "{title}"
+				}},
+				xAxis: {{
 					type: 'category',
 					data: {name}
-				},
-				yAxis: {
-					type: 'value'
-				},
-				series: [{
+				}},
+				yAxis: {{
+					type: 'value',
+					name: {ylab},
+					nameLocation: 'center'
+				}},
+				series: [{{
 					data: {data},
 					type: 'bar'
-				}]
-			});
-		""".format(pid=pid, title=title, name=name, data=data)
+				}}]
+			}});
+			window.addEventListener('resize', function(){{
+				{pvar}.resize();
+			}});
+		""".format(pvar=pvar, pid=pid, title=title, name=name, data=data, ylab=ylab)
+
+	def draw_line_plot(self, pid, title, datasets, xlab, ylab):
+		pvar = pid.replace('-', '_')
+		return """
+			var {pvar} = echarts.init(document.getElementById('{pid}'));
+			{pvar}.setOption({{
+				title: {{
+					text: "{title}"
+				}},
+				legend: {{}},
+				xAxis: {{
+					name: "{xlab}",
+					nameLocation: 'center'
+				}},
+				yAxis: {{
+					name: "{ylab}",
+					nameLocation: 'center'
+				}},
+				series: {datasets}
+			}});
+			window.addEventListener('resize', function(){{
+				{pvar}.resize();
+			}});
+		""".format(pvar=pvar, pid=pid, title=title, datasets=datasets, xlab=xlab, ylab=ylab)
 
 	def get_stats_plots(self):
 		plots = {}
@@ -1258,33 +1305,10 @@ class KraitExportStatistics:
 							motifs.append(row[0])
 							counts.append(row[5])
 
-						pid = "{}-motif-bar-{idx}".format(rtype, f.id)
+						pid = "{}-motif-bar-{}".format(rtype, f.id)
 						title = "{} motif distribution".format(rtype)
-						plots[pid] = self.draw_bar_plot(pid, title, motifs, counts)
-
-						plots.append("""
-							Plotly.newPlot('', [{{
-								type: 'bar',
-								y: {counts},
-								x: {motifs}
-							}}], {{
-								title: "",
-								font: {{size: 14}},
-								yaxis: {{
-									title: {{
-										text: "{ylab}"
-									}}
-								}}
-							}}, {{
-								responsive: true
-							}});
-						""".format(
-							cat = rtype,
-							idx = f.id,
-							motifs = json.dumps(motifs),
-							counts = json.dumps(counts),
-							ylab = "Frequency (loci/{})".format(self.uname)
-						))
+						ylab = "{} counts".format(rtype)
+						plots[pid] = self.draw_bar_plot(pid, title, motifs, counts, ylab)
 
 					if s == 'repeat_stats':
 						datasets = {}
@@ -1293,46 +1317,24 @@ class KraitExportStatistics:
 								datasets[row[0]] = []
 							datasets[row[0]].append((row[1], row[6]))
 
-						data = []
+						series = []
 						for t in datasets:
-							xs = []
-							ys = []
+							data = []
 							for x, y in sorted(datasets[t]):
-								xs.append(x)
-								ys.append(y)
+								data.append([x, y])
 
-							data.append({
+							series.append({
 								'name': t,
-								'mode': 'lines+markers',
-								'x': xs,
-								'y': ys
+								'type': 'line',
+								'smooth': 1,
+								'data': data,
 							})
 
-						plots.append("""
-							Plotly.newPlot('{cat}-repeat-line-{idx}', {data}, {{
-								title: "{cat} repeat distribution",
-								font: {{size: 14}},
-								yaxis: {{
-									title: {{
-										text: "{ylab}"
-									}}
-								}},
-								xaxis: {{
-									title: {{
-										text: "Repeat number"
-									}}
-								}}
-							}}, {{
-								responsive: true
-							}});
-						""".format(
-							cat = rtype,
-							idx = f.id,
-							data = json.dumps(data),
-							motifs = json.dumps(motifs),
-							counts = json.dumps(counts),
-							ylab = "Frequency (loci/{})".format(self.uname)
-						))
+						pid = "{}-repeat-line-{}".format(rtype, f.id)
+						title = "{} repeat distribution".format(rtype)
+						xlab = "Repeat number"
+						ylab = "Frequency (loci/{})".format(self.uname)
+						plots[pid] = self.draw_line_plot(pid, title, series, xlab, ylab)
 
 					if s == 'length_stats':
 						datasets = {}
@@ -1341,48 +1343,27 @@ class KraitExportStatistics:
 								datasets[row[0]] = []
 							datasets[row[0]].append((row[1], row[6]))
 
-						data = []
+						series = []
 						for t in datasets:
-							xs = []
-							ys = []
-							for x, y in sorted(datasets[t]):
-								xs.append(x)
-								ys.append(y)
+							data = []
 
-							data.append({
+							for x, y in sorted(datasets[t]):
+								data.append([x, y])
+
+							series.append({
 								'name': t,
-								'mode': 'lines+markers',
-								'x': xs,
-								'y': ys
+								'type': 'line',
+								'smooth': 1,
+								'data': data
 							})
 
-						plots.append("""
-							Plotly.newPlot('{cat}-length-line-{idx}', {data}, {{
-								title: "{cat} length distribution",
-								font: {{size: 14}},
-								yaxis: {{
-									title: {{
-										text: "{ylab}"
-									}}
-								}},
-								xaxis: {{
-									title: {{
-										text: "Length"
-									}}
-								}}
-							}}, {{
-								responsive: true
-							}});
-						""".format(
-							cat = rtype,
-							idx = f.id,
-							data = json.dumps(data),
-							motifs = json.dumps(motifs),
-							counts = json.dumps(counts),
-							ylab = "Frequency (loci/{})".format(self.uname)
-						))
+						pid = "{}-length-line-{}".format(rtype, f.id)
+						title = "{} length distribution".format(rtype)
+						xlab = "Length"
+						ylab = "Frequency (loci/{})".format(self.uname)
+						plots[pid] = self.draw_line_plot(pid, title, series, xlab, ylab)
 
-		return '\n'.join(plots)
+		return plots
 
 	def generate_summary_report(self):
 		f = QFile(':/template/stats.html')

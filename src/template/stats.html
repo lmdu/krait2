@@ -13,6 +13,8 @@
       	font-feature-settings: "cv03", "cv04", "cv11";
       }
       {{ styles }}
+
+      .plot-area {width:100%;min-width:200px;min-height: 400px;}
     </style>
   </head>
   <body class=" layout-fluid">
@@ -123,15 +125,17 @@
                     </div>
 
                     <div class="row">
-                      <div class="col-4">
-                          <div id="{{ rt }}-count-pie-{{ fx.id }}" class="w-100"></div>
+                      <div class="col">
+                          <div id="{{ rt }}-count-pie-{{ fx.id }}" class="plot-area"></div>
                       </div>
-                      <div class="col-4">
-                        <div id="{{ rt }}-length-pie-{{ fx.id }}" class="w-100"></div>
+                      <div class="col">
+                        <div id="{{ rt }}-length-pie-{{ fx.id }}" class="plot-area"></div>
                       </div>
-                      <div class="col-4">
-                        <div id="{{ rt }}-annot-pie-{{ fx.id }}" class="w-100"></div>
+                      {% if "{}-annot-pie-{}".format(rt, fx.id) in plots %}
+                      <div class="col">
+                        <div id="{{ rt }}-annot-pie-{{ fx.id }}" class="plot-area"></div>
                       </div>
+                      {% endif %}
                     </div>
                     {% endif %}
 
@@ -176,7 +180,7 @@
 
                     <div class="row">
                       <div class="col">
-                        <div id="{{ rt }}-motif-bar-{{ fx.id }}"></div>
+                        <div id="{{ rt }}-motif-bar-{{ fx.id }}" class="plot-area"></div>
                       </div>
                     </div>
                     {% endif %}
@@ -203,7 +207,7 @@
 
                     <div class="row">
                       <div class="col">
-                        <div id="{{ rt }}-repeat-line-{{ fx.id }}"></div>
+                        <div id="{{ rt }}-repeat-line-{{ fx.id }}" class="plot-area"></div>
                       </div>
                     </div>
                     {% endif %}
@@ -230,7 +234,7 @@
 
                     <div class="row">
                       <div class="col">
-                        <div id="{{ rt }}-length-line-{{ fx.id }}"></div>
+                        <div id="{{ rt }}-length-line-{{ fx.id }}" class="plot-area"></div>
                       </div>
                     </div>
                     {% endif %}
@@ -313,7 +317,13 @@
         });
       }
 
-      {{ plots }}
+      {% for plot in plots.values() %}
+      {{ plot }}
+      {% endfor %}
+
+      $('.accordion-button').click(function(){
+        window.dispatchEvent(new Event('resize'));
+      });
     </script>
   </body>
 </html>
