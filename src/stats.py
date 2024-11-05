@@ -1235,8 +1235,12 @@ class KraitExportStatistics:
 				yAxis: {{
 					type: 'value',
 					name: "{ylab}",
-					nameGap: 30,
-					nameLocation: 'center'
+					nameGap: 50,
+					nameLocation: 'center',
+					nameTextStyle: {{
+						color: '#000',
+						fontSize: 16,
+					}}
 				}},
 				series: [{{
 					data: {data},
@@ -1255,6 +1259,16 @@ class KraitExportStatistics:
 			{pvar}.setOption({{
 				title: {{
 					text: "{title}"
+				}},
+				tooltip: {{
+					trigger: 'item'
+				}},
+				toolbox: {{
+					show: true,
+					feature: {{
+						dataView: {{readOnly: true}},
+						saveAsImage: {{}}
+					}}
 				}},
 				legend: {{}},
 				xAxis: {{
