@@ -1069,6 +1069,9 @@ class KraitExportStatistics:
 
 		return plots
 
+	def perform_comparative_analysis(self):
+		pass
+
 	def generate_summary_report(self):
 		f = QFile(':/template/stats.html')
 		f.open(QIODevice.ReadOnly | QFile.Text)
