@@ -1070,7 +1070,16 @@ class KraitExportStatistics:
 		return plots
 
 	def perform_comparative_analysis(self):
-		pass
+		for i, f in enumerate(self.fastx_files):
+			datas = self.fastx_datas[i]
+
+			for k, datai in datas.items():
+				if rtype != 'ssr_stats':
+					continue
+
+				for s in datai:
+					if s == 'type_stats':
+						
 
 	def generate_summary_report(self):
 		f = QFile(':/template/stats.html')
