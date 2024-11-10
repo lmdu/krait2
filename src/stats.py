@@ -1070,6 +1070,10 @@ class KraitExportStatistics:
 		return plots
 
 	def perform_comparative_analysis(self):
+		ssr_summary = []
+		ssr_types = []
+		ssr_annot = []
+
 		for i, f in enumerate(self.fastx_files):
 			datas = self.fastx_datas[i]
 
@@ -1077,9 +1081,42 @@ class KraitExportStatistics:
 				if rtype != 'ssr_stats':
 					continue
 
+				ssr_summary.append([
+					f.name
+					datai['total_counts'],
+					datai['total_length'],
+					datai['average_length'],
+					datai['coverage'],
+					datai['frequency'],
+					datai['density']
+				])
+
 				for s in datai:
 					if s == 'type_stats':
-						
+						rows = {row[0]: row for row in datai[s]}
+						item = []
+						for j in [1, 2, 5, 6]:
+							for m in ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']:
+								row = rows.get(m, None):
+
+								if row is None:
+									item.append(0)
+								else:
+									item.append(row[j])
+
+					elif s == 'annot_stats':
+						pass
+
+					elif s == 'motif_stats':
+						pass
+
+
+
+
+
+
+
+
 
 	def generate_summary_report(self):
 		f = QFile(':/template/stats.html')
