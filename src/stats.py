@@ -1126,8 +1126,112 @@ class KraitExportStatistics:
 		}});
 		""".format(pid=pid, pvar=pvar, names=names, datasets=datasets)
 
-	def draw_stack_bar_mix_plot(self):
-		pass
+	def draw_stack_bar_mix_plot(self, pid, names, datasets):
+		pvar = pid.replace('-', '_')
+		return """
+		var {pvar}_source = {datasets};
+
+		var {pvar}_circos = $('<select>', {{id: '{pvar}-circos'}}).prependTo($('#{pid}').parent());
+		{pvar}_circos.append($("<option>").attr('value', 'bar').text('bar'));
+		{pvar}_circos.append($("<option>").attr('value', 'circle').text('circle'));
+
+		var {pvar}_select = $('<select>', {{id: '{pvar}-select'}}).prependTo($('#{pid}').parent());
+		//{pvar}_select.addClass('form-select');
+		for (key in {pvar}_source) {{
+			{pvar}_select.append($("<option>").attr('value', key).text(key));
+		}}
+		var {pvar} = echarts.init(document.getElementById('{pid}'));
+		var {pvar}_option_circos = {{
+			angleAxis: {{
+				type: 'category',
+				data: {names}
+			}},
+			radiusAxis: {{}},
+			polar: {{}},
+			legend: {{}},
+			series: []
+		}};
+
+		var {pvar}_option_bar = {{
+			legend: {{}},
+			tooltip: {{
+				trigger: 'item'
+			}},
+			toolbox: {{
+				show: true,
+				feature: {{
+					dataView: {{readOnly: true}},
+					saveAsImage: {{}}
+				}}
+			}},
+			yAxis: {{
+				type: 'category',
+				data: {names}
+			}},
+			xAxis: {{
+				type: 'value',
+				name: Object.keys({pvar}_source)[0],
+				nameGap: 50,
+				nameLocation: 'center',
+				nameTextStyle: {{
+					color: '#000',
+					fontSize: 16,
+				}}
+			}},
+			series: {pvar}_source[Object.keys({pvar}_source)[0]]
+		}};
+
+		var {pvar}_option = {pvar}_option_bar;
+		{pvar}.setOption({pvar}_option);
+
+		{pvar}_circos.on('change', function(){{
+			var {pvar}_series = {pvar}_source[{pvar}_select.val()];
+			if (this.value === 'circle') {{
+				{pvar}_option = {pvar}_option_circos;
+
+				for (var i = 0; i < {pvar}_series.length; i++) {{
+					{pvar}_series[i].coordinateSystem = 'polar';
+				}}
+
+			}} else {{
+				{pvar}_option = {pvar}_option_bar;
+
+				for (var i = 0; i < {pvar}_series.length; i++) {{
+					{pvar}_series[i].coordinateSystem = 'cartesian2d';
+				}}
+			}}
+			{pvar}_option.series = {pvar}_series;
+			{pvar}.clear();
+			{pvar}.setOption({pvar}_option);
+		}});
+
+		{pvar}_select.on('change', function() {{
+			var {pvar}_series = {pvar}_source[this.value];
+			if ({pvar}_circos.val() === 'circle') {{
+				{pvar}_option = {pvar}_option_circos;
+
+				for (var i = 0; i < {pvar}_series.length; i++) {{
+					{pvar}_series[i].coordinateSystem = 'polar';
+				}}
+
+			}} else {{
+				{pvar}_option = {pvar}_option_bar;
+
+				for (var i = 0; i < {pvar}_series.length; i++) {{
+					{pvar}_series[i].coordinateSystem = 'cartesian2d';
+				}}
+			}}
+
+			//{pvar}_option.xAxis.name = this.value;
+			//{pvar}_option.series = {pvar}_source[this.value];
+			{pvar}_option.series = {pvar}_series;
+			{pvar}.clear();
+			{pvar}.setOption({pvar}_option);
+		}});
+		window.addEventListener('resize', function(){{
+			{pvar}.resize();
+		}});
+		""".format(pid=pid, pvar=pvar, names=names, datasets=datasets)
 
 	def perform_comparative_analysis(self):
 		ssr_summary = []
@@ -1198,10 +1302,40 @@ class KraitExportStatistics:
 
 		type_pdata = {}
 		type_names = {
-			"SSR count": 2
-			}
-		for row in ssr_types:
-			pass
+			'SSR count': 2,
+			'SSR count percent': 2,
+			'SSR length': 8,
+			'SSR length percent': 8,
+			'SSR frequency': 14,
+			'SSR density': 20
+		}
+
+		for dtype, dindex in type_names.items():
+			type_pdata[dtype] = []
+			value_list = [[], [], [], [], [], []]
+
+			for row in ssr_types:
+				if 'percent' in dtype:
+					total = sum(row[dindex:dindex+6])
+
+					for j in range(6):
+						value_list[j].append(round(row[dindex+j]/total*100, 2))
+				else:
+					for j in range(6):
+						value_list[j].append(row[dindex+j])
+
+			ts = ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']
+			for l, t in enumerate(ts):
+				type_pdata[dtype].append({
+					'name': t,
+					'type': 'bar',
+					'stack': 'total',
+					'coordinateSystem': 'cartesian2d',
+					'data': value_list[l]
+				})
+
+		pid = 'ssr-type-compare-plot'
+		plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, type_pdata)	
 
 			
 
