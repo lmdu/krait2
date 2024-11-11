@@ -58,6 +58,83 @@
                 </div>
               </div>
             </div>
+            <div class="card mt-5">
+              <div class="card-status-top bg-red"></div>
+              <div class="card-header">
+                <h3 class="card-title">Microsatellite comparative analysis</h3>
+              </div>
+              <div class="card-body">
+                <h3>Comparison of SSRs</h3>
+                <div class="table-responsive">
+                  <table class="table table-vcenter" id="ssr-count-compare-table">
+                    <thead>
+                      <tr>
+                        <th>File No.</th>
+                        <th>File Name</th>
+                        <th>Total Counts</th>
+                        <th>Total Length (bp)</th>
+                        <th>Average length (bp)</th>
+                        <th>Sequence coverage (%)</th>
+                        <th>Relative abundance (loci/{{ uname }})</th>
+                        <th>Relative density (bp/{{ uname }})</th>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+                <div class="row mt-3">
+                  <div class="col">
+                    <div id="ssr-summary-plot" class="plot-area"></div>
+                  </div>
+                </div>
+
+                <h3>Comparison of SSR type</h3>
+                <div class="table-responsive">
+                  <table class="table table-vcenter" id="ssr-type-compare-table">
+                    <thead>
+                      <tr>
+                        <th rowspan="2">File No.</th>
+                        <th rowspan="2">File Name</th>
+                        <th colspan="6">Total Counts</th>
+                        <th colspan="6">Total Length (bp)</th>
+                        <th colspan="6">Relative abundance (loci/{{ uname }})</th>
+                        <th colspan="6">Relative density (bp/{{ uname }})</th>
+                      </tr>
+                      <tr>
+                        <th>Mono</th>
+                        <th>Di</th>
+                        <th>Tri</th>
+                        <th>Tetra</th>
+                        <th>Penta</th>
+                        <th>Hexa</th>
+                        <th>Mono</th>
+                        <th>Di</th>
+                        <th>Tri</th>
+                        <th>Tetra</th>
+                        <th>Penta</th>
+                        <th>Hexa</th>
+                        <th>Mono</th>
+                        <th>Di</th>
+                        <th>Tri</th>
+                        <th>Tetra</th>
+                        <th>Penta</th>
+                        <th>Hexa</th>
+                        <th>Mono</th>
+                        <th>Di</th>
+                        <th>Tri</th>
+                        <th>Tetra</th>
+                        <th>Penta</th>
+                        <th>Hexa</th>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+                <div class="row mt-3">
+                  <div class="col">
+                    <div id="ssr-type-compare-plot" class="plot-area"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="accordion mt-5" id="accordion-fastx">
               {% for fx in fastxs %}
               <div class="accordion-item card bg-white mb-3">

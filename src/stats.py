@@ -1069,20 +1069,83 @@ class KraitExportStatistics:
 
 		return plots
 
+	def draw_line_bar_mix_plot(self, pid, names, datasets):
+		pvar = pid.replace('-', '_')
+		return """
+		var {pvar}_source = {datasets};
+		var {pvar}_select = $('<select>', {{id: '{pvar}-select'}}).prependTo($('#{pid}').parent());
+		//{pvar}_select.addClass('form-select');
+		for (key in {pvar}_source) {{
+			{pvar}_select.append($("<option>").attr('value', key).text(key));
+		}}
+		var {pvar} = echarts.init(document.getElementById('{pid}'));
+		var {pvar}_option = {{
+			tooltip: {{
+				trigger: 'item'
+			}},
+			toolbox: {{
+				show: true,
+				feature: {{
+					dataView: {{readOnly: true}},
+					saveAsImage: {{}},
+					magicType: {{
+						type: ['bar', 'line']
+					}},
+				}}
+			}},
+			xAxis: {{
+				type: 'category',
+				data: {names},
+				axisLabel: {{
+					rotate: 30
+				}}
+			}},
+			yAxis: {{
+				type: 'value',
+				name: Object.keys({pvar}_source)[0],
+				nameGap: 50,
+				nameLocation: 'center',
+				nameTextStyle: {{
+					color: '#000',
+					fontSize: 16,
+				}}
+			}},
+			series: [{{
+				data: {pvar}_source[Object.keys({pvar}_source)[0]],
+				type: 'bar'
+			}}]
+		}};
+		{pvar}.setOption({pvar}_option);
+		{pvar}_select.on('change', function() {{
+			{pvar}_option.yAxis.name = this.value;
+			{pvar}_option.series[0].data = {pvar}_source[this.value];
+			{pvar}.setOption({pvar}_option);
+		}});
+		window.addEventListener('resize', function(){{
+			{pvar}.resize();
+		}});
+		""".format(pid=pid, pvar=pvar, names=names, datasets=datasets)
+
+	def draw_stack_bar_mix_plot(self):
+		pass
+
 	def perform_comparative_analysis(self):
 		ssr_summary = []
 		ssr_types = []
 		ssr_annot = []
+		ssr_files = []
 
 		for i, f in enumerate(self.fastx_files):
 			datas = self.fastx_datas[i]
+			ssr_files.append(f.name)
 
 			for k, datai in datas.items():
-				if rtype != 'ssr_stats':
+				if k != 'ssr_stats':
 					continue
 
 				ssr_summary.append([
-					f.name
+					f.id,
+					f.name,
 					datai['total_counts'],
 					datai['total_length'],
 					datai['average_length'],
@@ -1094,15 +1157,17 @@ class KraitExportStatistics:
 				for s in datai:
 					if s == 'type_stats':
 						rows = {row[0]: row for row in datai[s]}
-						item = []
+						item = [f.id, f.name]
 						for j in [1, 2, 5, 6]:
 							for m in ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']:
-								row = rows.get(m, None):
+								row = rows.get(m, None)
 
 								if row is None:
 									item.append(0)
 								else:
 									item.append(row[j])
+
+						ssr_types.append(item)
 
 					elif s == 'annot_stats':
 						pass
@@ -1110,13 +1175,38 @@ class KraitExportStatistics:
 					elif s == 'motif_stats':
 						pass
 
+		tables = {
+			'ssr-count-compare-table': ssr_summary,
+			'ssr-type-compare-table': ssr_types,
+		}
+		plots = {}
+
+		summary_pdata = {
+			'SSR count': [],
+			'SSR length': [],
+			'SSR frequency': [],
+			'SSR density': []
+		}
+		for row in ssr_summary:
+			summary_pdata['SSR count'].append(row[2])
+			summary_pdata['SSR length'].append(row[3])
+			summary_pdata['SSR frequency'].append(row[6])
+			summary_pdata['SSR density'].append(row[7])
+
+		pid = 'ssr-summary-plot'
+		plots[pid] = self.draw_line_bar_mix_plot(pid, ssr_files, summary_pdata)
+
+		type_pdata = {}
+		type_names = {
+			"SSR count": 2
+			}
+		for row in ssr_types:
+			pass
+
+			
 
 
-
-
-
-
-
+		return tables, plots
 
 	def generate_summary_report(self):
 		f = QFile(':/template/stats.html')
@@ -1130,6 +1220,10 @@ class KraitExportStatistics:
 		scripts = self.get_script_js()
 		tables = self.get_stats_tables()
 		plots = self.get_stats_plots()
+
+		forms, charts = self.perform_comparative_analysis()
+		tables.update(forms)
+		plots.update(charts)
 
 		return template.render(
 			styles = styles,
