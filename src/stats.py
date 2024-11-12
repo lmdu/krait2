@@ -1131,20 +1131,33 @@ class KraitExportStatistics:
 		return """
 		var {pvar}_source = {datasets};
 
+		var {pvar}_height = $('<input>', {{id: '{pvar}-height'}}).prependTo($('#{pid}').parent());
+		{pvar}_height.attr('value', 400).attr('type', 'number');
+		$('<span>').addClass('ms-3').text('Plot height:').prependTo($('#{pid}').parent());
+
 		var {pvar}_circos = $('<select>', {{id: '{pvar}-circos'}}).prependTo($('#{pid}').parent());
 		{pvar}_circos.append($("<option>").attr('value', 'bar').text('bar'));
 		{pvar}_circos.append($("<option>").attr('value', 'circle').text('circle'));
+		$('<span>').addClass('ms-3').text('Plot type:').prependTo($('#{pid}').parent());
 
 		var {pvar}_select = $('<select>', {{id: '{pvar}-select'}}).prependTo($('#{pid}').parent());
-		//{pvar}_select.addClass('form-select');
 		for (key in {pvar}_source) {{
 			{pvar}_select.append($("<option>").attr('value', key).text(key));
 		}}
+		$('<span>').text('Data type:').prependTo($('#{pid}').parent());
+
 		var {pvar} = echarts.init(document.getElementById('{pid}'));
 		var {pvar}_option_circos = {{
 			angleAxis: {{
 				type: 'category',
 				data: {names}
+			}},
+			toolbox: {{
+				show: true,
+				feature: {{
+					dataView: {{readOnly: true}},
+					saveAsImage: {{}}
+				}}
 			}},
 			radiusAxis: {{}},
 			polar: {{}},
@@ -1228,15 +1241,89 @@ class KraitExportStatistics:
 			{pvar}.clear();
 			{pvar}.setOption({pvar}_option);
 		}});
+
+		{pvar}_height.on('change', function(){{
+			$('#{pid}').height(this.value);
+			window.dispatchEvent(new Event('resize'));
+		}});
+
 		window.addEventListener('resize', function(){{
 			{pvar}.resize();
 		}});
 		""".format(pid=pid, pvar=pvar, names=names, datasets=datasets)
 
+	def draw_heatmap_plot(self, pid, xlabels, ylabels, datasets):
+		pvar = pid.replace('-', '_')
+		return """
+		var {pvar}_source = {datasets};
+
+		var {pvar}_height = $('<input>', {{id: '{pvar}-height'}}).prependTo($('#{pid}').parent());
+		{pvar}_height.attr('value', 400).attr('type', 'number');
+		$('<span>').addClass('ms-3').text('Plot height:').prependTo($('#{pid}').parent());
+
+		var {pvar}_select = $('<select>', {{id: '{pvar}-select'}}).prependTo($('#{pid}').parent());
+		for (key in {pvar}_source) {{
+			{pvar}_select.append($("<option>").attr('value', key).text(key));
+		}}
+		$('<span>').text('Data type:').prependTo($('#{pid}').parent());
+
+		var {pvar} = echarts.init(document.getElementById('{pid}'));
+		var {pvar}_option = {{
+			tooltip: {{
+				position: 'top'
+			}},
+			toolbox: {{
+				show: true,
+				feature: {{
+					dataView: {{readOnly: true}},
+					saveAsImage: {{}}
+				}}
+			}},
+			legend: {{}},
+			xAxis: {{
+				type: 'category',
+				data: {xlabels},
+				splitArea: {{
+					show: true
+				}},
+				axisLabel: {{
+					rotate: 30
+				}}
+			}},
+			yAxis: {{
+				type: 'category',
+				data: {ylabels},
+				splitArea: {{
+					show: true
+				}}
+			}},
+			visualMap: {{
+				calculable: true,
+				orient: 'horizontal',
+				left: 'center'
+			}},
+			series: {pvar}_source[Object.keys({pvar}_source)[0]]
+		}}
+		{pvar}.setOption({pvar}_option);
+		{pvar}_select.on('change', function() {{
+			{pvar}_option.series = {pvar}_source[this.value];
+			{pvar}.setOption({pvar}_option);
+		}});
+		{pvar}_height.on('change', function(){{
+			$('#{pid}').height(this.value);
+			window.dispatchEvent(new Event('resize'));
+		}});
+		window.addEventListener('resize', function(){{
+			{pvar}.resize();
+		}});
+		""".format(pid=pid, pvar=pvar, xlabels=xlabels, ylabels=ylabels, datasets=datasets)
+
 	def perform_comparative_analysis(self):
 		ssr_summary = []
 		ssr_types = []
 		ssr_annot = []
+		ssr_motif = set()
+		motif_data = []
 		ssr_files = []
 
 		for i, f in enumerate(self.fastx_files):
@@ -1277,7 +1364,12 @@ class KraitExportStatistics:
 						pass
 
 					elif s == 'motif_stats':
-						pass
+						motif_nums = {}
+						for row in datai[s]:
+							ssr_motif.add(row[1])
+							motif_nums[row[1]] = [row[2], row[3], row[5], row[6]]
+
+						motif_data.append(motif_nums)
 
 		tables = {
 			'ssr-count-compare-table': ssr_summary,
@@ -1337,7 +1429,40 @@ class KraitExportStatistics:
 		pid = 'ssr-type-compare-plot'
 		plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, type_pdata)	
 
-			
+		type_names = {
+			'SSR count': 0,
+			'SSR length': 1,
+			'SSR frequency': 2,
+			'SSR density': 3
+		}
+		motif_pdata = {}
+
+		xlabels = sorted(ssr_motif, key=lambda x: (len(x), x))
+		ylabels = ssr_files
+		
+		for dtype, dindex in type_names.items():
+			motif_pdata[dtype] = []
+			value_list = [[], [], [], [], [], []]
+		
+			for y, nums in enumerate(motif_data):
+				for x, motif in enumerate(xlabels):
+					if motif in nums:
+						sv = nums[motif][dindex]
+					else:
+						sv = 0
+
+					value_list[len(motif)-1].append([x, y, sv])
+
+			ts = ['Mono', 'Di', 'Tri', 'Tetra', 'Penta', 'Hexa']
+			for l, t in enumerate(ts):
+				motif_pdata[dtype].append({
+					'name': t,
+					'type': 'heatmap',
+					'data': value_list[l]
+				})
+
+		pid = 'ssr-motif-compare-plot'
+		plots[pid] = self.draw_heatmap_plot(pid, xlabels, ylabels, motif_pdata)
 
 
 		return tables, plots
