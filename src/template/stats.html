@@ -58,6 +58,8 @@
                 </div>
               </div>
             </div>
+
+            {% if 'ssr-count-compare-table' in tables %}
             <div class="card mt-5">
               <div class="card-status-top bg-red"></div>
               <div class="card-header">
@@ -139,8 +141,16 @@
                     <div id="ssr-motif-compare-plot" class="plot-area"></div>
                   </div>
                 </div>
+                <h3 class="mt-5">Comparison of SSRs in different regions</h3>
+                <div class="row mt-3">
+                  <div class="col">
+                    <div id="ssr-annot-compare-plot" class="plot-area"></div>
+                  </div>
+                </div>
               </div>
             </div>
+            {% endif %}
+
             <div class="accordion mt-5" id="accordion-fastx">
               {% for fx in fastxs %}
               <div class="accordion-item card bg-white mb-3">
@@ -153,9 +163,9 @@
                 <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse card-body" data-bs-parent="#accordion-fastx">
                   <div class="accordion-body">
                     {% for rt in ['ssr', 'cssr', 'issr', 'gtr'] %}
-                    <h3>{{ rt.upper() }} statistics</h3>
                     {% set tid = '{}-summary-table-{}'.format(rt, fx.id) %}
                     {% if tid in tables %}
+                    <h3>{{ rt.upper() }} statistics</h3>
                     <h4>{{ rt.upper() }} summary information</h4>
                     <div class="table-responsive mb-5">
                       <table class="table table-vcenter" id="{{ tid }}">

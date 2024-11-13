@@ -873,11 +873,23 @@ class KraitExportStatistics:
 			}});
 		""".format(pvar=pvar, pid=pid, title=title, name=name, data=data)
 
-	def draw_bar_plot(self, pid, title, data, ylab):
+	def draw_bar_plot(self, pid, title, datasets):
 		pvar = pid.replace('-', '_')
 		return """
+			var {pvar}_source = {datasets};
+
+			var {pvar}_height = $('<input>', {{id: '{pvar}-height'}}).prependTo($('#{pid}').parent());
+			{pvar}_height.attr('value', 400).attr('type', 'number');
+			$('<span>').addClass('ms-3').text('Plot height:').prependTo($('#{pid}').parent());
+
+			var {pvar}_select = $('<select>', {{id: '{pvar}-select'}}).prependTo($('#{pid}').parent());
+			for (key in {pvar}_source) {{
+				{pvar}_select.append($("<option>").attr('value', key).text(key));
+			}}
+			$('<span>').text('Data type:').prependTo($('#{pid}').parent());
+
 			var {pvar} = echarts.init(document.getElementById('{pid}'));
-			{pvar}.setOption({{
+			var {pvar}_option = {{
 				title: {{
 					text: "{title}"
 				}},
@@ -900,26 +912,50 @@ class KraitExportStatistics:
 				}},
 				yAxis: {{
 					type: 'value',
-					name: "{ylab}",
+					name: "SSR count",
 					nameGap: 50,
 					nameLocation: 'center',
 					nameTextStyle: {{
-						color: '#000',
 						fontSize: 16,
 					}}
 				}},
-				series: {data}
+				series: {pvar}_source[Object.keys({pvar}_source)[0]]
+			}};
+
+			{pvar}.setOption({pvar}_option);
+			{pvar}_select.on('change', function() {{
+				{pvar}_option.series = {pvar}_source[this.value];
+				{pvar}_option.yAxis.name = this.value;
+				{pvar}.setOption({pvar}_option);
 			}});
+			{pvar}_height.on('change', function(){{
+				$('#{pid}').height(this.value);
+				window.dispatchEvent(new Event('resize'));
+			}});
+
 			window.addEventListener('resize', function(){{
 				{pvar}.resize();
 			}});
-		""".format(pvar=pvar, pid=pid, title=title, data=data, ylab=ylab)
+		""".format(pvar=pvar, pid=pid, title=title, datasets=datasets)
 
-	def draw_line_plot(self, pid, title, datasets, xlab, ylab):
+	def draw_line_plot(self, pid, title, xlab, datasets):
 		pvar = pid.replace('-', '_')
 		return """
+			var {pvar}_source = {datasets};
+
+			var {pvar}_height = $('<input>', {{id: '{pvar}-height'}}).prependTo($('#{pid}').parent());
+			{pvar}_height.attr('value', 400).attr('type', 'number');
+			$('<span>').addClass('ms-3').text('Plot height:').prependTo($('#{pid}').parent());
+
+			var {pvar}_select = $('<select>', {{id: '{pvar}-select'}}).prependTo($('#{pid}').parent());
+			for (key in {pvar}_source) {{
+				{pvar}_select.append($("<option>").attr('value', key).text(key));
+			}}
+			$('<span>').text('Data type:').prependTo($('#{pid}').parent());
+
 			var {pvar} = echarts.init(document.getElementById('{pid}'));
-			{pvar}.setOption({{
+
+			var {pvar}_option = {{
 				title: {{
 					text: "{title}"
 				}},
@@ -939,15 +975,32 @@ class KraitExportStatistics:
 					nameLocation: 'center'
 				}},
 				yAxis: {{
-					name: "{ylab}",
-					nameLocation: 'center'
+					name: "SSR count",
+					nameLocation: 'center',
+					nameGap: 50,
+					nameLocation: 'center',
+					nameTextStyle: {{
+						fontSize: 16,
+					}}
 				}},
-				series: {datasets}
+				series: {pvar}_source[Object.keys({pvar}_source)[0]]
+			}};
+
+			{pvar}.setOption({pvar}_option);
+			{pvar}_select.on('change', function() {{
+				{pvar}_option.series = {pvar}_source[this.value];
+				{pvar}_option.yAxis.name = this.value;
+				{pvar}.setOption({pvar}_option);
 			}});
+			{pvar}_height.on('change', function(){{
+				$('#{pid}').height(this.value);
+				window.dispatchEvent(new Event('resize'));
+			}});
+
 			window.addEventListener('resize', function(){{
 				{pvar}.resize();
 			}});
-		""".format(pvar=pvar, pid=pid, title=title, datasets=datasets, xlab=xlab, ylab=ylab)
+		""".format(pvar=pvar, pid=pid, title=title, datasets=datasets, xlab=xlab)
 
 	def get_stats_plots(self):
 		plots = {}
@@ -983,89 +1036,121 @@ class KraitExportStatistics:
 						for row in datai[s]:
 							counts.append({'value': row[1], 'name': row[0]})
 
-						pid = "{}-annot-pie-{}".format(rtype, f.id)
-						title = "{} distribution in different gene regions".format(rtype)
-						name = "{} annotation".format(rtype)
-						plots[pid] = self.draw_pie_plot(pid, title, name, counts)
+						if counts:
+							pid = "{}-annot-pie-{}".format(rtype, f.id)
+							title = "{} count in different gene regions".format(rtype)
+							name = "{} annotation".format(rtype)
+							plots[pid] = self.draw_pie_plot(pid, title, name, counts)
 
 					if s == 'motif_stats':
-						datasets = {}
-						for row in datai[s]:
-							if row[0] not in datasets:
-								datasets[row[0]] = []
+						data_types = {
+							'SSR count': 2,
+							'SSR length': 3,
+							'SSR frequency': 6,
+							'SSR density': 7
+						}
+						
+						motif_pdata = {}
 
-							datasets[row[0]].append((row[1], row[6]))
+						for dtype, dindex in data_types.items():
+							datasets = {}
+							for row in datai[s]:
+								if row[0] not in datasets:
+									datasets[row[0]] = []
 
-						series = []
-						for t in datasets:
-							data = []
-							for x, y in sorted(datasets[t]):
-								data.append([x, y])
+								datasets[row[0]].append((row[1], row[dindex]))
 
-							series.append({
-								'name': t,
-								'type': 'bar',
-								'stack': 'stack',
-								'data': data,
-							})
+							series = []
+							for t in datasets:
+								data = []
+								for x, y in sorted(datasets[t]):
+									data.append([x, y])
+
+								series.append({
+									'name': t,
+									'type': 'bar',
+									'stack': 'stack',
+									'data': data,
+								})
+
+							motif_pdata[dtype] = series
 
 						pid = "{}-motif-bar-{}".format(rtype, f.id)
 						title = "{} motif distribution".format(rtype)
-						ylab = "{} counts".format(rtype)
-						plots[pid] = self.draw_bar_plot(pid, title, series, ylab)
+						plots[pid] = self.draw_bar_plot(pid, title, motif_pdata)
 
 					if s == 'repeat_stats':
-						datasets = {}
-						for row in datai[s]:
-							if row[0] not in datasets:
-								datasets[row[0]] = []
-							datasets[row[0]].append((row[1], row[6]))
+						data_types = {
+							'SSR count': 2,
+							'SSR length': 3,
+							'SSR frequency': 6,
+							'SSR density': 7
+						}
+						
+						repeat_pdata = {}
+						for dtype, dindex in data_types.items():
+							datasets = {}
+							for row in datai[s]:
+								if row[0] not in datasets:
+									datasets[row[0]] = []
+								datasets[row[0]].append((row[1], row[dindex]))
 
-						series = []
-						for t in datasets:
-							data = []
-							for x, y in sorted(datasets[t]):
-								data.append([x, y])
+							series = []
+							for t in datasets:
+								data = []
+								for x, y in sorted(datasets[t]):
+									data.append([x, y])
 
-							series.append({
-								'name': t,
-								'type': 'line',
-								'smooth': 1,
-								'data': data,
-							})
+								series.append({
+									'name': t,
+									'type': 'line',
+									'smooth': 1,
+									'data': data,
+								})
+
+							repeat_pdata[dtype] = series
 
 						pid = "{}-repeat-line-{}".format(rtype, f.id)
 						title = "{} repeat distribution".format(rtype)
 						xlab = "Repeat number"
-						ylab = "Frequency (loci/{})".format(self.uname)
-						plots[pid] = self.draw_line_plot(pid, title, series, xlab, ylab)
+						plots[pid] = self.draw_line_plot(pid, title, xlab, repeat_pdata)
 
 					if s == 'length_stats':
-						datasets = {}
-						for row in datai[s]:
-							if row[0] not in datasets:
-								datasets[row[0]] = []
-							datasets[row[0]].append((row[1], row[6]))
+						data_types = {
+							'SSR count': 2,
+							'SSR length': 3,
+							'SSR frequency': 6,
+							'SSR density': 7
+						}
+						
+						repeat_pdata = {}
+						for dtype, dindex in data_types.items():
+							datasets = {}
+							for row in datai[s]:
+								if row[0] not in datasets:
+									datasets[row[0]] = []
+								datasets[row[0]].append((row[1], row[dindex]))
 
-						series = []
-						for t in datasets:
-							data = []
+							series = []
+							for t in datasets:
+								data = []
 
-							for x, y in sorted(datasets[t]):
-								data.append([x, y])
+								for x, y in sorted(datasets[t]):
+									data.append([x, y])
 
-							series.append({
-								'name': t,
-								'type': 'line',
-								'smooth': 1,
-								'data': data
-							})
+								series.append({
+									'name': t,
+									'type': 'line',
+									'smooth': 1,
+									'data': data
+								})
+
+							repeat_pdata[dtype] = series
 
 						pid = "{}-length-line-{}".format(rtype, f.id)
 						title = "{} length distribution".format(rtype)
 						xlab = "Length"
-						ylab = "Frequency (loci/{})".format(self.uname)
-						plots[pid] = self.draw_line_plot(pid, title, series, xlab, ylab)
+						plots[pid] = self.draw_line_plot(pid, title, xlab, repeat_pdata)
 
 		return plots
 
@@ -1073,11 +1158,17 @@ class KraitExportStatistics:
 		pvar = pid.replace('-', '_')
 		return """
 		var {pvar}_source = {datasets};
+
+		var {pvar}_height = $('<input>', {{id: '{pvar}-height'}}).prependTo($('#{pid}').parent());
+		{pvar}_height.attr('value', 400).attr('type', 'number');
+		$('<span>').addClass('ms-3').text('Plot height:').prependTo($('#{pid}').parent());
+
 		var {pvar}_select = $('<select>', {{id: '{pvar}-select'}}).prependTo($('#{pid}').parent());
-		//{pvar}_select.addClass('form-select');
 		for (key in {pvar}_source) {{
 			{pvar}_select.append($("<option>").attr('value', key).text(key));
 		}}
+		$('<span>').text('Data type:').prependTo($('#{pid}').parent());
+
 		var {pvar} = echarts.init(document.getElementById('{pid}'));
 		var {pvar}_option = {{
 			tooltip: {{
@@ -1120,7 +1211,16 @@ class KraitExportStatistics:
 			{pvar}_option.yAxis.name = this.value;
 			{pvar}_option.series[0].data = {pvar}_source[this.value];
 			{pvar}.setOption({pvar}_option);
+		}});{pvar}_height.on('change', function(){{
+			$('#{pid}').height(this.value);
+			window.dispatchEvent(new Event('resize'));
 		}});
+
+		{pvar}_height.on('change', function(){{
+			$('#{pid}').height(this.value);
+			window.dispatchEvent(new Event('resize'));
+		}});
+
 		window.addEventListener('resize', function(){{
 			{pvar}.resize();
 		}});
@@ -1319,10 +1419,14 @@ class KraitExportStatistics:
 		""".format(pid=pid, pvar=pvar, xlabels=xlabels, ylabels=ylabels, datasets=datasets)
 
 	def perform_comparative_analysis(self):
+		if len(self.fastx_files) < 2:
+			return {}, {}
+
 		ssr_summary = []
 		ssr_types = []
 		ssr_annot = []
 		ssr_motif = set()
+		annot_type = set()
 		motif_data = []
 		ssr_files = []
 
@@ -1361,7 +1465,12 @@ class KraitExportStatistics:
 						ssr_types.append(item)
 
 					elif s == 'annot_stats':
-						pass
+						annot_nums = {}
+						for row in datai[s]:
+							annot_type.add(row[0])
+							annot_nums[row[0]] = [row[1], row[2], row[5], row[6]]
+
+						ssr_annot.append(annot_nums)
 
 					elif s == 'motif_stats':
 						motif_nums = {}
@@ -1371,12 +1480,13 @@ class KraitExportStatistics:
 
 						motif_data.append(motif_nums)
 
-		tables = {
-			'ssr-count-compare-table': ssr_summary,
-			'ssr-type-compare-table': ssr_types,
-		}
+		tables = {}
 		plots = {}
 
+		if ssr_summary:
+			tables['ssr-count-compare-table'] = ssr_summary
+			tables['ssr-type-compare-table'] = ssr_types
+		
 		summary_pdata = {
 			'SSR count': [],
 			'SSR length': [],
@@ -1390,7 +1500,9 @@ class KraitExportStatistics:
 			summary_pdata['SSR density'].append(row[7])
 
 		pid = 'ssr-summary-plot'
-		plots[pid] = self.draw_line_bar_mix_plot(pid, ssr_files, summary_pdata)
+
+		if summary_pdata:
+			plots[pid] = self.draw_line_bar_mix_plot(pid, ssr_files, summary_pdata)
 
 		type_pdata = {}
 		type_names = {
@@ -1427,7 +1539,55 @@ class KraitExportStatistics:
 				})
 
 		pid = 'ssr-type-compare-plot'
-		plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, type_pdata)	
+
+		if ssr_types:
+			plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, type_pdata)
+
+		annot_pdata = {}
+		type_names = {
+			'SSR count': 0,
+			'SSR count percent': 0,
+			'SSR length': 1,
+			'SSR length percent': 1,
+			'SSR frequency': 2,
+			'SSR density': 3
+		}
+
+		annot_type = sorted(annot_type)
+		for dtype, dindex in type_names.items():
+			annot_pdata[dtype] = []
+			value_list = []
+			for at in range(len(annot_type)):
+				value_list.append([])
+
+			for nums in ssr_annot:
+				if 'percent' in dtype:
+					total = sum(num[dindex] for num in nums.values())
+
+				for i, at in enumerate(annot_type):
+					if at in nums:
+						sv = nums[at][dindex]
+					else:
+						sv = 0
+
+					if 'percent' in dtype:
+						value_list[i].append(round(sv/total*100, 2))
+					else:
+						value_list[i].append(sv)
+
+			for l, t in enumerate(annot_type):
+				annot_pdata[dtype].append({
+					'name': t,
+					'type': 'bar',
+					'stack': 'total',
+					'coordinateSystem': 'cartesian2d',
+					'data': value_list[l]
+				})
+
+		pid = 'ssr-annot-compare-plot'
+
+		if ssr_annot:
+			plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, annot_pdata)
 
 		type_names = {
 			'SSR count': 0,
@@ -1462,8 +1622,9 @@ class KraitExportStatistics:
 				})
 
 		pid = 'ssr-motif-compare-plot'
-		plots[pid] = self.draw_heatmap_plot(pid, xlabels, ylabels, motif_pdata)
 
+		if motif_data:
+			plots[pid] = self.draw_heatmap_plot(pid, xlabels, ylabels, motif_pdata)
 
 		return tables, plots
 
