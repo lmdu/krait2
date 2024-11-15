@@ -1586,7 +1586,7 @@ class KraitExportStatistics:
 
 		pid = 'ssr-annot-compare-plot'
 
-		if ssr_annot:
+		if ssr_annot and ssr_annot[0]:
 			plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, annot_pdata)
 
 		type_names = {

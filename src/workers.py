@@ -520,6 +520,20 @@ class KraitExportWorker(QRunnable):
 		self.export_dest = export_dest
 		self.signals = KraitWorkerSignals()
 
+	def format_to_gff(self, feature, title, data):
+		fid = "ID={}{}".fomrat(feature.upper(), data[0])
+		attrs = [fid]
+
+		for i, d in enumerate(data):
+			if i > 3:
+				attrs.append("{}={}".format(title[i], d))
+
+		row = [data[1], '.', feature, data[2], data[3], '.', '.', '.', ';'.join(attrs)]
+		return row
+
+	def format_to_seq(self, ):
+		pass
+
 	def before_run(self):
 		pass
 
