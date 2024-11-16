@@ -531,8 +531,103 @@ class KraitExportWorker(QRunnable):
 		row = [data[1], '.', feature, data[2], data[3], '.', '.', '.', ';'.join(attrs)]
 		return row
 
-	def format_to_seq(self, ):
-		pass
+	def format_to_seq(self, seq, line_len=80):
+		bases = []
+		for i, b in enumerate(seq, 1):
+			bases.append(b)
+
+			if i % line_len == 0:
+				bases.append('\n')
+
+		return ''.join(bases)
+
+	def export_to_table(self, table, title, sender, total):
+		processed = 0
+		progress = 0
+
+		if self.export_dest.endswith('.csv'):
+			separator = ','
+		else:
+			separator = '\t'
+
+		with open(self.export_dest, 'w', newline='') as fw:
+			writer = csv.writer(fw, delimiter=separator)
+
+			if self.export_dest.endswith('.gff'):
+				writer.writerow(["##gff-version 3"])
+
+				for rows in selected:
+					for row in rows:
+						row = self.format_to_gff(table.upper(), title, row)
+						writer.writerow(row)
+
+					processed += len(rows)
+					p = int(processed/total*100)
+					if p > progress:
+						self.signals.progress.emit(p)
+						progress = p
+
+			else:
+				writer.writerow(title)
+
+				for rows in selected:
+					for row in rows:
+						writer.writerow(row)
+
+					processed += len(rows)
+					p = int(processed/total*100)
+					if p > progress:
+						self.signals.progress.emit(p)
+						progress = p
+
+	def export_to_fasta(self, table, sender, total):
+		cfile = self.parent.current_file
+
+		if not cfile:
+			return
+
+		settings = QSettings()
+		flank = settings.value('STR/flank', KRAIT_SEARCH_PARAMETERS['STR/flank'], int)
+
+		sql = "SELECT fpath,format FROM fastx WHERE id=? LIMIT 1"
+		file = DB.get_object(sql, (cfile))
+
+		if file.format == 'fastq':
+			fx = pyfastx.Fastq(file.fpath)
+		else:
+			fx = pyfastx.Fasta(file.fpath)
+
+		processed = 0
+		progress = 0
+		chrom = None
+		seq = None
+
+		with open(self.export_dest, 'w', newline='') as fw:
+			for rows in sender:
+				for row in rows:
+					if chrom != row[1]:
+						chrom = row[1]
+						seq = fx[row[1]].seq
+
+					start = row[2] - flank
+					if start < 1:
+						start = 1
+
+					end = row[3] + flank
+					rep_seq = seq[start-1:end]
+					rep_seq = self.format_to_seq(rep_seq)
+					rep_rec = ">{}{} {}:{}-{}|flank_len={}\n{}\n".format(
+						table.upper(), row[1], row[2], row[3], flank, rep_seq.strip()
+					)
+
+					print(fw, rep_rec)
+
+				processed += len(rows)
+				p = int(processed/total*100)
+				if p > progress:
+					self.signals.progress.emit(p)
+					progress = p
+
 
 	def before_run(self):
 		pass
@@ -596,60 +691,41 @@ class KraitExportSelectedWorker(KraitExportWorker):
 		table, total, selected = self.parent.get_selected_rows()
 		table = self.parent.get_current_table()
 
-		title = DB.get_field(table)
+		if self.export_dest.endswith('.fasta'):
+			self.export_to_fasta(table, selected, total)
 
-		processed = 0
-		progress = 0
-
-		if self.export_dest.endswith('.csv'):
-			separator = ','
 		else:
-			separator = '\t'
-
-		with open(self.export_dest, 'w', newline='') as fw:
-			writer = csv.writer(fw, delimiter=separator)
-			writer.writerow(title)
-
-			for rows in selected:
-				for row in rows:
-					writer.writerow(row)
-
-				processed += len(rows)
-				p = int(processed/total*100)
-				if p > progress:
-					self.signals.progress.emit(p)
-					progress = p
+			title = DB.get_field(table)
+			self.export_to_table(table, title, selected, total)
 
 		self.signals.messages.emit("Successfully exported {} selected rows to {}".format(total, self.export_dest))
 
 class KraitExportCurrentTableWorker(KraitExportWorker):
 	def do(self):
 		table = self.parent.get_current_table()
-		title = DB.get_field(table)
+		total = DB.get_one("SELECT COUNT(1) FROM {}".format(table))
 
-		processed = 0
-		progress = 0
+		selected = []
+		for row in DB.query("SELECT * FROM {}".format(table)):
+			selected.append(row)
 
-		if self.export_dest.endswith('.csv'):
-			separator = ','
-		else:
-			separator = '\t'
+			if len(selected) == 100:
+				if self.export_dest.endswith('.fasta'):
+					self.export_to_fasta(table, selected, total)
 
-		with open(self.export_dest, 'w', newline='') as fw:
-			writer = csv.writer(fw, delimiter=separator)
-			writer.writerow(title)
-			sql = "SELECT * FROM {}".format(table)
-			total = DB.get_one("SELECT COUNT(1) FROM {}".format(table))
+				else:
+					title = DB.get_field(table)
+					self.export_to_table(table, title, selected, total)
 
-			for row in DB.query(sql):
-				writer.writerow(row)
+				selected = []
 
-				processed += 1
-				p = int(processed/total*100)
+		if selected
+			if self.export_dest.endswith('.fasta'):
+				self.export_to_fasta(table, selected, total)
 
-				if p > progress:
-					self.signals.progress.emit(p)
-					progress = p
+			else:
+				title = DB.get_field(table)
+				self.export_to_table(table, title, selected, total)
 
 		self.signals.messages.emit("Successfully exported to {}".format(self.export_dest))
 

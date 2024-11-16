@@ -876,18 +876,40 @@ class KraitMainWindow(QMainWindow):
 			QMessageBox.warning(self, "Warning", msg)
 
 	def export_selected_rows(self):
-		out_file, _ = QFileDialog.getSaveFileName(self, filter="TSV (*.tsv);;CSV (*.csv)")
+		file_filters = "TSV (*.tsv);;CSV (*.csv);;GFF (*.gff);;FASTA (*.fasta)"
+		out_file, _ = QFileDialog.getSaveFileName(self, filter=file_filters)
 
 		if not out_file:
 			return
+
+		table = self.get_current_table()
+
+		if table is None:
+			return
+
+		if out_file.endswith(['.gff', '.fasta']):
+			if table.startswith(['ssr', 'issr', 'cssr', 'gtr']):
+				error = "The selected rows do not support for exporting as this format"
+				return QMessageBox.warning(self, "Warning", error)
 
 		self.run_work_thread(KraitExportSelectedWorker, self, out_file)
 
 	def export_current_table(self):
-		out_file, _ = QFileDialog.getSaveFileName(self, filter="TSV (*.tsv);;CSV (*.csv)")
+		file_filters = "TSV (*.tsv);;CSV (*.csv);;GFF (*.gff);;FASTA (*.fasta)"
+		out_file, _ = QFileDialog.getSaveFileName(self, filter=file_filters)
 
 		if not out_file:
 			return
+
+		table = self.get_current_table()
+
+		if table is None:
+			return
+
+		if out_file.endswith(['.gff', '.fasta']):
+			if table.startswith(['ssr', 'issr', 'cssr', 'gtr']):
+				error = "The selected rows do not support for exporting as this format"
+				return QMessageBox.warning(self, "Warning", error)
 
 		self.run_work_thread(KraitExportCurrentTableWorker, self, out_file)
 
