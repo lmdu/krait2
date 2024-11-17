@@ -887,8 +887,8 @@ class KraitMainWindow(QMainWindow):
 		if table is None:
 			return
 
-		if out_file.endswith(['.gff', '.fasta']):
-			if table.startswith(['ssr', 'issr', 'cssr', 'gtr']):
+		if out_file.endswith(('.gff', '.fasta')):
+			if not table.startswith(('ssr', 'issr', 'cssr', 'gtr')):
 				error = "The selected rows do not support for exporting as this format"
 				return QMessageBox.warning(self, "Warning", error)
 
@@ -906,8 +906,8 @@ class KraitMainWindow(QMainWindow):
 		if table is None:
 			return
 
-		if out_file.endswith(['.gff', '.fasta']):
-			if table.startswith(['ssr', 'issr', 'cssr', 'gtr']):
+		if out_file.endswith(('.gff', '.fasta')):
+			if not table.startswith(('ssr', 'issr', 'cssr', 'gtr')):
 				error = "The selected rows do not support for exporting as this format"
 				return QMessageBox.warning(self, "Warning", error)
 

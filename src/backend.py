@@ -1,6 +1,8 @@
 import apsw
 import threading
 
+from PySide6.QtCore import *
+
 __all__ = ['DB']
 
 FASTX_TABLE_SQL = """
@@ -160,11 +162,11 @@ def row_factory(cursor, row):
 	fields = [name for name, _ in cursor.getdescription()]
 	return DataRow(zip(fields, row))
 
-class DataBackend:
+class DataBackend(QObject):
 	conn = None
 
 	def __init__(self):
-		self.lock = threading.Lock()
+		self.mutex = QMutex()
 		self._connect_to_db()
 
 	def __del__(self):
@@ -179,7 +181,10 @@ class DataBackend:
 
 	@property
 	def cursor(self):
-		return self.conn.cursor()
+		self.mutex.lock()
+		cur = self.conn.cursor()
+		self.mutex.unlock()
+		return cur
 
 	def _optimize(self):
 		self.query("PRAGMA synchronous=OFF")
