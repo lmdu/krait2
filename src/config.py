@@ -21,9 +21,10 @@ KRAIT_CITATION = """
 KRAIT_ABOUT ="""
 <p><b>Krait2 - Microsatellite Identification and Primer Design</b></p>
 <p><b>Version</b> v{version} <b>Build</b> {build}<p>
-<p>Krait2 is a robust and ultrafast tool that provides a user-friendly GUI for no computationally
-skilled biologists to extract perfect, imperfect and compound microsatellites and VNTRs from fasta
-formatted DNA sequences; and design primers; and perform statistical analysis.</p>
+<p>Krait2 is a robust and ultrafast tool that provides a user-friendly
+GUI for no computationally skilled biologists to extract perfect,
+imperfect and compound microsatellites as well as generic tandem repeats from fasta/q
+formatted DNA sequences. Krait2 can design primers and perform statistical analysis.</p>
 <p><b>Acknowledgements:</b></p>
 <table cellspacing="5">
 	<tr>
@@ -99,11 +100,11 @@ formatted DNA sequences; and design primers; and perform statistical analysis.</
 		<td>
 	</tr>
 	<tr>
-		<td>plotly.js</td>
-		<td>v2.35.0</td>
+		<td>ECharts</td>
+		<td>v5.5.1</td>
 		<td>
-			<a href="https://plotly.com/javascript/">
-				https://plotly.com/javascript
+			<a href="https://echarts.apache.org/">
+				https://echarts.apache.org
 			</a>
 		<td>
 	</tr>
