@@ -179,8 +179,9 @@ class DataBackend:
 
 	@property
 	def cursor(self):
-		with self._lock:
-			yield self.conn.cursor()
+		self._lock.acquire()
+		cur = self.conn.cursor()
+		self._lock.release()
 
 	def _optimize(self):
 		self.query("PRAGMA synchronous=OFF")
