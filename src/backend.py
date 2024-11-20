@@ -162,9 +162,9 @@ def row_factory(cursor, row):
 
 class DataBackend:
 	conn = None
+	lock = threading.RLock()
 
 	def __init__(self):
-		self._lock = threading.RLock()
 		self._connect_to_db()
 
 	def __del__(self):
@@ -179,7 +179,7 @@ class DataBackend:
 
 	@property
 	def cursor(self):
-		with self._lock:
+		with self.lock:
 			cur = self.conn.cursor()
 		
 		return cur
@@ -246,7 +246,7 @@ class DataBackend:
 
 	def has_table(self, table):
 		sql = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1"
-		res = self.get_one(sql)
+		res = self.get_one(sql, (table))
 		return True if res else False
 
 	def query(self, sql, paras=None):
@@ -256,7 +256,9 @@ class DataBackend:
 			return self.cursor.execute(sql, paras)
 
 	def table_exists(self, table):
-		return self.conn.table_exists(None, table)
+		sql = "SELECT 1 FROM sqlite_master WHERE type=? AND name=? LIMIT 1"
+		res = self.get_one(sql, ('table', table))
+		return True if res else False
 
 	def get_one(self, sql, paras=None):
 		for row in self.query(sql, paras):
