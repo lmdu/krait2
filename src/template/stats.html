@@ -141,12 +141,15 @@
                     <div id="ssr-motif-compare-plot" class="plot-area"></div>
                   </div>
                 </div>
+
+                {% if 'ssr-annot-compare-plot' in plots %}
                 <h3 class="mt-5">Comparison of SSRs in different regions</h3>
                 <div class="row mt-3">
                   <div class="col">
                     <div id="ssr-annot-compare-plot" class="plot-area"></div>
                   </div>
                 </div>
+                {% endif %}
               </div>
             </div>
             {% endif %}

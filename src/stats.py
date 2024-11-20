@@ -827,7 +827,7 @@ class KraitExportStatistics:
 				tables.update(self.get_repeat_summary_table(k, f.id, data))
 				
 				for s in stats:
-					if s in data:
+					if s in data and data[s]:
 						tables.update(self.get_repeat_detail_table(k, s, f.id, data[s]))
 
 		return tables
@@ -1585,6 +1585,8 @@ class KraitExportStatistics:
 				})
 
 		pid = 'ssr-annot-compare-plot'
+
+		print(ssr_annot)
 
 		if ssr_annot and ssr_annot[0]:
 			plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, annot_pdata)

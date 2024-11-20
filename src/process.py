@@ -325,6 +325,7 @@ class KraitMappingProcess(KraitBaseProcess):
 		rows = []
 		for r in self.repeats:
 			fs = mapper.contain(r[1], r[2], r[3])
+			self.progress += 1
 
 			if fs:
 				ft = min(f[1] for f in fs)
@@ -332,13 +333,11 @@ class KraitMappingProcess(KraitBaseProcess):
 				rows.append((None, r[4], r[0], ft, ps))
 
 				if len(rows) == 200:
-					self.progress += 200
 					p = self.progress/self.total*self.fastx['weight']
 					self.send(type='map', records=rows, progress=p)
 					rows = []
 
 		if rows:
-			self.progress += len(rows)
 			p = self.progress/self.total*self.fastx['weight']
 			self.send(type='map', records=rows, progress=p)
 
