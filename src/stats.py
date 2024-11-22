@@ -1252,6 +1252,9 @@ class KraitExportStatistics:
 				type: 'category',
 				data: {names}
 			}},
+			tooltip: {{
+				trigger: 'item'
+			}},
 			toolbox: {{
 				show: true,
 				feature: {{
@@ -1304,6 +1307,8 @@ class KraitExportStatistics:
 
 				for (var i = 0; i < {pvar}_series.length; i++) {{
 					{pvar}_series[i].coordinateSystem = 'polar';
+					{pvar}_series[i].barCategoryGap = 0;
+					{pvar}_series[i].angleAxis.
 				}}
 
 			}} else {{
@@ -1311,6 +1316,7 @@ class KraitExportStatistics:
 
 				for (var i = 0; i < {pvar}_series.length; i++) {{
 					{pvar}_series[i].coordinateSystem = 'cartesian2d';
+					delete {pvar}_series[i].barCategoryGap;
 				}}
 			}}
 			{pvar}_option.series = {pvar}_series;
@@ -1325,6 +1331,7 @@ class KraitExportStatistics:
 
 				for (var i = 0; i < {pvar}_series.length; i++) {{
 					{pvar}_series[i].coordinateSystem = 'polar';
+					{pvar}_series[i].barCategoryGap = 0;
 				}}
 
 			}} else {{
@@ -1332,6 +1339,7 @@ class KraitExportStatistics:
 
 				for (var i = 0; i < {pvar}_series.length; i++) {{
 					{pvar}_series[i].coordinateSystem = 'cartesian2d';
+					delete {pvar}_series[i].barCategoryGap;
 				}}
 			}}
 
@@ -1476,7 +1484,7 @@ class KraitExportStatistics:
 						motif_nums = {}
 						for row in datai[s]:
 							ssr_motif.add(row[1])
-							motif_nums[row[1]] = [row[2], row[3], row[5], row[6]]
+							motif_nums[row[1]] = [row[2], row[3], row[6], row[7]]
 
 						motif_data.append(motif_nums)
 
@@ -1585,8 +1593,6 @@ class KraitExportStatistics:
 				})
 
 		pid = 'ssr-annot-compare-plot'
-
-		print(ssr_annot)
 
 		if ssr_annot and ssr_annot[0]:
 			plots[pid] = self.draw_stack_bar_mix_plot(pid, ssr_files, annot_pdata)
