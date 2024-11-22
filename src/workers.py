@@ -43,7 +43,7 @@ class KraitWorkerSignals(QObject):
 	prompt = Signal(str)
 
 class KraitBaseWorker(QRunnable):
-	processer = None
+	processer = lambda: None
 
 	def __init__(self):
 		super().__init__()
@@ -63,7 +63,7 @@ class KraitBaseWorker(QRunnable):
 		proc.start()
 
 	def get_params(self):
-		pass
+		return
 
 	def before_run(self):
 		pass
@@ -1354,7 +1354,7 @@ class ExportWholeTableThread(WorkerThread):
 					self.signals.progress.emit(p)
 					progress = p
 
-		self.signals.messages.emit("Successfully exported the whole table to {}".format(total, self.out_file))
+		self.signals.messages.emit("Successfully exported the whole table to {}".format(self.out_file))
 
 class ExportAllTablesThread(WorkerThread):
 	def __init__(self, parent=None, out_dir=None):

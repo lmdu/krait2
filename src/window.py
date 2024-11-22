@@ -75,6 +75,9 @@ class KraitMainWindow(QMainWindow):
 		#opened project file
 		self.project_file = None
 
+		#current thread
+		self.threader = None
+
 		self.show()
 
 	def create_fastx_tree(self):

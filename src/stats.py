@@ -89,12 +89,14 @@ class KraitBaseStatistics:
 	def percent(self, num, total):
 		return round(num/total*100, 2)
 
+	"""
 	@classmethod
 	def get_reports(cls, repeats, fastx, unit):
 		stats = cls(repeats, fastx, unit)
 		json_str = stats.json()
 		html_str = stats.html()
 		return json_str, html_str
+	"""
 
 	def json(self):
 		return json.dumps(self.result_stats)
@@ -715,8 +717,8 @@ class KraitISSRStatistics(KraitSTRStatistics):
 	stype = 'issr'
 
 class KraitExportStatistics:
-	def __init__(self, uname='Mb'):
-		self.uname = uname
+	def __init__(self):
+		self.uname = 'Mb'
 		self.fastx_files = [f for f in DB.get_objects("SELECT * FROM fastx")]
 		self.fastx_datas = []
 		sql = "SELECT type,json FROM stats_{}"
@@ -790,6 +792,7 @@ class KraitExportStatistics:
 	def get_repeat_summary_table(self, rtype, fastx, data):
 		rtype = rtype.split('_')[0]
 		tid = '{}-summary-table-{}'.format(rtype, fastx)
+		self.uname = data['unit']
 		return {tid: [[
 			data['total_counts'],
 			data['total_length'],
@@ -1658,5 +1661,6 @@ class KraitExportStatistics:
 			scripts = scripts,
 			fastxs = self.fastx_files,
 			tables = tables,
-			plots = plots
+			plots = plots,
+			uname = self.uname
 		)

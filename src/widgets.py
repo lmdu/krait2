@@ -52,7 +52,7 @@ class KraitTextBrowser(QTextBrowser):
 		self.parent.select_counter.setNum(0)
 
 class KraitTableView(QTableView):
-	modeler = None
+	modeler = lambda: None
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
