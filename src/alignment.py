@@ -61,6 +61,7 @@ def wrap_around_extend(s, ms, dr):
 def wrap_around_backtrace(mx, s, ms, dr):
 	m = len(ms)
 	i = len(s)
+	j = 0
 
 	#find minimum value
 	minv = min(mx[i])

@@ -37,10 +37,10 @@ class GXFReader:
 			)
 
 	def split_value(self, item):
-		pass
+		return None, None
 
 	def split_attrs(self, item):
-		pass
+		return None, None
 
 	def parse_attrs(self, attr_str):
 		attrs = AttrDict()
