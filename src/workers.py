@@ -43,7 +43,7 @@ class KraitWorkerSignals(QObject):
 	prompt = Signal(str)
 
 class KraitBaseWorker(QRunnable):
-	processer = lambda: None
+	processer = lambda *x: None
 
 	def __init__(self):
 		super().__init__()
