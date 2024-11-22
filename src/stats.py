@@ -1311,7 +1311,6 @@ class KraitExportStatistics:
 				for (var i = 0; i < {pvar}_series.length; i++) {{
 					{pvar}_series[i].coordinateSystem = 'polar';
 					{pvar}_series[i].barCategoryGap = 0;
-					{pvar}_series[i].angleAxis.
 				}}
 
 			}} else {{
