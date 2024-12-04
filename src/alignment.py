@@ -61,12 +61,12 @@ def wrap_around_extend(s, ms, dr):
 def wrap_around_backtrace(mx, s, ms, dr):
 	m = len(ms)
 	i = len(s)
-	j = 0
+	j = (i - 1) % m + 1
 
 	#find minimum value
-	minv = min(mx[i])
+	minv = mx[i][j]
 	for idx, val in enumerate(mx[i]):
-		if minv == val:
+		if minv > val:
 			j = idx
 
 	if dr == -1:
