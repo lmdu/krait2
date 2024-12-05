@@ -201,9 +201,9 @@ class KraitISSRSearchProcess(KraitSearchProcess):
 			records = []
 			for issr in issrs:
 				smotif = SM.standard(issr[3])
-				records.append((None, name, issr[6], issr[7], issr[3], smotif,
-					issr[4], issr[9], issr[1], issr[2], issr[5], issr[10],
-					issr[11], issr[12], issr[13], round(issr[14], 2)))
+				records.append((None, name, issr[1], issr[2], issr[3], smotif,
+					issr[4], issr[6], issr[7], issr[8], issr[9], issr[11],
+					issr[12], issr[13], issr[14], round(issr[15], 2)))
 
 			self.progress += len(seq)
 			p = self.progress/self.fastx['size']*self.fastx['weight']
