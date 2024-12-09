@@ -93,8 +93,10 @@ class KraitFilterDelegate(QStyledItemDelegate):
 		else:
 			if self.parent.types[idx] == 'REAL':
 				editor = QDoubleSpinBox(parent)
+				editor.setRange(0, 10000)
 			elif self.parent.types[idx] == 'INTEGER':
 				editor = QSpinBox(parent)
+				editor.setRange(0, 1000000000)
 			else:
 				editor = QStyledItemDelegate.createEditor(self, parent, option, index)
 
