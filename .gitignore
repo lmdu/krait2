@@ -56,3 +56,4 @@ data/ddd.tsv
 data/ddd.gff
 data/ddd.fasta
 src/pytrf.cp310-win_amd64.pyd
+/data
