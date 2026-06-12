@@ -32,4 +32,8 @@ The documentation is available here: [https://krait2.readthedocs.io/en/latest](h
 
 You can download the latest installer for Windows, Linux and MacOS from [https://github.com/lmdu/krait2/releases](https://github.com/lmdu/krait2/releases)
 
-中国镜像下载地址: [https://big.cdu.edu.cn/software/krait2](https://big.cdu.edu.cn/software/krait2)
+中国镜像下载地址: [https://big.cdu.edu.cn/software/krait2](https://big.cdu.edu.cn/bioinfo/software/krait2)
+
+## Citation
+
+Du L, Chen J, Sun D, Zhao K, Zeng Q, Yang N. Krait2: a versatile software for microsatellite investigation, visualization and marker development. BMC Genomics. 2025, 26(1):72 ([doi:10.1186/s12864-025-11252-2](https://doi.org/10.1186/s12864-025-11252-2))

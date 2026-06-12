@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
 	QCoreApplication.setOrganizationName("DuLab")
 	QCoreApplication.setOrganizationDomain("big.cdu.edu.cn")
-	QCoreApplication.setApplicationName("Kriat")
+	QCoreApplication.setApplicationName("Krait")
 	QCoreApplication.setApplicationVersion(KRAIT_VERSION)
 	QSettings.setDefaultFormat(QSettings.IniFormat)
 
