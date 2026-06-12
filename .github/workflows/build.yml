@@ -48,7 +48,7 @@ jobs:
           package/build_mac_installer.sh $version arm64
 
       - name: MacOS X64 Package
-        if: matrix.os == 'macos-15'
+        if: matrix.os == 'macos-15-intel'
         run: |
           version=`awk '/^KRAIT_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           chmod +x package/build_mac_installer.sh

@@ -32,7 +32,7 @@ The documentation is available here: [https://krait2.readthedocs.io/en/latest](h
 
 You can download the latest installer for Windows, Linux and MacOS from [https://github.com/lmdu/krait2/releases](https://github.com/lmdu/krait2/releases)
 
-中国镜像下载地址: [https://big.cdu.edu.cn/software/krait2](https://big.cdu.edu.cn/bioinfo/software/krait2)
+中国镜像下载地址: [https://big.cdu.edu.cn/bioinfo/software/krait2](https://big.cdu.edu.cn/bioinfo/software/krait2)
 
 ## Citation
 
