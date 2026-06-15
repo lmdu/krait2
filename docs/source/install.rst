@@ -5,7 +5,7 @@ Krait2 is a standalone desktop software designed to run on Windows, Linux and Ma
 
 Krait2 download: `https://github.com/lmdu/krait2/releases <https://github.com/lmdu/krait2/releases>`_
 
-中国镜像下载地址: `https://big.cdu.edu.cn/software/krait2 <https://big.cdu.edu.cn/software/krait2>`_
+中国镜像下载地址: `https://big.cdu.edu.cn/bioinfo/software/krait2 <https://big.cdu.edu.cn/bioinfo/software/krait2>`_
 
 On Windows
 ----------
