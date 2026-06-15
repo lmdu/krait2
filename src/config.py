@@ -10,9 +10,9 @@ __all__ = ['KRAIT_VERSION', 'KRAIT_BUILD', 'KRAIT_ABOUT',
 			'KRAIT_SEARCH_PARAMETERS', 'KRAIT_PRIMER_TAGS',
 			'KRAIT_PRIMER_COMMONS']
 
-KRAIT_VERSION = "2.1.0"
+KRAIT_VERSION = "2.1.2"
 
-KRAIT_BUILD = "20260612"
+KRAIT_BUILD = "20260615"
 
 KRAIT_CITATION = """
 Du et al. Krait2: a versatile software for microsatellite investigation, visualization and marker development. BMC Genomics. 2025, 26(1):72.
